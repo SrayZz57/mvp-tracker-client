@@ -39,9 +39,17 @@ import {
   endPlaySession,
   getPlaySessionHistory,
   backfillLegacyPuuid,
+  saveSeasonalRanks,
+  getSeasonalRanks as getCachedSeasonalRanks,
+  saveActMatchStats,
+  getActMatchStats,
 } from './services/db.js';
-import { isValorantRunning, pingOnce } from './services/network.js';
-import { getAgentSelect } from './services/valorantLocal.js';
+import { isValorantRunning, pingOnce, isValorantFocused } from './services/network.js';
+import {
+  getAgentSelect,
+  getSeasonalRanks as fetchLocalSeasonalRanks,
+  backfillActHistory,
+} from './services/valorantLocal.js';
 import { syncMatches } from './services/matchSync.js';
 import { updateElectronApp } from 'update-electron-app';
 import { captureEvent, captureException, shutdown as shutdownTelemetry } from './services/telemetry.js';
@@ -406,6 +414,21 @@ const createWindow = () => {
     mainWindow.hide();
   });
 
+  // Signale au renderer quand la fenêtre n'est plus au premier plan (perd le
+  // focus, cachée dans la tray) pour couper les animations décoratives — un
+  // testeur a signalé une hausse de latence d'affichage EN JEU pendant que
+  // l'app tourne juste en arrière-plan (carte graphique visiblement
+  // sollicitée dans le Gestionnaire des tâches). Les animations CSS
+  // continues (halos, pulses...) tournent même fenêtre pas au premier plan
+  // tant que rien ne les coupe explicitement — voir index.css .app-unfocused.
+  const sendFocusChange = (focused) => {
+    if (!mainWindow.isDestroyed()) mainWindow.webContents.send('window:focus-change', focused);
+  };
+  mainWindow.on('focus', () => sendFocusChange(true));
+  mainWindow.on('blur', () => sendFocusChange(false));
+  mainWindow.on('show', () => sendFocusChange(mainWindow.isFocused()));
+  mainWindow.on('hide', () => sendFocusChange(false));
+
   // `Menu.setApplicationMenu(null)` ci-dessous supprime aussi le raccourci
   // DevTools par défaut (Ctrl+Maj+I) — celui-ci le restitue via F12, pour
   // pouvoir profiler l'app (utile pour investiguer un souci de perf signalé
@@ -743,6 +766,33 @@ setInterval(async () => {
 
 ipcMain.handle('network:get-status', () => networkStatus);
 
+// Coupe aussi les animations décoratives dès qu'une partie est LANCÉE (pas
+// juste le client ouvert) — un joueur qui garde l'app visible sur un second
+// écran pendant qu'il joue n'aurait sinon jamais le bénéfice de la coupure
+// sur perte de focus (voir window:focus-change) puisque la fenêtre reste au
+// premier plan. Deux signaux combinés : getAgentSelect (pregame/core-game —
+// couvre une vraie partie matchmakée, 'select'/'game') OU Valorant au
+// premier plan côté Windows (couvre le Terrain d'entraînement et les menus,
+// que pregame/core-game ne voit pas — demandé après coup sur Discord).
+// isValorantRunning() d'abord pour éviter tout appel (API locale ou
+// PowerShell) tant que le client est fermé.
+let lastMatchActive = false;
+
+async function pollMatchActive() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  let active = false;
+  if (isValorantRunning()) {
+    const [agentSelect, focused] = await Promise.all([getAgentSelect(), isValorantFocused()]);
+    active = agentSelect.state === 'ok' || focused;
+  }
+  if (active !== lastMatchActive) {
+    lastMatchActive = active;
+    mainWindow.webContents.send('window:match-active-change', active);
+  }
+}
+
+setInterval(pollMatchActive, 6000);
+
 // Détection de tilt en direct : tant que Valorant tourne, on revérifie
 // régulièrement si un nouveau match vient de se terminer et, si oui, on
 // recalcule le statut de tilt pour prévenir par notification Windows —
@@ -806,6 +856,88 @@ setInterval(() => {
   if (isValorantRunning()) checkTiltAndNotify();
 }, 120000);
 
+// Remonte l'historique complet de matchs (K/D/agent par match) directement
+// depuis l'API locale du client Riot, PAS HenrikDev — celui-ci ne garde que
+// les 40 derniers matchs (quota 30 req/min), largement insuffisant pour
+// couvrir plusieurs actes en arrière. Automatique et silencieux, en tout
+// petits lots tant que le client tourne (voir aussi la barre système qui
+// garde l'app active) — `actBackfillBusy` sert de verrou partagé entre le
+// tick de fond ET le bouton "Recharger l'historique" (valorant:backfill-act-
+// history-now), pour ne jamais lancer deux passes en même temps.
+let actBackfillBusy = false;
+
+async function runActBackfillBatch(batchSize) {
+  const puuid = currentPuuid();
+  if (!puuid) return { addedRows: 0, remaining: 0, done: true };
+  const cachedIds = new Set(getActMatchStats(puuid).map((r) => r.match_id));
+  const result = await backfillActHistory(cachedIds, batchSize);
+  console.log('[act-backfill]', {
+    state: result.state,
+    reason: result.reason,
+    resultPuuid: result.puuid,
+    matchingPuuid: result.puuid === puuid,
+    alreadyCached: cachedIds.size,
+    fetchedRows: result.rows?.length ?? 0,
+    remaining: result.remaining,
+  });
+  if (result.state === 'ok' && result.puuid === puuid && result.rows.length > 0) {
+    saveActMatchStats(puuid, result.rows);
+  }
+  return {
+    addedRows: result.rows?.length ?? 0,
+    remaining: result.remaining ?? 0,
+    done: result.state !== 'ok' || result.rows?.length === 0,
+  };
+}
+
+async function pollActHistoryBackfill() {
+  if (actBackfillBusy || !isValorantRunning()) return;
+  actBackfillBusy = true;
+  try {
+    await runActBackfillBatch(5);
+  } catch {
+    // Client fermé en cours de route, endpoint indisponible... on retentera au prochain tick.
+  } finally {
+    actBackfillBusy = false;
+  }
+}
+
+setInterval(pollActHistoryBackfill, 8000);
+
+// Bouton "Recharger l'historique" (SeasonalRanksTab.jsx) : plusieurs lots
+// d'affilée en une seule requête IPC plutôt que d'attendre le tick de fond
+// toutes les 8s — l'utilisateur vient de cliquer, il attend un vrai résultat
+// tout de suite. Borné en TEMPS (30s) plutôt qu'en nombre de lots fixe : un
+// compte avec des milliers de matchs en arrière (plusieurs actes/épisodes)
+// mettrait sinon beaucoup trop de clics à rattraper — un budget de temps
+// avance autant que possible sans jamais faire poireauter le bouton
+// indéfiniment. `addedRows`/`remaining` renvoyés pour que l'interface
+// confirme que ça a vraiment avancé, même si tout n'est pas encore là.
+const RELOAD_BUDGET_MS = 30000;
+
+ipcMain.handle('valorant:backfill-act-history-now', async () => {
+  if (actBackfillBusy) return { done: false, busy: true, addedRows: 0, remaining: 0 };
+  actBackfillBusy = true;
+  const startedAt = Date.now();
+  let addedRows = 0;
+  let remaining = 0;
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await runActBackfillBatch(15);
+      addedRows += result.addedRows;
+      remaining = result.remaining;
+      if (result.done || Date.now() - startedAt > RELOAD_BUDGET_MS) break;
+    }
+    return { done: remaining === 0, addedRows, remaining };
+  } catch {
+    return { done: false, addedRows, remaining };
+  } finally {
+    actBackfillBusy = false;
+  }
+});
+
 // Accepte un puuid explicite plutôt que de compter uniquement sur
 // currentPuuid() (lu depuis le disque) : au tout premier appel d'une
 // session, cet appel et celui qui enregistre linkedAccountPuuid partent en
@@ -821,6 +953,32 @@ ipcMain.handle('network:get-ping-samples', (_event, puuid) => {
 // jeu, plus un certificat auto-signé à accepter — trois choses impossibles
 // depuis le renderer, que la CSP bloquerait de toute façon.
 ipcMain.handle('valorant-local:agent-select', () => getAgentSelect());
+
+// Rang par acte : tente une lecture live via l'API locale (client Riot
+// ouvert) et sauvegarde en base en cas de succès, puis renvoie toujours le
+// cache — sinon l'historique disparaîtrait dès que le client est fermé,
+// alors que rien n'empêche de le consulter hors-jeu.
+ipcMain.handle('valorant:get-seasonal-ranks', async () => {
+  const puuid = currentPuuid();
+  if (!puuid) return [];
+  try {
+    const live = await fetchLocalSeasonalRanks();
+    if (live.state === 'ok' && live.puuid === puuid && live.seasons.length > 0) {
+      saveSeasonalRanks(puuid, live.seasons);
+    }
+  } catch {
+    // Client fermé ou API locale indisponible — pas grave, on retombe sur le cache.
+  }
+  return getCachedSeasonalRanks(puuid);
+});
+
+// Résumé léger par match (acte/agent/K/D), déjà remonté en arrière-plan par
+// pollActHistoryBackfill — jamais de fetch live ici, juste une lecture du
+// cache local pour rester instantané à l'ouverture de l'onglet.
+ipcMain.handle('valorant:get-act-history', () => {
+  const puuid = currentPuuid();
+  return puuid ? getActMatchStats(puuid) : [];
+});
 
 // Overlay de sélection d'agent : une fenêtre séparée, transparente et
 // toujours au premier plan — PAS une injection dans le jeu. Elle reste

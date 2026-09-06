@@ -7,7 +7,7 @@ import '@fontsource/chakra-petch/latin-700.css';
 import '@fontsource-variable/inter';
 import './index.css';
 import './renderer/i18n/index.js';
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './renderer/App.jsx';
 import TitleBar from './renderer/TitleBar.jsx';
@@ -41,6 +41,30 @@ if (view === 'aim-trainer') {
 }
 
 function Root() {
+  // Coupe les animations décoratives (halos, pulses...) dès que la fenêtre
+  // n'est plus au premier plan — un testeur a signalé une hausse de latence
+  // d'affichage EN JEU juste parce que l'app tournait en arrière-plan, carte
+  // graphique visiblement sollicitée dans le Gestionnaire des tâches. Voir
+  // .app-unfocused dans index.css : coupe TOUTES les animations d'un coup
+  // plutôt que d'avoir à modifier chacune des ~20 qui existent déjà.
+  useEffect(() => {
+    if (view) return undefined; // fenêtres aim-trainer/overlay non concernées
+    return window.electronAPI.onWindowFocusChange((focused) => {
+      document.body.classList.toggle('app-unfocused', !focused);
+    });
+  }, []);
+
+  // Même coupure, mais sur l'état de la partie plutôt que le focus de la
+  // fenêtre — un joueur qui garde l'app visible sur un second écran pendant
+  // qu'il joue ne perd jamais le focus, donc app-unfocused seul ne suffisait
+  // pas à couper les animations pendant une vraie game.
+  useEffect(() => {
+    if (view) return undefined;
+    return window.electronAPI.onMatchActiveChange((active) => {
+      document.body.classList.toggle('app-in-match', active);
+    });
+  }, []);
+
   if (view === 'aim-trainer') return <AimTrainerGame config={gameConfig} />;
   if (view === 'agent-select-overlay') return <AgentSelectOverlay />;
   return (

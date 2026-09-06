@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const LOCKFILE_PATH = path.join(
@@ -38,6 +39,47 @@ export function isValorantRunning() {
     // (toujours "en cours"). Tout le reste (ESRCH...) = PID mort, lockfile périmé.
     return err.code === 'EPERM';
   }
+}
+
+// Fenêtre au premier plan sous Windows (nom du process, via l'API Win32
+// GetForegroundWindow) — sert à couper les animations décoratives dès que
+// Valorant a le focus, MÊME hors match (menus, Terrain d'entraînement...),
+// contrairement à la détection de partie active (pregame/core-game de
+// l'API locale) qui ne couvre pas ces cas. Le script est écrit une seule
+// fois dans un fichier temporaire plutôt qu'inliné dans la commande : passer
+// un bloc PowerShell multi-lignes (Add-Type) via un argument de ligne de
+// commande pose des problèmes d'échappement en cascade (cmd → PowerShell) ;
+// un `-File` évite ça complètement.
+const FOREGROUND_SCRIPT_PATH = path.join(tmpdir(), 'mvptracker-foreground-process.ps1');
+const FOREGROUND_SCRIPT = `Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public class MvpTrackerForegroundWindow {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+}
+'@
+$hwnd = [MvpTrackerForegroundWindow]::GetForegroundWindow()
+$procId = 0
+[MvpTrackerForegroundWindow]::GetWindowThreadProcessId($hwnd, [ref]$procId) | Out-Null
+(Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName
+`;
+
+function ensureForegroundScript() {
+  if (!existsSync(FOREGROUND_SCRIPT_PATH)) writeFileSync(FOREGROUND_SCRIPT_PATH, FOREGROUND_SCRIPT, 'utf-8');
+  return FOREGROUND_SCRIPT_PATH;
+}
+
+export function isValorantFocused() {
+  if (process.platform !== 'win32') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ensureForegroundScript()],
+      { timeout: 3000 },
+      (err, stdout) => resolve(!err && /valorant/i.test(stdout)),
+    );
+  });
 }
 
 // `execFile` plutôt que `exec` : `exec` passe systématiquement par un shell

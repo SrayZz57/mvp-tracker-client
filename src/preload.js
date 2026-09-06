@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPingSamples: (puuid) => ipcRenderer.invoke('network:get-ping-samples', puuid),
   // Sélection d'agent en direct (API locale du client Valorant).
   getAgentSelect: () => ipcRenderer.invoke('valorant-local:agent-select'),
+  getSeasonalRanks: () => ipcRenderer.invoke('valorant:get-seasonal-ranks'),
+  getActHistory: () => ipcRenderer.invoke('valorant:get-act-history'),
+  backfillActHistoryNow: () => ipcRenderer.invoke('valorant:backfill-act-history-now'),
   setAgentSelectOverlayVisible: (visible) => ipcRenderer.invoke('agent-select-overlay:set-visible', visible),
   getAgentSelectOverlayEnabled: () => ipcRenderer.invoke('agent-select-overlay:get-enabled'),
   setAgentSelectOverlayEnabled: (enabled) => ipcRenderer.invoke('agent-select-overlay:set-enabled', enabled),
@@ -109,6 +112,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = (_event, maximized) => callback(maximized);
     ipcRenderer.on('window:maximized-change', listener);
     return () => ipcRenderer.removeListener('window:maximized-change', listener);
+  },
+  onWindowFocusChange: (callback) => {
+    const listener = (_event, focused) => callback(focused);
+    ipcRenderer.on('window:focus-change', listener);
+    return () => ipcRenderer.removeListener('window:focus-change', listener);
+  },
+  onMatchActiveChange: (callback) => {
+    const listener = (_event, active) => callback(active);
+    ipcRenderer.on('window:match-active-change', listener);
+    return () => ipcRenderer.removeListener('window:match-active-change', listener);
   },
   getUpdateStatus: () => ipcRenderer.invoke('app-update:get-status'),
   installUpdate: () => ipcRenderer.invoke('app-update:install'),

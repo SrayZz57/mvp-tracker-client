@@ -13,6 +13,7 @@ import {
   excludeDeathmatch,
   weaponKillsForAgent,
   agentTotalKills,
+  kastStats,
 } from '../valorantStats.js';
 import { useAgentIcons, useAgentPortraits, useAgentRoles } from '../agentIcons.js';
 import { useMapImages } from '../mapImages.js';
@@ -248,6 +249,7 @@ function StatsTab({ settings, matches, rank, loading }) {
       hsPercent: totalShots > 0 ? (totalHeadshots / totalShots) * 100 : null,
       bsPercent: totalShots > 0 ? (totalBodyshots / totalShots) * 100 : null,
       lsPercent: totalShots > 0 ? (totalLegshots / totalShots) * 100 : null,
+      kast: kastStats(scopedMatches, settings.name, settings.tag),
       weaponRanking: [...weaponCounts.entries()].sort((a, b) => b[1] - a[1]),
     };
   }, [scopedMatches, settings.name, settings.tag]);
@@ -521,6 +523,10 @@ function StatsTab({ settings, matches, rank, loading }) {
           <div className="stat-tile">
             <div className="value">{globalStats.lsPercent === null ? '?' : `${globalStats.lsPercent.toFixed(1)}%`}</div>
             <div className="label">{t('stats.legs')}</div>
+          </div>
+          <div className="stat-tile">
+            <div className="value">{globalStats.kast === null ? '?' : `${globalStats.kast.toFixed(0)}%`}</div>
+            <div className="label">{t('stats.kast')}</div>
           </div>
         </div>
 

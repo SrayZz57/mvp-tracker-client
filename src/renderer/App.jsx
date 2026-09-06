@@ -28,12 +28,14 @@ import {
   History,
   Search,
   Compass,
+  Layers,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
 import { useCollapsedBlocks } from './CollapsedBlocksContext.jsx';
 import { useE2EE } from './E2EEContext.jsx';
 import StatsTab from './tabs/StatsTab.jsx';
+import SeasonalRanksTab from './tabs/SeasonalRanksTab.jsx';
 import WeaknessTab from './tabs/WeaknessTab.jsx';
 import FormTab from './tabs/FormTab.jsx';
 import NetworkTab from './tabs/NetworkTab.jsx';
@@ -85,6 +87,7 @@ const NAV_SECTIONS = [
     sectionKey: 'nav.sections.performance',
     tabs: [
       { id: 'stats', labelKey: 'nav.tabs.stats', icon: BarChart3 },
+      { id: 'seasonal-ranks', labelKey: 'nav.tabs.seasonalRanks', icon: Layers },
       { id: 'forme', labelKey: 'nav.tabs.form', icon: AlarmClock },
       { id: 'heatmap', labelKey: 'nav.tabs.heatmap', icon: Flame },
       { id: 'analyse', labelKey: 'nav.tabs.analyse', icon: Brain },
@@ -774,6 +777,8 @@ function App() {
             loading={data.loading}
           />
         );
+      case 'seasonal-ranks':
+        return <SeasonalRanksTab myId={session.user.id} />;
       case 'forme':
         return <FormTab settings={settings} matches={data.matches} loading={data.loading} />;
       case 'reseau':

@@ -138,6 +138,7 @@
       "admin": "Administration",
       "tournaments": "Tournaments",
       "stats": "Stats",
+      "seasonalRanks": "Rank per act",
       "form": "Perf & Form",
       "tilt": "Tilt",
       "heatmap": "Heatmap",
@@ -1297,6 +1298,7 @@
     "head": "Head",
     "body": "Body",
     "legs": "Legs",
+    "kast": "KAST",
     "topWeapons": "Most used weapons",
     "noWeaponData": "No weapon data yet.",
     "killsCount_one": "{{count}} kill",
@@ -1494,6 +1496,17 @@
         "action": "Open Aim Trainer"
       }
     }
+  },
+  "seasonalRanks": {
+    "title": "Rank per act",
+    "empty": "No stats yet — launch Valorant once while MVP Tracker is running to fetch them.",
+    "unranked": "Unranked",
+    "pastActs": "Past acts",
+    "reload": "Reload history",
+    "reloading": "Fetching...",
+    "reloadPartial": "{{added}} new matches fetched — {{remaining}} left to go, click again to continue.",
+    "reloadDone": "{{added}} new matches fetched — that's all Riot keeps in detail for this account.",
+    "reloadNothingMore": "Nothing more to fetch — Riot only keeps per-match detail (agent, K/D) for a limited window. Older acts will keep their rank badge, but never these details."
   },
   "goals": {
     "widgetTitle": "Personal goals",

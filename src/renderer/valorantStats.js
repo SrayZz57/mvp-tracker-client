@@ -211,6 +211,52 @@ export function clutchStats(matches, name, tag) {
   return { attempts, wins, winrate: attempts > 0 ? (wins / attempts) * 100 : null };
 }
 
+// KAST : % de rounds où le joueur suivi a eu un Kill, un Assist, Survécu, ou
+// été Trade (un coéquipier a tué son tueur peu après sa mort) — au moins une
+// des quatre. Round "traded" au sens strict (venge la mort, pas juste
+// "un coéquipier a fait un kill dans la fenêtre"), calculé à partir de
+// kill_events puisque HenrikDev ne renvoie pas de champ KAST direct.
+const TRADE_WINDOW_MS = 5000;
+
+export function kastStats(matches, name, tag) {
+  let kastRounds = 0;
+  let totalRounds = 0;
+
+  excludeDeathmatch(matches).forEach((match) => {
+    const me = findMe(match, name, tag);
+    if (!me?.puuid || !me?.team) return;
+
+    (match.rounds || []).forEach((round) => {
+      const playerStats = round.player_stats || [];
+      const myStats = playerStats.find((ps) => ps.player_puuid === me.puuid);
+      if (!myStats) return; // pas présent ce round (rejoint en cours de partie, etc.)
+      totalRounds += 1;
+
+      const allKills = [];
+      playerStats.forEach((ps) => (ps.kill_events || []).forEach((k) => allKills.push(k)));
+
+      const gotKill = (myStats.kills ?? 0) > 0;
+      const gotAssist = allKills.some((k) => (k.assistants || []).some((a) => a.assistant_puuid === me.puuid));
+      const myDeath = allKills.find((k) => k.victim_puuid === me.puuid);
+      const survived = !myDeath;
+      const traded =
+        !!myDeath &&
+        allKills.some(
+          (k) =>
+            k.killer_team === me.team &&
+            k.killer_puuid !== me.puuid &&
+            k.victim_puuid === myDeath.killer_puuid &&
+            k.kill_time_in_round >= myDeath.kill_time_in_round &&
+            k.kill_time_in_round - myDeath.kill_time_in_round <= TRADE_WINDOW_MS,
+        );
+
+      if (gotKill || gotAssist || survived || traded) kastRounds += 1;
+    });
+  });
+
+  return totalRounds > 0 ? (kastRounds / totalRounds) * 100 : null;
+}
+
 // Premier kill du round (toutes équipes confondues) : le joueur suivi en est
 // soit l'auteur ("premier sang"), soit la victime ("première mort"). Sert de
 // proxy d'agressivité — plus fiable qu'un ratio K/D brut puisqu'il capture

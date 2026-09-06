@@ -97,6 +97,33 @@ export function useSeasonNames() {
   return seasons;
 }
 
+let seasonOrderCache = null;
+
+// Ordre chronologique des actes (uuid -> timestamp de début) — l'API renvoie
+// déjà ses actes dans cet ordre, mais un Map par nom (useSeasonNames) ne le
+// garde pas. Sert au tri du rang par acte (Rang par acte, StatsTab.jsx).
+async function loadSeasonOrder() {
+  if (seasonOrderCache) return seasonOrderCache;
+  const response = await fetch('https://valorant-api.com/v1/seasons');
+  const json = await response.json();
+  seasonOrderCache = new Map(
+    json.data
+      .filter((season) => season.type === 'EAresSeasonType::Act')
+      .map((act) => [act.uuid, new Date(act.startTime).getTime()]),
+  );
+  return seasonOrderCache;
+}
+
+export function useSeasonOrder() {
+  const [order, setOrder] = useState(new Map());
+
+  useEffect(() => {
+    loadSeasonOrder().then(setOrder);
+  }, []);
+
+  return order;
+}
+
 const cardArtCache = new Map();
 const EMPTY_CARD_ART = { icon: null, banner: null };
 

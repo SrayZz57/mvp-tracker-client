@@ -278,6 +278,181 @@ async function fetchCoregame(glz, pdBase, headers, puuid) {
 }
 
 /**
+ * Rang atteint par le joueur suivi sur CHAQUE acte joué, via le même
+ * endpoint MMR que fetchMmrTier ci-dessus, mais sans filtrer sur une saison
+ * précise : `QueueSkills.competitive.SeasonalInfoBySeasonID` contient une
+ * entrée par acte (jamais exposé par HenrikDev, qui ne donne que le rang
+ * courant + le peak global). Ne marche que client Riot ouvert — main.js
+ * sauvegarde le résultat en base à chaque appel réussi pour qu'il reste
+ * consultable ensuite même client fermé (voir saveSeasonalRanks/db.js).
+ *
+ * Renvoie toujours un objet avec un `state`, jamais une exception, même
+ * logique que getAgentSelect : appelée en boucle, un client fermé est le cas
+ * normal, pas une erreur.
+ */
+// Regroupe le boilerplate commun (lockfile -> glz -> pdBase -> jetons) partagé
+// par getSeasonalRanks et le backfill d'historique ci-dessous. Lève une
+// exception avec `.local = true` pour les cas normaux (client fermé, pas de
+// glz encore écrit) — les appelants les traitent comme "indisponible", jamais
+// une vraie erreur.
+async function getLocalSession() {
+  const lock = readLockfile();
+  if (!lock) {
+    const err = new Error('client-closed');
+    err.local = true;
+    throw err;
+  }
+  const glz = readGlzBase();
+  if (!glz) {
+    const err = new Error('no-glz');
+    err.local = true;
+    throw err;
+  }
+  const pdBase = pdBaseFromGlz(glz);
+  if (!pdBase) {
+    const err = new Error('no-pd-base');
+    err.local = true;
+    throw err;
+  }
+  const auth = await getLocalAuth(lock);
+  const version = await getClientVersion();
+  return { pdBase, auth, headers: glzHeaders(auth, version) };
+}
+
+export async function getSeasonalRanks() {
+  try {
+    const { pdBase, auth, headers } = await getLocalSession();
+
+    const res = await fetch(`${pdBase}/mmr/v1/players/${auth.puuid}`, { headers });
+    if (!res.ok) return { state: 'unavailable', reason: `mmr-${res.status}` };
+    const json = await res.json();
+
+    const bySeason = json.QueueSkills?.competitive?.SeasonalInfoBySeasonID ?? {};
+    const seasons = Object.entries(bySeason).map(([seasonId, info]) => ({ seasonId, ...info }));
+
+    return { state: 'ok', puuid: auth.puuid, seasons };
+  } catch (err) {
+    return { state: 'unavailable', reason: err.message };
+  }
+}
+
+let agentNamesCache = null;
+
+/** UUID d'agent (characterId brut du client local) -> nom affiché. */
+async function getAgentNames() {
+  if (agentNamesCache) return agentNamesCache;
+  const res = await fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true');
+  if (!res.ok) return new Map();
+  const json = await res.json();
+  agentNamesCache = new Map((json.data ?? []).map((a) => [a.uuid.toLowerCase(), a.displayName]));
+  return agentNamesCache;
+}
+
+const MATCH_HISTORY_PAGE = 20;
+// Plafond de sécurité sur la pagination de l'historique — au-delà, mieux vaut
+// s'arrêter que de scanner indéfiniment un compte avec des milliers de
+// matchs ; le backfill reprendra simplement plus tard là où il s'est arrêté
+// (les matchs déjà en cache sont filtrés à chaque appel).
+const MATCH_HISTORY_MAX = 2000;
+
+// Liste complète des match IDs, mise en cache pour tout le procesus — MAIS
+// seulement si la pagination est allée jusqu'au bout (`reachedEnd`). Un
+// premier essai interrompu par une requête en échec (réseau, client pas
+// encore prêt...) ne doit JAMAIS être mis en cache tel quel : ça figeait le
+// backfill pour le reste du lancement sur une liste tronquée, avec
+// "Recharger l'historique" qui ne trouvait plus jamais rien de nouveau à
+// aller chercher (constaté en vrai : plus aucune progression malgré
+// plusieurs clics).
+let matchIdsCache = null;
+
+async function listAllMatchIds(pdBase, headers, puuid) {
+  if (matchIdsCache) return matchIdsCache;
+  const ids = [];
+  let startIndex = 0;
+  let reachedEnd = false;
+  let lastStatus = null;
+  while (ids.length < MATCH_HISTORY_MAX) {
+    const res = await fetch(
+      `${pdBase}/match-history/v1/history/${puuid}?startIndex=${startIndex}&endIndex=${startIndex + MATCH_HISTORY_PAGE}`,
+      { headers },
+    );
+    lastStatus = res.status;
+    if (!res.ok) break;
+    const json = await res.json();
+    const page = json.History ?? [];
+    page.forEach((m) => ids.push(m.MatchID));
+    if (page.length < MATCH_HISTORY_PAGE) {
+      reachedEnd = true;
+      break;
+    }
+    startIndex += MATCH_HISTORY_PAGE;
+  }
+  console.log('[act-backfill] listAllMatchIds', { total: ids.length, reachedEnd, lastStatus });
+  if (reachedEnd) matchIdsCache = ids;
+  return ids;
+}
+
+// Résumé ULTRA léger d'un match (pas le détail round par round comme
+// matchNormalizer.js) : seulement ce qu'il faut pour "Rang par acte" — acte,
+// agent joué, kills/deaths. Pas besoin de tout le reste (économie, positions
+// de mort...), ça évite de dupliquer tout le normaliseur HenrikDev pour un
+// usage qui n'en a pas besoin.
+async function fetchActMatchSummary(matchId, pdBase, headers, puuid) {
+  const res = await fetch(`${pdBase}/match-details/v1/matches/${matchId}`, { headers });
+  if (!res.ok) {
+    console.log('[act-backfill] match-details échec', { matchId, status: res.status });
+    return null;
+  }
+  const match = await res.json();
+  const me = (match.players ?? []).find((p) => p.subject === puuid);
+  if (!me) {
+    console.log('[act-backfill] joueur introuvable dans le match', { matchId, puuid });
+    return null;
+  }
+  const agentNames = await getAgentNames();
+  return {
+    matchId: match.matchInfo?.matchId ?? matchId,
+    seasonId: match.matchInfo?.seasonId ?? null,
+    queueId: match.matchInfo?.queueID ?? null,
+    gameStart: match.matchInfo?.gameStartMillis ?? null,
+    agent: agentNames.get((me.characterId ?? '').toLowerCase()) ?? null,
+    kills: me.stats?.kills ?? 0,
+    deaths: me.stats?.deaths ?? 0,
+  };
+}
+
+/**
+ * Récupère un petit lot de matchs pas encore en cache (`alreadyCachedIds`),
+ * directement depuis le client Riot local — contrairement à la synchro
+ * HenrikDev classique (plafonnée à 40 matchs pour ménager son quota de
+ * 30 req/min), cette API n'a pas de limite documentée : on peut donc
+ * remonter tout l'historique, acte par acte, tant que le client tourne.
+ * Volontairement petit lot (`batchSize`) à chaque appel plutôt que tout
+ * d'un coup — appelée en boucle par main.js pendant que Valorant tourne
+ * (voir pollActHistoryBackfill), jamais bloquant pour l'interface.
+ */
+export async function backfillActHistory(alreadyCachedIds, batchSize = 5) {
+  try {
+    const { pdBase, auth, headers } = await getLocalSession();
+    const allIds = await listAllMatchIds(pdBase, headers, auth.puuid);
+    const pending = allIds.filter((id) => !alreadyCachedIds.has(id));
+    if (pending.length === 0) return { state: 'done', puuid: auth.puuid, rows: [] };
+
+    const rows = [];
+    for (const matchId of pending.slice(0, batchSize)) {
+      // Séquentiel plutôt que Promise.all : reste discret sur une API non
+      // officiellement supportée, pas de rafale de requêtes simultanées.
+      // eslint-disable-next-line no-await-in-loop
+      const summary = await fetchActMatchSummary(matchId, pdBase, headers, auth.puuid);
+      if (summary) rows.push(summary);
+    }
+    return { state: 'ok', puuid: auth.puuid, rows, remaining: pending.length - rows.length };
+  } catch (err) {
+    return { state: 'unavailable', reason: err.message };
+  }
+}
+
+/**
  * État de la sélection d'agent, puis de la partie qui suit (chargement +
  * début de match), en direct.
  *

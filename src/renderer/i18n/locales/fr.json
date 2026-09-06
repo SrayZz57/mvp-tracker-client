@@ -138,6 +138,7 @@
       "admin": "Administration",
       "tournaments": "Tournois",
       "stats": "Stats",
+      "seasonalRanks": "Rang par acte",
       "form": "Perf & Forme",
       "tilt": "Tilt",
       "heatmap": "Heatmap",
@@ -1297,6 +1298,7 @@
     "head": "Tête",
     "body": "Corps",
     "legs": "Jambes",
+    "kast": "KAST",
     "topWeapons": "Armes les plus utilisées",
     "noWeaponData": "Aucune donnée d'arme pour l'instant.",
     "killsCount_one": "{{count}} kill",
@@ -1494,6 +1496,17 @@
         "action": "Ouvrir l'Aim Trainer"
       }
     }
+  },
+  "seasonalRanks": {
+    "title": "Rang par acte",
+    "empty": "Aucune statistique pour l'instant — lance Valorant une seule fois pendant que MVP Tracker tourne pour les récupérer.",
+    "unranked": "Non classé",
+    "pastActs": "Actes précédents",
+    "reload": "Recharger l'historique",
+    "reloading": "Récupération...",
+    "reloadPartial": "{{added}} nouveaux matchs récupérés — encore {{remaining}} à remonter, reclique pour continuer.",
+    "reloadDone": "{{added}} nouveaux matchs récupérés — c'est tout ce que Riot garde en détail pour ce compte.",
+    "reloadNothingMore": "Rien de plus à récupérer — Riot ne garde le détail par match (agent, K/D) que sur une fenêtre limitée. Les actes plus anciens garderont leur rang, mais jamais ces détails."
   },
   "goals": {
     "widgetTitle": "Objectifs personnels",

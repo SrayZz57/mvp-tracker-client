@@ -30,7 +30,17 @@ function RoleSegment({ role, percent, games, topAgents, mounted, onSelectAgent }
     const rect = segmentRef.current?.getBoundingClientRect();
     if (!rect) return;
     const left = Math.min(Math.max(rect.left, CARD_MARGIN), window.innerWidth - CARD_WIDTH - CARD_MARGIN);
-    setCardPos({ top: rect.bottom + 8, left });
+    // La barre est souvent tout en bas de page (ce graphique arrive après
+    // plusieurs autres cartes) — sans ça, la carte s'ouvrait toujours vers le
+    // bas et se retrouvait coupée sous la fenêtre/barre des tâches. Bascule
+    // au-dessus du segment quand il n'y a pas assez de place en dessous
+    // (hauteur estimée à partir du nombre d'agents affichés, max 5).
+    const estimatedHeight = 40 + Math.min(topAgents.length, 5) * 32;
+    const top =
+      window.innerHeight - rect.bottom >= estimatedHeight + CARD_MARGIN
+        ? rect.bottom + 8
+        : Math.max(CARD_MARGIN, rect.top - estimatedHeight - 8);
+    setCardPos({ top, left });
   };
 
   return (

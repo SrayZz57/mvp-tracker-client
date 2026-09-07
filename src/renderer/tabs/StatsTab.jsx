@@ -42,9 +42,16 @@ function groupMatchesByDay(matches, settings, language) {
   for (const match of matches) {
     const start = match.metadata?.game_start;
     const date = start ? new Date(start * 1000) : null;
-    const key = date ? date.toDateString() : 'unknown';
-    if (!current || current.key !== key) {
-      current = { key, label: date ? formatter.format(date) : '', matches: [], wins: 0, losses: 0 };
+    const day = date ? date.toDateString() : null;
+    if (!current || current.day !== day) {
+      current = {
+        key: match.metadata?.matchid ?? `sans-match-id-${days.length}`,
+        day,
+        label: date ? formatter.format(date) : '',
+        matches: [],
+        wins: 0,
+        losses: 0,
+      };
       days.push(current);
     }
     const label = resultLabel(match, findMe(match, settings.name, settings.tag));

@@ -7,12 +7,14 @@ export default function Button({
   loadingLabel,
   className = '',
   disabled,
+  type = 'button',
   children,
   ...props
 }) {
   const gate = useLoadingGate(loading);
   return (
     <button
+      type={type}
       className={['btn', `btn-${variant}`, size === 'sm' && 'btn-sm', className]
         .filter(Boolean)
         .join(' ')}

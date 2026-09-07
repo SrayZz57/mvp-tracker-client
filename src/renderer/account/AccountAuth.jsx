@@ -152,6 +152,8 @@ function AccountAuth() {
     resetMessages();
     setConfirmEmail('');
     setConfirmPassword('');
+    setCode('');
+    setNewPassword('');
   };
 
   const subtitle = { forgot: t('auth.subtitles.forgot'), reset: t('auth.subtitles.reset') }[mode];

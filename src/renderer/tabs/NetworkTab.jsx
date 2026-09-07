@@ -88,6 +88,41 @@ function PingSparkline({ samples }) {
   );
 }
 
+async function pushAndReadTotals(myId, deathsAnalyzed, deathsNearSpike) {
+  const deviceId = await window.electronAPI.getDeviceId();
+  if (!deviceId) return null;
+
+  await supabase.from('network_ping_stats').upsert(
+    {
+      user_id: myId,
+      device_id: deviceId,
+      deaths_analyzed: deathsAnalyzed,
+      deaths_near_spike: deathsNearSpike,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,device_id' },
+  );
+
+  const { data, error } = await supabase
+    .from('network_ping_stats')
+    .select('deaths_analyzed, deaths_near_spike')
+    .eq('user_id', myId);
+  if (error) {
+    console.error('[network_ping_stats] échec de la lecture :', error.message);
+    return null;
+  }
+
+  const totals = (data ?? []).reduce(
+    (acc, row) => ({
+      deathsAnalyzed: acc.deathsAnalyzed + row.deaths_analyzed,
+      deathsNearSpike: acc.deathsNearSpike + row.deaths_near_spike,
+    }),
+    { deathsAnalyzed: 0, deathsNearSpike: 0 },
+  );
+  lastPushed = { userId: myId, deathsAnalyzed, deathsNearSpike, totals };
+  return totals;
+}
+
 function NetworkTab({ settings, matches, pingSamples, myId }) {
   const { t } = useTranslation();
   const { platforms, platform, setPlatform, filteredMatches } = usePlatformFilter(matches, 'pc');
@@ -99,9 +134,13 @@ function NetworkTab({ settings, matches, pingSamples, myId }) {
   const percent = pingStats.deathsAnalyzed > 0 ? (pingStats.deathsNearSpike / pingStats.deathsAnalyzed) * 100 : 0;
 
   const [accountTotals, setAccountTotals] = useState(() => (lastPushed?.userId === myId ? lastPushed.totals : null));
+  const [totalsLoading, setTotalsLoading] = useState(() => lastPushed?.userId !== myId);
 
   useEffect(() => {
-    if (!myId || pingStats.deathsAnalyzed === 0) return;
+    if (!myId || pingStats.deathsAnalyzed === 0) {
+      setTotalsLoading(false);
+      return undefined;
+    }
     if (
       lastPushed &&
       lastPushed.userId === myId &&
@@ -109,46 +148,22 @@ function NetworkTab({ settings, matches, pingSamples, myId }) {
       lastPushed.deathsNearSpike === pingStats.deathsNearSpike
     ) {
       setAccountTotals(lastPushed.totals);
-      return;
+      setTotalsLoading(false);
+      return undefined;
     }
     let cancelled = false;
+    setTotalsLoading(true);
 
-    window.electronAPI.getDeviceId().then(async (deviceId) => {
-      if (cancelled || !deviceId) return;
-      await supabase.from('network_ping_stats').upsert(
-        {
-          user_id: myId,
-          device_id: deviceId,
-          deaths_analyzed: pingStats.deathsAnalyzed,
-          deaths_near_spike: pingStats.deathsNearSpike,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,device_id' },
-      );
-      const { data, error } = await supabase
-        .from('network_ping_stats')
-        .select('deaths_analyzed, deaths_near_spike')
-        .eq('user_id', myId);
-      if (cancelled) return;
-      if (error) {
-        console.error('[network_ping_stats] échec de la lecture :', error.message);
-        return;
-      }
-      const totals = (data ?? []).reduce(
-        (acc, row) => ({
-          deathsAnalyzed: acc.deathsAnalyzed + row.deaths_analyzed,
-          deathsNearSpike: acc.deathsNearSpike + row.deaths_near_spike,
-        }),
-        { deathsAnalyzed: 0, deathsNearSpike: 0 },
-      );
-      lastPushed = {
-        userId: myId,
-        deathsAnalyzed: pingStats.deathsAnalyzed,
-        deathsNearSpike: pingStats.deathsNearSpike,
-        totals,
-      };
-      setAccountTotals(totals);
-    });
+    pushAndReadTotals(myId, pingStats.deathsAnalyzed, pingStats.deathsNearSpike)
+      .catch((err) => {
+        console.error('[network_ping_stats] échec de la remontée :', err?.message ?? err);
+        return null;
+      })
+      .then((totals) => {
+        if (cancelled) return;
+        setAccountTotals(totals);
+        setTotalsLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -186,7 +201,7 @@ function NetworkTab({ settings, matches, pingSamples, myId }) {
                 {t('network.correlationSummary', { percent: percent.toFixed(0) })}
               </p>
               <LoadingGate
-                active={accountTotals === null}
+                active={totalsLoading}
                 fallback={
                   <Skeleton>
                     <p className="label" style={{ marginTop: '0.5rem' }}>

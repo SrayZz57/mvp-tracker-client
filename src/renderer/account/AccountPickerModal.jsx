@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from './supabaseClient.js';
 import { PROFILE_FIELDS } from '../social/friendsShared.jsx';
 import Button from '../ui/Button';
-import { AccountSearchSkeleton } from '../ui/skeletons.jsx';
-import LoadingGate from '../ui/LoadingGate.jsx';
 
 function AccountPickerModal({ onSelect, onClose }) {
   const { t } = useTranslation();

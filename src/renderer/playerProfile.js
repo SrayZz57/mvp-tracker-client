@@ -26,16 +26,46 @@ export const WEAKNESS_RECOMMENDATIONS = {
   positioning: { tab: 'aim-trainer', mode: 'reflex', key: 'positioning' },
 };
 
-const MAX_WEAKNESSES = 3;
+const MAX_WEAKNESSES = 4;
+// Amplitude du mélange journalier, en points de score — assez pour
+// permuter l'ordre entre dimensions proches ou faire remonter un 5e/6e axe
+// pas loin derrière, jamais assez pour faire passer un point fort (score
+// élevé) pour un point faible.
+const JITTER_RANGE = 20;
+
+// PRNG déterministe (mulberry32) — pas besoin de vraie aléatoire, juste
+// d'une valeur stable pour une graine donnée (même jour + même dimension
+// → même résultat, mais qui change le lendemain).
+function seededRandom(seed) {
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// Graine du jour (change chaque jour à minuit local, stable le reste de la
+// journée) combinée au nom de la dimension, pour que chaque axe reçoive un
+// décalage différent plutôt que tous le même.
+function dailyJitter(dimension) {
+  const now = new Date();
+  const dayKey = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  let hash = dayKey;
+  for (let i = 0; i < dimension.length; i += 1) hash = (hash * 31 + dimension.charCodeAt(i)) | 0;
+  return (seededRandom(hash >>> 0) - 0.5) * JITTER_RANGE;
+}
 
 // Dimensions à travailler en priorité : classées par tendance relative (les
-// scores les plus bas d'abord), pas juste celles tombées sous le seuil
-// 'low' — sinon un joueur avec un seul vrai point faible et le reste en
-// milieu de tableau ne voyait jamais ses 2e/3e axes les plus fragiles.
+// scores les plus bas d'abord, légèrement mélangés chaque jour via
+// dailyJitter — demandé pour que l'onglet ne fige pas indéfiniment sur
+// exactement les mêmes axes si les scores ne bougent pas d'un jour à
+// l'autre), pas juste celles tombées sous le seuil 'low' — sinon un joueur
+// avec un seul vrai point faible et le reste en milieu de tableau ne
+// voyait jamais ses axes suivants les plus fragiles.
 export function getWeaknesses(scores) {
   return Object.entries(scores)
     .filter(([, value]) => value !== null)
-    .sort((a, b) => a[1] - b[1])
+    .map(([dimension, value]) => [dimension, value, value + dailyJitter(dimension)])
+    .sort((a, b) => a[2] - b[2])
     .slice(0, MAX_WEAKNESSES)
     .map(([dimension, value]) => ({ dimension, value, ...WEAKNESS_RECOMMENDATIONS[dimension] }));
 }

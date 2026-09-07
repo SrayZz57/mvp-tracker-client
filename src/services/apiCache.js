@@ -58,6 +58,7 @@ export function write(key, value) {
 }
 
 export function forget(key) {
+  inFlight.delete(key);
   if (key in entries) {
     delete entries[key];
     persist();
@@ -77,9 +78,12 @@ export async function remember(key, ttlMs, producer) {
   }
 
   misses += 1;
+  const isCurrent = () => inFlight.get(key) === promise;
   const promise = (async () => producer())()
-    .then((value) => write(key, value))
-    .finally(() => inFlight.delete(key));
+    .then((value) => (isCurrent() ? write(key, value) : value))
+    .finally(() => {
+      if (isCurrent()) inFlight.delete(key);
+    });
   inFlight.set(key, promise);
   return promise;
 }

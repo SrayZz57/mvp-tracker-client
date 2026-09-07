@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { app } from 'electron';
 import { ABILITY_WEAPON_NAMES } from './matchNormalizer.js';
-import { debug } from '../logger.js';
+import { debug, maskPuuid } from '../logger.js';
 
 const db = new DatabaseSync(path.join(app.getPath('userData'), 'matches.db'));
 
@@ -293,7 +293,7 @@ export function saveMatches(puuid, matches) {
     insert.run(match.metadata.matchid, puuid, match.metadata.game_start, JSON.stringify(match));
   }
   if (skipped > 0) {
-    console.error(`[db] saveMatches (puuid=${puuid}) : ${skipped}/${matches.length} match(s) ignoré(s) · metadata.matchid manquant`);
+    console.error(`[db] saveMatches (puuid=${maskPuuid(puuid)}) : ${skipped}/${matches.length} match(s) ignoré(s) · metadata.matchid manquant`);
   }
   invalidateMatchCache(puuid);
 }

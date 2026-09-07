@@ -584,10 +584,13 @@ async function syncAndReadMatches({ name, tag, apiKey, force = false }) {
 ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey, force = false }) => {
   const key = `${String(name).toLowerCase()}#${String(tag).toLowerCase()}`;
   const pending = matchSyncInFlight.get(key);
-  if (pending) return pending;
+  if (pending && (!force || pending.force)) return pending.promise;
 
-  const promise = syncAndReadMatches({ name, tag, apiKey, force }).finally(() => matchSyncInFlight.delete(key));
-  matchSyncInFlight.set(key, promise);
+  const run = () => syncAndReadMatches({ name, tag, apiKey, force });
+  const promise = (pending ? pending.promise.then(run, run) : run()).finally(() => {
+    if (matchSyncInFlight.get(key)?.promise === promise) matchSyncInFlight.delete(key);
+  });
+  matchSyncInFlight.set(key, { promise, force });
   return promise;
 });
 
@@ -756,6 +759,9 @@ function createAgentSelectOverlay() {
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 

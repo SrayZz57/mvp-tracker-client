@@ -208,7 +208,16 @@ autoUpdater.on('update-downloaded', (_event, releaseNotes, releaseName) => {
 });
 
 ipcMain.handle('app-update:get-status', () => pendingUpdate);
-ipcMain.handle('app-update:install', () => autoUpdater.quitAndInstall());
+// `isQuitting` doit passer à true AVANT quitAndInstall() : sinon le handler
+// 'close' de mainWindow (voir plus bas, réduit dans la tray au lieu de
+// fermer) intercepte la fermeture déclenchée par la mise à jour et cache la
+// fenêtre au lieu de la laisser vraiment quitter — l'app restait plantée en
+// arrière-plan dans le Gestionnaire des tâches au lieu de relancer la
+// nouvelle version (signalé sur Discord).
+ipcMain.handle('app-update:install', () => {
+  isQuitting = true;
+  autoUpdater.quitAndInstall();
+});
 
 // Si le joueur ferme l'app sans avoir cliqué sur le bouton "Redémarrer" (ex.
 // il ferme juste sa session de jeu), on applique quand même la mise à jour

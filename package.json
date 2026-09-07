@@ -1,7 +1,7 @@
 {
   "name": "mvp-tracker",
   "productName": "MVP Tracker",
-  "version": "1.9.6",
+  "version": "1.9.7",
   "description": "Tracker de stats Valorant qui croise performance, réseau et rythme de jeu.",
   "main": ".vite/build/main.js",
   "private": true,

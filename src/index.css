@@ -67,18 +67,24 @@ html, body, #root {
   height: 100%;
 }
 
-/* Coupe toutes les animations CSS d'un coup quand la fenêtre n'est plus au
-   premier plan OU qu'une partie est en cours (voir renderer.jsx) — sinon les
-   halos/pulses décoratifs continuent de solliciter la carte graphique même
-   app en arrière-plan/réduite dans la barre système, ou même au premier plan
-   sur un second écran pendant une game, ce qui a un vrai coût (latence
-   d'affichage signalée par des testeurs). `!important` volontaire : plus
-   fiable que de traquer individuellement les ~20 animations existantes (et
-   celles à venir) pour leur ajouter la même condition de pause. Purement
-   visuel, rien de fonctionnel n'en dépend. */
-body.app-unfocused *,
-body.app-in-match * {
-  animation-play-state: paused !important;
+/* Coupe les animations décoratives EN BOUCLE (halos, pulses...) quand la
+   fenêtre n'est plus au premier plan OU qu'une partie est en cours (voir
+   renderer.jsx) — sinon elles continuent de solliciter la carte graphique
+   même app en arrière-plan/réduite dans la barre système, ou même au premier
+   plan sur un second écran pendant une game (latence d'affichage signalée
+   par des testeurs).
+   Volontairement PAS un `* { animation-play-state: paused }` global : ça
+   gelait aussi les animations d'ENTRÉE à une seule répétition (fondu
+   d'ouverture d'un onglet, popup d'une modale...) si elles démarraient
+   pendant que l'app était déjà en partie/hors focus — l'élément restait
+   figé à son état de départ (souvent invisible), l'onglet Stats apparaissait
+   vide en jeu (signalé en vrai). Chaque animation en boucle référence donc
+   explicitement cette variable (`animation-play-state: var(--decor-anim-state,
+   running);`, ~20 endroits) plutôt que d'être coupée par un sélecteur
+   générique — les animations ponctuelles n'y touchent jamais. */
+body.app-unfocused,
+body.app-in-match {
+  --decor-anim-state: paused;
 }
 
 body {
@@ -116,6 +122,7 @@ body::before {
     radial-gradient(34% 38% at 88% 82%, rgba(90, 120, 255, 0.09), transparent 70%),
     radial-gradient(50% 50% at 50% 0%, rgba(255, 255, 255, 0.028), transparent 72%);
   animation: aurora-drift 46s var(--ease-in-out) infinite alternate;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 /* Une fois dans l'app (au-delà des écrans de bienvenue/connexion), le halo
@@ -624,6 +631,7 @@ h1 {
    découvrir la feature Tournois, pas juste signaler un compteur habituel. */
 .sidebar-link-badge.glow {
   animation: sidebarBadgePulse 1.8s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes sidebarBadgePulse {
@@ -964,6 +972,7 @@ h1 {
   font-weight: 700;
   font-size: 0.86rem;
   animation: update-ready-pulse 2s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .update-ready-button:hover {
@@ -1011,6 +1020,7 @@ h1 {
   filter: blur(70px);
   opacity: 0.35;
   animation: welcome-orb-drift ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .welcome-orb-1 {
@@ -1415,6 +1425,7 @@ h1 {
   border: 3px solid rgba(255, 70, 85, 0.2);
   border-top-color: var(--accent);
   animation: loading-spin 0.8s linear infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes loading-spin {
@@ -1521,6 +1532,7 @@ h1 {
   filter: blur(10px);
   pointer-events: none;
   animation: rank-glow-breathe-soft 5s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes rank-glow-breathe-soft {
@@ -1772,6 +1784,7 @@ h1 {
   border-color: #3ddc84;
   background: rgba(61, 220, 132, 0.08);
   animation: network-pulse-glow 2s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .status-dot-lg {
@@ -1795,6 +1808,7 @@ h1 {
   border-radius: 50%;
   background: #3ddc84;
   animation: status-dot-radar 1.8s ease-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .skeleton-block {
@@ -1810,6 +1824,7 @@ h1 {
   background: linear-gradient(90deg, var(--surface-alt) 25%, #2c303a 50%, var(--surface-alt) 75%);
   background-size: 200% 100%;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes skeleton-pulse {
@@ -2188,6 +2203,7 @@ h1 {
   background: linear-gradient(135deg, rgba(255, 184, 77, 0.12), rgba(255, 184, 77, 0.02));
   box-shadow: 0 0 24px rgba(255, 184, 77, 0.12);
   animation: tilt-glow 3s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .tilt-card-header {
@@ -2756,6 +2772,7 @@ li {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
   transform: skewX(-20deg);
   animation: aim-topbar-sheen 4.5s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes aim-topbar-sheen {
@@ -4912,6 +4929,7 @@ input[type='color'] {
    qui clippe la bannière à l'intérieur. Respire doucement au lieu d'un glow figé. */
 .profile-header-card.rank-glow {
   animation: rank-glow-breathe 4s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes rank-glow-breathe {
@@ -5267,6 +5285,7 @@ input[type='color'] {
   z-index: 90;
   transition: width 0.2s ease, box-shadow 0.2s ease;
   animation: weekly-notch-pulse 2.5s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .weekly-notch:hover {
@@ -7888,6 +7907,7 @@ input[type='color'] {
 
 .friend-summary-banner.rank-glow {
   animation: rank-glow-breathe 4s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .friend-summary-banner-overlay {
@@ -8268,6 +8288,7 @@ input[type='color'] {
   border-radius: 50%;
   background: #50c878;
   animation: tournamentStatusPulse 1.6s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes tournamentStatusPulse {
@@ -8495,6 +8516,7 @@ input[type='color'] {
   color: var(--accent, #ff4655);
   filter: drop-shadow(0 0 24px rgba(255, 70, 85, 0.35));
   animation: tournamentsPromoFloat 4s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
   /* Décalage réglé à l'œil pour tomber au-dessus de l'espace entre
      "TOURNOI" et "POUR" dans le titre FR — purement cosmétique, à
      rajuster si le texte change. */
@@ -8806,6 +8828,7 @@ input[type='color'] {
   object-fit: contain;
   filter: drop-shadow(0 0 28px rgba(120, 60, 255, 0.55)) drop-shadow(0 0 60px rgba(255, 60, 220, 0.25));
   animation: tournamentsPromoFloat 5s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes tournamentsPromoFloat {
@@ -8993,6 +9016,7 @@ input[type='color'] {
   border-radius: inherit;
   z-index: -1;
   animation: bracketChampionGlow 2.2s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -9206,6 +9230,7 @@ input[type='color'] {
 
 .bracket-match.champion {
   animation: bracketChampionGlow 2.2s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes bracketChampionGlow {
@@ -9422,6 +9447,7 @@ input[type='color'] {
   border-radius: 50%;
   background: var(--accent);
   animation: agent-select-pulse 1.6s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 @keyframes agent-select-pulse {
@@ -9452,6 +9478,7 @@ input[type='color'] {
   border-radius: 50%;
   background: #3ddc84;
   animation: agent-select-pulse 1.6s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
 .session-end-btn {

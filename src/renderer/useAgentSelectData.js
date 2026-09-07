@@ -52,34 +52,45 @@ export function useAgentSelectData() {
         const result = await window.electronAPI.getAgentSelect();
         if (cancelled) return;
 
-        const matchId = result.state === 'ok' ? result.matchId : null;
-        if (matchId !== lastMatchIdRef.current) {
-          // Nouveau match, ou plus de match du tout : la décision de
-          // masquage précédente ne concernait que l'ancien.
-          lastMatchIdRef.current = matchId;
-          hiddenMatchIdRef.current = null;
-          hadSelectPhaseRef.current = false;
-          clearHideTimer();
+        // Uniquement si l'API répond vraiment sur un match : un résultat
+        // non-'ok' (blip passager de l'API locale — non officielle, un raté
+        // ponctuel est normal) ne doit JAMAIS être traité comme "on a quitté
+        // le match". Sinon la mémoire "overlay déjà masqué pour ce match"
+        // est effacée par erreur, et le prochain poll qui retrouve la MÊME
+        // partie en cours la prend pour une nouvelle — l'overlay réapparaît
+        // en pleine game pour un nouveau délai de 25-30s (signalé en vrai).
+        if (result.state === 'ok') {
+          const matchId = result.matchId;
+          if (matchId !== lastMatchIdRef.current) {
+            // Vrai nouveau match : la décision de masquage précédente ne
+            // concernait que l'ancien.
+            lastMatchIdRef.current = matchId;
+            hiddenMatchIdRef.current = null;
+            hadSelectPhaseRef.current = false;
+            clearHideTimer();
+          }
+
+          if (result.phase === 'select') {
+            hadSelectPhaseRef.current = true;
+          }
+
+          const inGame = result.phase === 'game';
+          const hasEnemies = inGame && result.players.some((p) => p.team === 'enemy');
+          const shouldStartHideTimer = hadSelectPhaseRef.current ? hasEnemies : inGame;
+          const hideDelay = hadSelectPhaseRef.current ? AUTO_HIDE_AFTER_ENEMIES_MS : AUTO_HIDE_NO_SELECT_MS;
+
+          if (shouldStartHideTimer && !hideTimerRef.current && hiddenMatchIdRef.current !== matchId) {
+            hideTimerRef.current = setTimeout(() => {
+              hiddenMatchIdRef.current = matchId;
+              hideTimerRef.current = null;
+              if (!cancelled) setData({ state: 'idle' });
+            }, hideDelay);
+          }
+
+          setData(matchId === hiddenMatchIdRef.current ? { state: 'idle' } : result);
+        } else {
+          setData(result);
         }
-
-        if (result.state === 'ok' && result.phase === 'select') {
-          hadSelectPhaseRef.current = true;
-        }
-
-        const inGame = result.state === 'ok' && result.phase === 'game';
-        const hasEnemies = inGame && result.players.some((p) => p.team === 'enemy');
-        const shouldStartHideTimer = hadSelectPhaseRef.current ? hasEnemies : inGame;
-        const hideDelay = hadSelectPhaseRef.current ? AUTO_HIDE_AFTER_ENEMIES_MS : AUTO_HIDE_NO_SELECT_MS;
-
-        if (shouldStartHideTimer && !hideTimerRef.current && hiddenMatchIdRef.current !== matchId) {
-          hideTimerRef.current = setTimeout(() => {
-            hiddenMatchIdRef.current = matchId;
-            hideTimerRef.current = null;
-            if (!cancelled) setData({ state: 'idle' });
-          }, hideDelay);
-        }
-
-        setData(matchId !== null && matchId === hiddenMatchIdRef.current ? { state: 'idle' } : result);
       } catch {
         // L'API locale est non officielle : un échec ne doit jamais casser
         // l'interface, on retentera au prochain tour.

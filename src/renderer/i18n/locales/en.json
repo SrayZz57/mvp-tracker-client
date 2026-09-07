@@ -152,7 +152,6 @@
       "session": "Guided session",
       "aimTrainer": "Aim Trainer",
       "puzzle": "Daily puzzle",
-      "bets": "Self bets",
       "playSessions": "Sessions",
       "crosshairs": "Crosshairs",
       "strategy": "Strategy",
@@ -623,33 +622,6 @@
     "notAnsweredYet": "Not answered yet",
     "goodIntuition": "Good intuition",
     "missed": "Missed"
-  },
-  "bets": {
-    "title": "Self bets",
-    "pointsUnit": "pts",
-    "accumulatedPoints": "Points accumulated",
-    "description": "Before starting a session, bet virtually on your performance. The bet resolves itself as soon as your next match shows up in your history.",
-    "currentBetTitle": "Active bet",
-    "waitingNextMatch": "Waiting for your next match to resolve automatically.",
-    "cancelBet": "Cancel bet",
-    "placeBetTitle": "Place a bet",
-    "placeBetBtn": "Place bet",
-    "historyTitle": "Bet history",
-    "noHistory": "No bet resolved yet.",
-    "wonPoints": "+{{points}} pts",
-    "lostPoints": "0 pt",
-    "types": {
-      "kills": "Get X+ kills",
-      "duelWinrate": "Win more than X% of my duels",
-      "hsPercent": "Get X%+ headshot accuracy",
-      "win": "Win this match"
-    },
-    "describe": {
-      "kills": "Get {{threshold}}+ kills",
-      "duelWinrate": "Win more than {{threshold}}% of my duels",
-      "hsPercent": "Get {{threshold}}%+ headshot accuracy",
-      "win": "Win this match"
-    }
   },
   "playSessions": {
     "title": "Current session",

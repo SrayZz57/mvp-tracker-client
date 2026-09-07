@@ -61,14 +61,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startPlaySession: () => ipcRenderer.invoke('play-session:start'),
   endPlaySession: (id) => ipcRenderer.invoke('play-session:end', id),
   getPlaySessionHistory: (limit) => ipcRenderer.invoke('play-session:history', limit),
-  getPendingBet: () => ipcRenderer.invoke('bet:get-pending'),
-  createBet: (type, threshold, baselineMatchId) =>
-    ipcRenderer.invoke('bet:create', { type, threshold, baselineMatchId }),
-  cancelBet: (id) => ipcRenderer.invoke('bet:cancel', id),
-  resolveBet: (id, resolvedMatchId, actualValue, won, points) =>
-    ipcRenderer.invoke('bet:resolve', { id, resolvedMatchId, actualValue, won, points }),
-  getBetHistory: (limit) => ipcRenderer.invoke('bet:history', limit),
-  getTotalBetPoints: () => ipcRenderer.invoke('bet:total-points'),
   getMatchAssessment: (matchId) => ipcRenderer.invoke('assessment:get', matchId),
   saveMatchAssessment: (matchId, date, map, answersJson) =>
     ipcRenderer.invoke('assessment:save', { matchId, date, map, answersJson }),

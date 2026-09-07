@@ -166,23 +166,6 @@ db.exec(`
   )
 `);
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS bets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    puuid TEXT NOT NULL DEFAULT '',
-    type TEXT NOT NULL,
-    threshold REAL,
-    baseline_match_id TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    resolved_match_id TEXT,
-    actual_value REAL,
-    won INTEGER,
-    points INTEGER,
-    created_at INTEGER NOT NULL,
-    resolved_at INTEGER
-  )
-`);
-
 // UNIQUE(match_id, puuid) — pas match_id seul : un match partagé entre deux
 // comptes suivis (ou une simple re-tentative) faisait échouer silencieusement
 // l'enregistrement dès qu'une ligne existait déjà pour ce match_id, peu importe
@@ -288,7 +271,6 @@ function addPuuidColumn(table) {
 
 addPuuidColumn('strategies');
 addPuuidColumn('crosshairs');
-addPuuidColumn('bets');
 addPuuidColumn('match_assessments');
 addPuuidColumn('ping_samples');
 
@@ -349,7 +331,7 @@ recreateWithCompositeUnique(
 // actuellement configuré, pour ne pas perdre l'historique déjà là.
 export function backfillLegacyPuuid(puuid) {
   if (!puuid) return;
-  ['strategies', 'crosshairs', 'bets', 'match_assessments', 'puzzles', 'weekly_narratives', 'ping_samples'].forEach((table) => {
+  ['strategies', 'crosshairs', 'match_assessments', 'puzzles', 'weekly_narratives', 'ping_samples'].forEach((table) => {
     db.prepare(`UPDATE ${table} SET puuid = ? WHERE puuid = ''`).run(puuid);
   });
 }
@@ -487,45 +469,6 @@ export function saveActMatchStats(puuid, rows) {
 
 export function getActMatchStats(puuid) {
   return db.prepare('SELECT match_id, season_id, queue_id, agent, kills, deaths FROM act_match_stats WHERE puuid = ?').all(puuid);
-}
-
-export function getPendingBet(puuid) {
-  return (
-    db
-      .prepare("SELECT * FROM bets WHERE status = 'pending' AND puuid = ? ORDER BY created_at DESC LIMIT 1")
-      .get(puuid) ?? null
-  );
-}
-
-export function createBet(puuid, type, threshold, baselineMatchId) {
-  db.prepare(
-    "INSERT INTO bets (puuid, type, threshold, baseline_match_id, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)",
-  ).run(puuid, type, threshold ?? null, baselineMatchId ?? null, Date.now());
-  return getPendingBet(puuid);
-}
-
-export function cancelBet(puuid, id) {
-  db.prepare("DELETE FROM bets WHERE id = ? AND puuid = ? AND status = 'pending'").run(id, puuid);
-}
-
-export function resolveBet(puuid, id, resolvedMatchId, actualValue, won, points) {
-  db.prepare(
-    "UPDATE bets SET status = 'resolved', resolved_match_id = ?, actual_value = ?, won = ?, points = ?, resolved_at = ? WHERE id = ? AND puuid = ?",
-  ).run(resolvedMatchId, actualValue, won ? 1 : 0, points, Date.now(), id, puuid);
-  return db.prepare('SELECT * FROM bets WHERE id = ?').get(id);
-}
-
-export function getBetHistory(puuid, limit) {
-  return db
-    .prepare("SELECT * FROM bets WHERE status = 'resolved' AND puuid = ? ORDER BY resolved_at DESC LIMIT ?")
-    .all(puuid, limit);
-}
-
-export function getTotalBetPoints(puuid) {
-  const row = db
-    .prepare("SELECT COALESCE(SUM(points), 0) as total FROM bets WHERE status = 'resolved' AND puuid = ?")
-    .get(puuid);
-  return row.total;
 }
 
 export function getAssessmentForMatch(puuid, matchId) {

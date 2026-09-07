@@ -28,12 +28,6 @@ import {
   getAssessmentForMatch,
   saveAssessment,
   getAssessmentHistory,
-  getPendingBet,
-  createBet,
-  cancelBet,
-  resolveBet,
-  getBetHistory,
-  getTotalBetPoints,
   getActivePlaySession,
   startPlaySession,
   endPlaySession,
@@ -1214,22 +1208,6 @@ ipcMain.handle('play-session:end', (_event, id) => {
 ipcMain.handle('play-session:history', (_event, limit) =>
   currentPuuid() ? getPlaySessionHistory(currentPuuid(), limit ?? 30) : [],
 );
-
-ipcMain.handle('bet:get-pending', () => (currentPuuid() ? getPendingBet(currentPuuid()) : null));
-
-ipcMain.handle('bet:create', (_event, { type, threshold, baselineMatchId }) =>
-  createBet(currentPuuid(), type, threshold, baselineMatchId),
-);
-
-ipcMain.handle('bet:cancel', (_event, id) => cancelBet(currentPuuid(), id));
-
-ipcMain.handle('bet:resolve', (_event, { id, resolvedMatchId, actualValue, won, points }) =>
-  resolveBet(currentPuuid(), id, resolvedMatchId, actualValue, won, points),
-);
-
-ipcMain.handle('bet:history', (_event, limit) => (currentPuuid() ? getBetHistory(currentPuuid(), limit ?? 30) : []));
-
-ipcMain.handle('bet:total-points', () => (currentPuuid() ? getTotalBetPoints(currentPuuid()) : 0));
 
 ipcMain.handle('assessment:get', (_event, matchId) =>
   currentPuuid() ? getAssessmentForMatch(currentPuuid(), matchId) : null,

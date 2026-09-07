@@ -14,7 +14,6 @@ import {
   Clapperboard,
   Target,
   Dices,
-  Coins,
   Map,
   Puzzle as PuzzleIcon,
   Wallet,
@@ -51,7 +50,6 @@ import HallOfFameTab from './tabs/HallOfFameTab.jsx';
 import PerformanceChartsTab from './tabs/PerformanceChartsTab.jsx';
 import TeammatesRivalsTab from './tabs/TeammatesRivalsTab.jsx';
 import BuySimulatorTab from './tabs/BuySimulatorTab.jsx';
-import BetsTab from './tabs/BetsTab.jsx';
 import PlaySessionsTab from './tabs/PlaySessionsTab.jsx';
 import SessionGuideTab from './tabs/SessionGuideTab.jsx';
 import AimTrainerTab from './tabs/AimTrainerTab.jsx';
@@ -115,7 +113,6 @@ const NAV_SECTIONS = [
       { id: 'session', labelKey: 'nav.tabs.session', icon: Clapperboard },
       { id: 'aim-trainer', labelKey: 'nav.tabs.aimTrainer', icon: Target },
       { id: 'puzzle', labelKey: 'nav.tabs.puzzle', icon: Dices },
-      { id: 'bets', labelKey: 'nav.tabs.bets', icon: Coins },
     ],
   },
   {
@@ -827,8 +824,6 @@ function App() {
         return <MySkinsCollectionTab myId={session.user.id} />;
       case 'buy-simulator':
         return <BuySimulatorTab settings={settings} matches={data.matches} loading={data.loading} />;
-      case 'bets':
-        return <BetsTab settings={mySettings} matches={myMatches} />;
       case 'play-sessions':
         return <PlaySessionsTab settings={mySettings} matches={myMatches} apiKey={settings?.apiKey} />;
       case 'session':

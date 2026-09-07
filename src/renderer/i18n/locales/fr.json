@@ -152,7 +152,6 @@
       "session": "Session guidée",
       "aimTrainer": "Aim Trainer",
       "puzzle": "Puzzle du jour",
-      "bets": "Paris perso",
       "playSessions": "Sessions",
       "crosshairs": "Crosshairs",
       "strategy": "Stratégie",
@@ -623,33 +622,6 @@
     "notAnsweredYet": "Pas encore répondu",
     "goodIntuition": "Bonne intuition",
     "missed": "Loupé"
-  },
-  "bets": {
-    "title": "Paris perso",
-    "pointsUnit": "pts",
-    "accumulatedPoints": "Points accumulés",
-    "description": "Avant de lancer une session, parie virtuellement sur ta perf. Le pari se résout tout seul dès que ton prochain match apparaît dans l'historique.",
-    "currentBetTitle": "Pari en cours",
-    "waitingNextMatch": "En attente de ton prochain match pour être résolu automatiquement.",
-    "cancelBet": "Annuler le pari",
-    "placeBetTitle": "Placer un pari",
-    "placeBetBtn": "Placer le pari",
-    "historyTitle": "Historique des paris",
-    "noHistory": "Aucun pari résolu pour l'instant.",
-    "wonPoints": "+{{points}} pts",
-    "lostPoints": "0 pt",
-    "types": {
-      "kills": "Faire X+ kills",
-      "duelWinrate": "Gagner plus de X% de mes duels",
-      "hsPercent": "Avoir X%+ de précision tête",
-      "win": "Gagner ce match"
-    },
-    "describe": {
-      "kills": "Faire {{threshold}}+ kills",
-      "duelWinrate": "Gagner plus de {{threshold}}% de mes duels",
-      "hsPercent": "Avoir {{threshold}}%+ de précision tête",
-      "win": "Gagner ce match"
-    }
   },
   "playSessions": {
     "title": "Session en cours",

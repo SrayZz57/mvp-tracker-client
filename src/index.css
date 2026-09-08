@@ -6649,6 +6649,25 @@ input[type='color'] {
   color: var(--text-muted);
 }
 
+.hof-suggest-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.hof-suggest-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .achievement-group-track {
   height: 6px;
   border-radius: 999px;
@@ -7507,8 +7526,21 @@ input[type='color'] {
 .account-contact-button {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: 0.5rem;
   margin-top: 0.5rem;
+}
+
+.account-reset-form,
+.account-contact-form {
+  max-width: 100%;
+  margin: 0.75rem 0 0;
+}
+
+.account-contact-textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
 }
 
 .account-email-row {

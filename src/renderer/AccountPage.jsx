@@ -11,8 +11,7 @@ import AgentDetailModal from './AgentDetailModal.jsx';
 import IconPickerModal from './IconPickerModal.jsx';
 import { supabase } from './supabaseClient.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
-
-const CONTACT_EMAIL = 'mvptracker.app@gmail.com';
+import { useE2EE } from './E2EEContext.jsx';
 
 // Noms de rôles issus de valorant-api.com (appelée en fr-FR) — hors périmètre
 // de cette passe de traduction (voir CLAUDE.md / plan i18n), comparés tels
@@ -26,12 +25,20 @@ function formatMemberSince(isoDate, locale) {
 
 function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, onUpdate, onUpdateApiKey, onUpdateRiotId, onSignOut, onReplayOnboarding }) {
   const { t, i18n } = useTranslation();
+  const { unlockForUser } = useE2EE();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState(profile.display_name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
   const [resetStatus, setResetStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [apiKeyDraft, setApiKeyDraft] = useState(apiKey ?? '');
   const [savingApiKey, setSavingApiKey] = useState(false);
@@ -125,10 +132,63 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   const handleForgotPassword = async () => {
     if (!email) return;
     setResetStatus('sending');
+    setResetError(null);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'mvptracker://reset-password',
     });
     setResetStatus(error ? 'error' : 'sent');
+  };
+
+  const handleResetPassword = async (event) => {
+    event.preventDefault();
+    setResetError(null);
+    if (newPassword !== confirmPassword) {
+      setResetError(t('auth.passwordMismatch'));
+      return;
+    }
+    setResettingPassword(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: resetCode.trim(),
+      type: 'recovery',
+    });
+    if (verifyError) {
+      setResettingPassword(false);
+      setResetError(verifyError.message);
+      return;
+    }
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setResettingPassword(false);
+    if (updateError) {
+      setResetError(updateError.message);
+      return;
+    }
+    // Le nouveau mot de passe vient d'être posé côté Supabase à l'instant —
+    // sûr de régénérer la clé de messagerie (l'ancienne, enveloppée avec
+    // l'ancien mot de passe, est désormais irrécupérable).
+    if (updateData.user) unlockForUser(updateData.user.id, newPassword);
+    setResetStatus(null);
+    setResetCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleSendContact = async (event) => {
+    event.preventDefault();
+    const trimmed = contactMessage.trim();
+    if (!trimmed) return;
+    setContactStatus('sending');
+    // Même table que le formulaire du site (services/contact.ts côté
+    // mvp-tracker-site) — le Database Webhook + la fonction Edge
+    // contact-notify déjà en place s'en chargent, rien de spécifique à
+    // ajouter côté app.
+    const { error } = await supabase.from('contact_messages').insert({
+      name: profile.display_name || `${mySettings.name}#${mySettings.tag}`,
+      email,
+      message: trimmed,
+    });
+    setContactStatus(error ? 'error' : 'sent');
+    if (!error) setContactMessage('');
   };
 
   const handleSaveName = async () => {
@@ -398,18 +458,60 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
             {t('account.replayOnboarding')}
           </button>
         </div>
-        {resetStatus === 'sent' && <p className="label account-reset-status">{t('account.forgotPasswordSent')}</p>}
+        {resetStatus === 'sent' && (
+          <form className="account-auth-form account-reset-form" onSubmit={handleResetPassword}>
+            <p className="label account-reset-status">{t('account.forgotPasswordSent')}</p>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder={t('auth.codePlaceholder')}
+              value={resetCode}
+              onChange={(e) => setResetCode(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder={t('auth.newPasswordPlaceholder')}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <input
+              type="password"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <button type="submit" disabled={resettingPassword}>
+              {resettingPassword ? t('auth.validating') : t('auth.resetPassword')}
+            </button>
+            {resetError && <p className="warning">{resetError}</p>}
+          </form>
+        )}
         {resetStatus === 'error' && <p className="warning account-reset-status">{t('account.forgotPasswordError')}</p>}
       </CollapsibleCard>
 
       <CollapsibleCard id="account.contact" title={t('account.contactTitle')}>
         <p className="label">{t('account.contactHint')}</p>
-        <button
-          className="account-contact-button"
-          onClick={() => window.electronAPI.openExternal(`mailto:${CONTACT_EMAIL}`)}
-        >
-          <Icon icon={Mail} size={16} /> {CONTACT_EMAIL}
-        </button>
+        <form className="account-auth-form account-contact-form" onSubmit={handleSendContact}>
+          <textarea
+            className="account-contact-textarea"
+            placeholder={t('account.contactMessagePlaceholder')}
+            value={contactMessage}
+            onChange={(e) => setContactMessage(e.target.value)}
+            rows={4}
+            required
+          />
+          <button className="account-contact-button" type="submit" disabled={contactStatus === 'sending'}>
+            <Icon icon={Mail} size={16} />
+            {contactStatus === 'sending' ? t('account.contactSending') : t('account.contactSend')}
+          </button>
+        </form>
+        {contactStatus === 'sent' && <p className="label account-reset-status">{t('account.contactSent')}</p>}
+        {contactStatus === 'error' && <p className="warning account-reset-status">{t('account.contactError')}</p>}
       </CollapsibleCard>
 
       {avatarPickerOpen && (

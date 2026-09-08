@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Flame, Snowflake, Crown, Wrench, ListMusic } from 'lucide-react';
+import { Flame, Snowflake, Crown, Wrench, ListMusic, HelpCircle } from 'lucide-react';
 import { DEFAULT_CONFIG, MODES } from './AimTrainerGame.jsx';
 import Icon from './Icon.jsx';
 import {
@@ -24,6 +24,7 @@ import CrosshairPreview from './CrosshairPreview.jsx';
 import { supabase } from './supabaseClient.js';
 
 const SETTINGS_STORAGE_KEY = 'mvptracker-aim-trainer-settings';
+const TUTORIAL_SEEN_KEY = 'mvptracker-aim-trainer-tutorial-seen';
 
 const TARGET_COLORS = ['#ff4655', '#4ec9f5', '#3ddc84', '#ffc857', '#9b7bff', '#ffffff'];
 
@@ -108,6 +109,45 @@ function ModeGroupPicker({ titleKey, descKey, modeIds, activeModeId, personalBes
   );
 }
 
+// Demandé après plusieurs retours Discord : beaucoup d'utilisateurs
+// n'ouvraient jamais la carte "Comment ça marche" (repliable, en haut de
+// l'onglet) et ne savaient donc pas comment lancer une session ni régler
+// leur sensibilité pour qu'elle corresponde à Valorant. Un vrai popup à la
+// première visite de l'onglet force ces deux points à être vus au moins une
+// fois, plutôt que de compter sur une carte qu'on peut ignorer.
+function AimTrainerTutorialModal({ onClose, t }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="modal-close" onClick={onClose}>{t('detail.close')}</button>
+        <h3>{t('aimTrainer.tutorialTitle')}</h3>
+        <p className="label">{t('aimTrainer.tutorialIntro')}</p>
+
+        <div className="aim-howto-steps">
+          <div className="aim-howto-step">
+            <span className="aim-howto-num">1</span>
+            <div>
+              <strong>{t('aimTrainer.tutorialSensTitle')}</strong>
+              <span className="label">{t('aimTrainer.tutorialSensText')}</span>
+            </div>
+          </div>
+          <div className="aim-howto-step">
+            <span className="aim-howto-num">2</span>
+            <div>
+              <strong>{t('aimTrainer.tutorialLaunchTitle')}</strong>
+              <span className="label">{t('aimTrainer.tutorialLaunchText')}</span>
+            </div>
+          </div>
+        </div>
+
+        <button className="refresh" onClick={onClose} style={{ marginTop: '1rem' }}>
+          {t('aimTrainer.tutorialGotIt')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AimTrainer({ myId, matches, settings, apiKey }) {
   const { t } = useTranslation();
   const [config, setConfig] = useState(loadConfig);
@@ -123,8 +163,20 @@ function AimTrainer({ myId, matches, settings, apiKey }) {
   // chargé une fois (pas par ligne survolée) pour savoir quel bouton
   // proposer dans la carte au survol (voir AimLeaderboardRow.jsx).
   const [friendStatusByUser, setFriendStatusByUser] = useState({});
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const challenge = useMemo(() => buildDailyChallenge(todayKey()), []);
+
+  // Affiché une seule fois par compte, à la toute première ouverture de
+  // l'onglet — voir le commentaire sur AimTrainerTutorialModal ci-dessus.
+  useEffect(() => {
+    if (!myId) return;
+    const storageKey = `${TUTORIAL_SEEN_KEY}:${myId}`;
+    if (!localStorage.getItem(storageKey)) {
+      setShowTutorial(true);
+      localStorage.setItem(storageKey, '1');
+    }
+  }, [myId]);
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(config));
@@ -248,7 +300,16 @@ function AimTrainer({ myId, matches, settings, apiKey }) {
   return (
     <div>
       {/* --- Comment ça marche --------------------------------------------- */}
-      <CollapsibleCard id="aimTrainer.howto" title={t('aimTrainer.howtoTitle')} className="aim-howto-card">
+      <CollapsibleCard
+        id="aimTrainer.howto"
+        title={t('aimTrainer.howtoTitle')}
+        className="aim-howto-card"
+        headerExtra={
+          <button type="button" className="hof-suggest-button" onClick={() => setShowTutorial(true)}>
+            <Icon icon={HelpCircle} size={14} /> {t('aimTrainer.tutorialReplay')}
+          </button>
+        }
+      >
         <p className="label">{t('aimTrainer.howtoIntro')}</p>
 
         <div className="aim-howto-steps">
@@ -723,6 +784,8 @@ function AimTrainer({ myId, matches, settings, apiKey }) {
           }}
         />
       )}
+
+      {showTutorial && <AimTrainerTutorialModal t={t} onClose={() => setShowTutorial(false)} />}
     </div>
   );
 }

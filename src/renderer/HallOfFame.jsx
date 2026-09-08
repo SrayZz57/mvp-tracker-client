@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bomb, Flame, Target, Star, Lock } from 'lucide-react';
+import { Bomb, Flame, Target, Star, Lock, Plus } from 'lucide-react';
 import { computeHallOfFame } from './hallOfFame.js';
 import { deriveAchievements } from './achievements.js';
 import { useAgentPortraits } from './agentIcons.js';
+import { supabase } from './supabaseClient.js';
 import ConfettiBurst from './ConfettiBurst.jsx';
 import LoadingState from './LoadingState.jsx';
 import CollapsibleCard from './CollapsibleCard.jsx';
@@ -62,6 +63,57 @@ function AchievementBadge({ icon, color, title, description, unlocked, contextTe
   );
 }
 
+// Réutilise la table contact_messages (même pipeline que "Nous contacter" /
+// le formulaire du site : Database Webhook + fonction Edge contact-notify
+// déjà en place) plutôt que de créer un circuit dédié pour une simple boîte
+// à suggestions.
+function SuggestAchievementModal({ onClose, t }) {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setStatus('sending');
+    const { data: userData } = await supabase.auth.getUser();
+    const { error } = await supabase.from('contact_messages').insert({
+      name: userData?.user?.user_metadata?.display_name || userData?.user?.email || 'Joueur',
+      email: userData?.user?.email ?? '',
+      message: `[Suggestion de succès] ${trimmed}`,
+    });
+    setStatus(error ? 'error' : 'sent');
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="modal-close" onClick={onClose}>{t('detail.close')}</button>
+        <h3>{t('hallOfFame.suggestTitle')}</h3>
+        {status === 'sent' ? (
+          <p className="label">{t('hallOfFame.suggestSent')}</p>
+        ) : (
+          <form className="account-auth-form" onSubmit={handleSubmit}>
+            <textarea
+              className="account-contact-textarea"
+              placeholder={t('hallOfFame.suggestPlaceholder')}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={4}
+              autoFocus
+              required
+            />
+            <button type="submit" disabled={status === 'sending'}>
+              {status === 'sending' ? t('hallOfFame.suggestSending') : t('hallOfFame.suggestSend')}
+            </button>
+            {status === 'error' && <p className="warning">{t('hallOfFame.suggestError')}</p>}
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function HallOfFame({ settings, matches, loading }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'en' ? 'en-US' : 'fr-FR';
@@ -71,6 +123,7 @@ function HallOfFame({ settings, matches, loading }) {
   const totalCount = achievementGroups.reduce((sum, g) => sum + g.items.length, 0);
   const unlockedCount = achievementGroups.reduce((sum, g) => sum + g.items.filter((i) => i.unlocked).length, 0);
   const [celebrate, setCelebrate] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   // Compare aux succès déjà vus (stockés localement par compte) pour ne
   // fêter que ceux qui viennent réellement de tomber, pas ceux déjà connus
@@ -155,9 +208,16 @@ function HallOfFame({ settings, matches, loading }) {
       <CollapsibleCard
         id="hallOfFame.achievements"
         title={t('hallOfFame.achievementsTitle', { unlocked: unlockedCount, total: totalCount })}
+        headerExtra={
+          <button type="button" className="hof-suggest-button" onClick={() => setSuggestOpen(true)}>
+            <Icon icon={Plus} size={14} /> {t('hallOfFame.suggestButton')}
+          </button>
+        }
       >
         <p className="label">{t('hallOfFame.achievementsHint')}</p>
       </CollapsibleCard>
+
+      {suggestOpen && <SuggestAchievementModal t={t} onClose={() => setSuggestOpen(false)} />}
 
       {achievementGroups.map((group) => (
         <CollapsibleCard

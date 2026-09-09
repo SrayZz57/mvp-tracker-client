@@ -222,19 +222,14 @@ db.exec(`
   )
 `);
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS puzzles (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    puuid TEXT NOT NULL DEFAULT '',
-    date TEXT NOT NULL,
-    situation_json TEXT NOT NULL,
-    choice TEXT,
-    correct INTEGER,
-    created_at INTEGER NOT NULL,
-    answered_at INTEGER,
-    UNIQUE(puuid, date)
-  )
-`);
+// Puzzle du jour retiré (2026-09) : plus de CREATE TABLE pour les nouvelles
+// bases, et on nettoie la table des installations existantes — c'était une
+// fonctionnalité autonome (aucune autre table n'y référence de ligne).
+try {
+  db.exec('DROP TABLE IF EXISTS puzzles');
+} catch {
+  // rien à nettoyer
+}
 
 // Migration légère pour les bases déjà créées avant l'ajout de ces colonnes.
 try {
@@ -250,12 +245,12 @@ try {
 
 // Scoping par compte (2026-08-18) : ajoute `puuid` aux tables qui n'en avaient
 // pas encore, pour que consulter le tracker d'un autre joueur sur la même
-// machine ne mélange plus ses données avec les tiennes. `puzzles` et
-// `weekly_narratives` avaient une contrainte UNIQUE sur une seule colonne
-// (date / week_start) — SQLite ne permet pas de la transformer en UNIQUE
-// composite via ALTER TABLE, donc ces deux tables sont recréées avec le bon
-// schéma si elles existent encore sous l'ancienne forme (détecté via absence
-// de la colonne puuid), en conservant les lignes existantes.
+// machine ne mélange plus ses données avec les tiennes. `weekly_narratives`
+// avait une contrainte UNIQUE sur une seule colonne (week_start) — SQLite ne
+// permet pas de la transformer en UNIQUE composite via ALTER TABLE, donc
+// cette table est recréée avec le bon schéma si elle existe encore sous
+// l'ancienne forme (détecté via absence de la colonne puuid), en conservant
+// les lignes existantes.
 function tableHasColumn(table, column) {
   return db
     .prepare(`PRAGMA table_info(${table})`)
@@ -285,19 +280,7 @@ function recreateWithCompositeUnique(table, columns, uniqueCols) {
   }
   const legacyCols = columns.filter((c) => c !== 'puuid');
   db.exec(`ALTER TABLE ${table} RENAME TO ${table}_legacy`);
-  const createSql = table === 'puzzles'
-    ? `CREATE TABLE puzzles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        puuid TEXT NOT NULL DEFAULT '',
-        date TEXT NOT NULL,
-        situation_json TEXT NOT NULL,
-        choice TEXT,
-        correct INTEGER,
-        created_at INTEGER NOT NULL,
-        answered_at INTEGER,
-        UNIQUE(puuid, date)
-      )`
-    : `CREATE TABLE weekly_narratives (
+  db.exec(`CREATE TABLE weekly_narratives (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         puuid TEXT NOT NULL DEFAULT '',
         week_start TEXT NOT NULL,
@@ -306,8 +289,7 @@ function recreateWithCompositeUnique(table, columns, uniqueCols) {
         narrative_json TEXT NOT NULL,
         created_at INTEGER NOT NULL,
         UNIQUE(puuid, week_start)
-      )`;
-  db.exec(createSql);
+      )`);
   const hasPuuidInLegacy = tableHasColumn(`${table}_legacy`, 'puuid');
   const selectCols = legacyCols.map((c) => (c === 'puuid' ? "''" : c));
   db.exec(
@@ -316,11 +298,6 @@ function recreateWithCompositeUnique(table, columns, uniqueCols) {
   db.exec(`DROP TABLE ${table}_legacy`);
 }
 
-recreateWithCompositeUnique(
-  'puzzles',
-  ['id', 'puuid', 'date', 'situation_json', 'choice', 'correct', 'created_at', 'answered_at'],
-  ['puuid', 'date'],
-);
 recreateWithCompositeUnique(
   'weekly_narratives',
   ['id', 'puuid', 'week_start', 'recap_json', 'rank_json', 'narrative_json', 'created_at'],
@@ -331,7 +308,7 @@ recreateWithCompositeUnique(
 // actuellement configuré, pour ne pas perdre l'historique déjà là.
 export function backfillLegacyPuuid(puuid) {
   if (!puuid) return;
-  ['strategies', 'crosshairs', 'match_assessments', 'puzzles', 'weekly_narratives', 'ping_samples'].forEach((table) => {
+  ['strategies', 'crosshairs', 'match_assessments', 'weekly_narratives', 'ping_samples'].forEach((table) => {
     db.prepare(`UPDATE ${table} SET puuid = ? WHERE puuid = ''`).run(puuid);
   });
 }
@@ -511,31 +488,3 @@ export function getNarrativeHistory(puuid, limit) {
   return db.prepare('SELECT * FROM weekly_narratives WHERE puuid = ? ORDER BY week_start DESC LIMIT ?').all(puuid, limit);
 }
 
-export function getPuzzleByDate(puuid, date) {
-  return db.prepare('SELECT * FROM puzzles WHERE date = ? AND puuid = ?').get(date, puuid) ?? null;
-}
-
-export function savePuzzle(puuid, date, situationJson) {
-  db.prepare('INSERT INTO puzzles (puuid, date, situation_json, created_at) VALUES (?, ?, ?, ?)').run(
-    puuid,
-    date,
-    situationJson,
-    Date.now(),
-  );
-  return getPuzzleByDate(puuid, date);
-}
-
-export function answerPuzzle(puuid, date, choice, correct) {
-  db.prepare('UPDATE puzzles SET choice = ?, correct = ?, answered_at = ? WHERE date = ? AND puuid = ?').run(
-    choice,
-    correct ? 1 : 0,
-    Date.now(),
-    date,
-    puuid,
-  );
-  return getPuzzleByDate(puuid, date);
-}
-
-export function getPuzzleHistory(puuid, limit) {
-  return db.prepare('SELECT * FROM puzzles WHERE puuid = ? ORDER BY date DESC LIMIT ?').all(puuid, limit);
-}

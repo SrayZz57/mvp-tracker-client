@@ -1,10 +1,18 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAgentsById, useAgentIcons, useAgentRoles } from './agentIcons.js';
+import { useAgentsById, useAgentIcons, useAgentAbilities, useAgentRoles } from './agentIcons.js';
 import { useRankTiers } from './rankData.js';
 import { useAgentSelectData } from './useAgentSelectData.js';
 import { useMapUrlToName } from './mapImages.js';
 import { suggestAgents } from './agentSuggestion.js';
+import { getPistolRoundBuy, pistolRoundCost, LIGHT_SHIELD_COST, NO_STANDARD_BUY_MODE_IDS } from './pistolRoundBuys.js';
+import { useWeaponIcons, useShopArmors } from './weaponIcons.js';
+import { AGENT_ABILITY_COSTS } from './abilityCosts.js';
+
+// Durée d'affichage de l'overlay d'achat : le temps de la phase d'achat du
+// premier round, pas plus — passé ce délai il n'a plus rien à dire et n'a
+// aucune raison de rester par-dessus le jeu.
+const BUY_OVERLAY_MS = 40000;
 
 // =============================================================================
 // SÉLECTION D'AGENT EN DIRECT, PUIS DÉBUT DE PARTIE
@@ -74,6 +82,9 @@ function AgentSelectLive({ matches = [], settings = null }) {
   const { t } = useTranslation();
   const agentsById = useAgentsById();
   const agentIcons = useAgentIcons();
+  const agentAbilities = useAgentAbilities();
+  const weaponIcons = useWeaponIcons();
+  const shopArmors = useShopArmors();
   const agentRoles = useAgentRoles();
   const rankTiers = useRankTiers();
   const mapUrlToName = useMapUrlToName();
@@ -113,6 +124,85 @@ function AgentSelectLive({ matches = [], settings = null }) {
   useEffect(() => {
     window.electronAPI.setAgentSelectOverlayVisible(overlayVisible);
   }, [overlayVisible]);
+
+  // --- Overlay d'achat du round 1 -----------------------------------------
+  // Se déclenche à l'ENTRÉE en partie, une seule fois par match :
+  // `shownForMatch` évite qu'il revienne à chaque tour de polling tant qu'on
+  // est dans la même partie.
+  const shownForMatch = useRef(null);
+  // Les minuteurs vivent dans une ref, pas dans le cleanup de l'effet : le
+  // bandeau repasse en 'idle' au bout de 25-30 s (voir useAgentSelectData), et
+  // un cleanup les annulerait avant la fin des 40 s — l'overlay resterait
+  // alors affiché indéfiniment.
+  const buyTimers = useRef([]);
+
+  const myAgentName = me?.agentId ? agentsById.get(me.agentId.toLowerCase())?.name ?? null : null;
+
+  useEffect(() => {
+    if (!inGame || !data.matchId || !myAgentName) return;
+    if (shownForMatch.current === data.matchId) return;
+    // Deathmatch, Spike Rush, Skirmish (bots)... : pas de vrai round 1 à 800
+    // crédits, l'overlay n'a rien de pertinent à montrer.
+    // TEMPORAIRE — à retirer une fois l'identifiant de mode des parties
+    // personnalisées confirmé en vrai (aucune doc publique ne le liste) :
+    // ce log remonte jusqu'au terminal (voir console-message sur mainWindow
+    // dans main.js), donc visible sans ouvrir les DevTools.
+    console.log('[buy-overlay] mode détecté :', JSON.stringify(data.mode));
+    if (NO_STANDARD_BUY_MODE_IDS.has(data.mode)) {
+      console.log('[buy-overlay] mode exclu, overlay non déclenché');
+      shownForMatch.current = data.matchId;
+      return;
+    }
+    // Les capacités arrivent d'un fetch : tant qu'elles ne sont pas là, on
+    // laisse le prochain rendu réessayer plutôt que d'afficher une liste vide.
+    const abilities = agentAbilities.get(myAgentName);
+    if (!abilities) return;
+
+    const buy = getPistolRoundBuy(myAgentName);
+    if (!buy) return;
+
+    shownForMatch.current = data.matchId;
+
+    const bySlot = new Map(abilities.map((ability) => [ability.slot, ability]));
+    // Même quand on garde le Classic (buy.weapon === null), il a lui aussi
+    // une icône — on la montre au lieu de laisser juste un libellé texte.
+    const lightShield = shopArmors.find((armor) => armor.cost === LIGHT_SHIELD_COST);
+    const loadout = {
+      agentName: myAgentName,
+      agentIcon: agentIcons.get(myAgentName) ?? null,
+      weapon: buy.weapon,
+      weaponIcon: weaponIcons.get(buy.weapon ?? 'Classic') ?? null,
+      shield: buy.shield,
+      shieldIcon: buy.shield === 'light' ? lightShield?.icon ?? null : null,
+      abilities: buy.abilities.map(({ slot, count }) => ({
+        slot,
+        count,
+        name: bySlot.get(slot)?.name ?? slot,
+        icon: bySlot.get(slot)?.icon ?? null,
+      })),
+      cost: pistolRoundCost(buy, AGENT_ABILITY_COSTS[myAgentName]),
+      noteKey: buy.noteKey ?? null,
+    };
+
+    buyTimers.current.forEach(clearTimeout);
+    window.electronAPI.setBuyOverlayVisible(true);
+    // La fenêtre vient d'être créée : ce court délai laisse son rendu se
+    // monter avant de lui envoyer le contenu, sinon l'écouteur IPC n'est pas
+    // encore branché et le message se perd.
+    buyTimers.current = [
+      setTimeout(() => window.electronAPI.setBuyOverlayLoadout(loadout), 500),
+      setTimeout(() => window.electronAPI.setBuyOverlayVisible(false), BUY_OVERLAY_MS),
+    ];
+  }, [inGame, data.matchId, data.mode, myAgentName, agentAbilities, agentIcons, weaponIcons, shopArmors]);
+
+  // Fermeture de l'app : on ne laisse jamais la fenêtre overlay derrière nous.
+  useEffect(
+    () => () => {
+      buyTimers.current.forEach(clearTimeout);
+      window.electronAPI.setBuyOverlayVisible(false);
+    },
+    [],
+  );
 
   if (data.state !== 'ok' || data.players.length === 0) return null;
 

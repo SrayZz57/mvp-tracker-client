@@ -43,6 +43,7 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   const [apiKeyDraft, setApiKeyDraft] = useState(apiKey ?? '');
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [overlayEnabled, setOverlayEnabled] = useState(true);
+  const [buyOverlayEnabled, setBuyOverlayEnabled] = useState(true);
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(true);
   // Agent choisi depuis la carte au survol de la répartition par rôle
   // (RoleStackedBar) — demandé sur Discord, ouvre les mêmes stats détaillées
@@ -59,6 +60,7 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
 
   useEffect(() => {
     window.electronAPI.getAgentSelectOverlayEnabled().then(setOverlayEnabled);
+    window.electronAPI.getBuyOverlayEnabled().then(setBuyOverlayEnabled);
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
   }, []);
 
@@ -66,6 +68,12 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
     const next = !overlayEnabled;
     setOverlayEnabled(next);
     window.electronAPI.setAgentSelectOverlayEnabled(next);
+  };
+
+  const handleToggleBuyOverlay = () => {
+    const next = !buyOverlayEnabled;
+    setBuyOverlayEnabled(next);
+    window.electronAPI.setBuyOverlayEnabled(next);
   };
 
   const handleToggleAutoLaunch = () => {
@@ -437,6 +445,16 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
           </span>
         </label>
         <p className="label account-toggle-hint">{t('account.agentSelectOverlayHint')}</p>
+        <label className="account-email-row account-toggle-row">
+          <span className="account-tile-label">{t('account.buyOverlayLabel')}</span>
+          <span className={`switch ${buyOverlayEnabled ? 'on' : ''}`}>
+            <input type="checkbox" checked={buyOverlayEnabled} onChange={handleToggleBuyOverlay} />
+            <span className="switch-track">
+              <span className="switch-thumb" />
+            </span>
+          </span>
+        </label>
+        <p className="label account-toggle-hint">{t('account.buyOverlayHint')}</p>
         <label className="account-email-row account-toggle-row">
           <span className="account-tile-label">{t('account.autoLaunchLabel')}</span>
           <span className={`switch ${autoLaunchEnabled ? 'on' : ''}`}>

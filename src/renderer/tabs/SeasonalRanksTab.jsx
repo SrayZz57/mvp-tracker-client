@@ -11,8 +11,9 @@ import CollapsibleCard from '../CollapsibleCard.jsx';
 const REFRESH_MS = 10000;
 
 // Mêmes exclusions que excludeDeathmatch (valorantStats.js) : Combat à mort,
-// partie perso, Escalade — pas de vraies équipes/rounds/K-D comparables.
-const EXCLUDED_QUEUE_IDS = new Set(['deathmatch', 'custom', '', 'ggteam']);
+// partie perso, Escalade, Team Deathmatch — pas de vraies équipes/rounds/K-D
+// comparables.
+const EXCLUDED_QUEUE_IDS = new Set(['deathmatch', 'custom', '', 'ggteam', 'hurm', 'console_hurm']);
 
 // Rang par acte : tout vient de l'API LOCALE du client Riot (jamais
 // HenrikDev pour cet onglet — plafonné à 40 matchs, largement insuffisant

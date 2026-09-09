@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearCachedMessagingKey: (userId) => ipcRenderer.invoke('messaging:clear-cached-key', userId),
   getMatches: (settings) => ipcRenderer.invoke('valorant:get-matches', settings),
   previewRiotAccount: (payload) => ipcRenderer.invoke('valorant:preview-account', payload),
+  previewRecentStats: (payload) => ipcRenderer.invoke('valorant:preview-recent-stats', payload),
   getCachedMatches: () => ipcRenderer.invoke('valorant:get-cached-matches'),
   getCachedMatchesFor: (puuid) => ipcRenderer.invoke('valorant:get-cached-matches-for', puuid),
   getRankFor: (puuid) => ipcRenderer.invoke('valorant:get-rank-for', puuid),
@@ -40,6 +41,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = (_event, suggestions) => callback(suggestions);
     ipcRenderer.on('agent-select-overlay:suggestions', listener);
     return () => ipcRenderer.removeListener('agent-select-overlay:suggestions', listener);
+  },
+  setBuyOverlayVisible: (visible) => ipcRenderer.invoke('buy-overlay:set-visible', visible),
+  getBuyOverlayEnabled: () => ipcRenderer.invoke('buy-overlay:get-enabled'),
+  setBuyOverlayEnabled: (enabled) => ipcRenderer.invoke('buy-overlay:set-enabled', enabled),
+  setBuyOverlayLoadout: (loadout) => ipcRenderer.invoke('buy-overlay:set-loadout', loadout),
+  onBuyOverlayLoadout: (callback) => {
+    const listener = (_event, loadout) => callback(loadout);
+    ipcRenderer.on('buy-overlay:loadout', listener);
+    return () => ipcRenderer.removeListener('buy-overlay:loadout', listener);
   },
   getDeviceId: () => ipcRenderer.invoke('network:get-device-id'),
   openAimTrainer: (config) => ipcRenderer.invoke('aim-trainer:open', config),
@@ -70,10 +80,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveWeeklyNarrative: (weekStart, recapJson, rankJson, narrativeJson) =>
     ipcRenderer.invoke('narrative:save', { weekStart, recapJson, rankJson, narrativeJson }),
   getWeeklyNarrativeHistory: (limit) => ipcRenderer.invoke('narrative:history', limit),
-  getPuzzle: (date) => ipcRenderer.invoke('puzzle:get', date),
-  savePuzzle: (date, situationJson) => ipcRenderer.invoke('puzzle:save', { date, situationJson }),
-  answerPuzzle: (date, choice, correct) => ipcRenderer.invoke('puzzle:answer', { date, choice, correct }),
-  getPuzzleHistory: (limit) => ipcRenderer.invoke('puzzle:history', limit),
   getCollapsedBlocks: () => ipcRenderer.invoke('ui:get-collapsed-blocks'),
   toggleCollapsedBlock: (blockId) => ipcRenderer.invoke('ui:toggle-collapsed-block', blockId),
   getSkinsWishlist: () => ipcRenderer.invoke('skins:get-wishlist'),

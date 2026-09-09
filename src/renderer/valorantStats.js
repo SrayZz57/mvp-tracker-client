@@ -8,19 +8,20 @@
 // légitimes à afficher, voir StatsTab qui liste les modes depuis les matchs
 // bruts, sans passer par cette fonction). Signalé en vrai : un "meilleur ace"
 // à 23 kills en un round, provenant d'un match d'Escalade.
+// Le Team Deathmatch (mode_id 'hurm' — nom interne Riot "HURM", 4v4 à
+// respawns continus, ajouté après l'écriture du commentaire ci-dessus) a
+// exactement le même défaut : pas de vraies manches 5v5, même symptôme
+// signalé en vrai (un "meilleur ace" à 16 kills en une "manche"). 'console_hurm'
+// pour les comptes ayant aussi des parties console dans leur historique.
 // HenrikDev renvoie mode_id = "" (chaîne vide) pour une partie perso, pas
 // "custom" — repéré en inspectant les vrais matchs stockés localement, où
 // aucune partie perso n'avait jamais mode_id === 'custom'. Les skirmish
 // (mode_id "skirmish_*") comptent normalement, ce ne sont pas des parties
 // perso.
+const NON_STANDARD_MODE_IDS = new Set(['deathmatch', 'custom', '', 'ggteam', 'hurm', 'console_hurm']);
+
 export function excludeDeathmatch(matches) {
-  return matches.filter(
-    (m) =>
-      m.metadata?.mode_id !== 'deathmatch' &&
-      m.metadata?.mode_id !== 'custom' &&
-      m.metadata?.mode_id !== '' &&
-      m.metadata?.mode_id !== 'ggteam',
-  );
+  return matches.filter((m) => !NON_STANDARD_MODE_IDS.has(m.metadata?.mode_id));
 }
 
 // Compare les noms SANS tenir compte des accents, pas juste en unifiant leur

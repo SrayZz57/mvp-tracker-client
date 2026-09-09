@@ -59,7 +59,7 @@ function cm360(dpi, sens) {
 // (Tracking, Patrol...) — reprend exactement les mêmes cartes que la grille
 // principale, juste côte à côte dans une fenêtre à part plutôt que 4
 // emplacements dans la grille (demandé sur Discord).
-function ModeGroupPicker({ titleKey, descKey, modeIds, activeModeId, personalBests, globalBests, onSelect, onClose, t }) {
+function ModeGroupPicker({ titleKey, descKey, modeIds, activeModeId, personalBests, globalBests, onSelect, onLaunch, onClose, t }) {
   return (
     <div className="custom-config-overlay" onClick={onClose}>
       <div className="custom-config-card tracking-picker-card" onClick={(e) => e.stopPropagation()}>
@@ -77,6 +77,7 @@ function ModeGroupPicker({ titleKey, descKey, modeIds, activeModeId, personalBes
                 className={id === activeModeId ? 'aim-mode-card active' : 'aim-mode-card'}
                 style={{ '--mode-accent': mode.accent }}
                 onClick={() => onSelect(id)}
+                onDoubleClick={() => onLaunch(id)}
               >
                 <span className="aim-mode-glow" aria-hidden="true" />
                 <span className="aim-mode-head">
@@ -417,6 +418,15 @@ function AimTrainer({ myId, matches, settings, apiKey }) {
                 className={id === config.mode ? 'aim-mode-card active' : 'aim-mode-card'}
                 style={{ '--mode-accent': mode.accent }}
                 onClick={() => selectMode(id)}
+                // Double-clic : lance directement, sans passer par le bouton
+                // "Lancer" — utilise le preset du mode explicitement plutôt
+                // que `config` (mis à jour par selectMode juste avant, mais
+                // setState est asynchrone : `config` ne serait pas encore à
+                // jour si on lisait juste l'état ici).
+                onDoubleClick={() => {
+                  selectMode(id);
+                  launch({ mode: id, ...mode.preset });
+                }}
               >
                 <span className="aim-mode-glow" aria-hidden="true" />
                 <span className="aim-mode-head">
@@ -743,6 +753,11 @@ function AimTrainer({ myId, matches, settings, apiKey }) {
             selectMode(id);
             setShowTrackingPicker(false);
           }}
+          onLaunch={(id) => {
+            selectMode(id);
+            setShowTrackingPicker(false);
+            launch({ mode: id, ...MODES[id].preset });
+          }}
           onClose={() => setShowTrackingPicker(false)}
           t={t}
         />
@@ -759,6 +774,11 @@ function AimTrainer({ myId, matches, settings, apiKey }) {
           onSelect={(id) => {
             selectMode(id);
             setShowPatrolPicker(false);
+          }}
+          onLaunch={(id) => {
+            selectMode(id);
+            setShowPatrolPicker(false);
+            launch({ mode: id, ...MODES[id].preset });
           }}
           onClose={() => setShowPatrolPicker(false)}
           t={t}

@@ -13,7 +13,6 @@ import {
   Signal,
   Clapperboard,
   Target,
-  Dices,
   Map,
   Puzzle as PuzzleIcon,
   Wallet,
@@ -28,6 +27,7 @@ import {
   Search,
   Compass,
   Layers,
+  Video,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
@@ -53,8 +53,8 @@ import BuySimulatorTab from './tabs/BuySimulatorTab.jsx';
 import PlaySessionsTab from './tabs/PlaySessionsTab.jsx';
 import SessionGuideTab from './tabs/SessionGuideTab.jsx';
 import AimTrainerTab from './tabs/AimTrainerTab.jsx';
-import DailyPuzzleTab from './tabs/DailyPuzzleTab.jsx';
 import WikiTab from './tabs/WikiTab.jsx';
+import LineupsTab from './tabs/LineupsTab.jsx';
 import GoalsWidget from './GoalsWidget.jsx';
 import WeeklyRecapCard from './WeeklyRecapCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
@@ -112,7 +112,6 @@ const NAV_SECTIONS = [
     tabs: [
       { id: 'session', labelKey: 'nav.tabs.session', icon: Clapperboard },
       { id: 'aim-trainer', labelKey: 'nav.tabs.aimTrainer', icon: Target },
-      { id: 'puzzle', labelKey: 'nav.tabs.puzzle', icon: Dices },
     ],
   },
   {
@@ -124,6 +123,7 @@ const NAV_SECTIONS = [
       { id: 'skins', labelKey: 'nav.tabs.skins', icon: Gem },
       { id: 'composition', labelKey: 'nav.tabs.composition', icon: PuzzleIcon },
       { id: 'buy-simulator', labelKey: 'nav.tabs.buySimulator', icon: Wallet },
+      { id: 'lineups', labelKey: 'nav.tabs.lineups', icon: Video },
       { id: 'wiki', labelKey: 'nav.tabs.wiki', icon: BookOpen },
     ],
   },
@@ -480,7 +480,7 @@ function App() {
 
   // Garde main.js informé du puuid du compte réellement lié — c'est cette
   // valeur (pas les réglages "vue courante") qui scope crosshairs, stratégies,
-  // paris, puzzles, wrapped, objectifs, skins et blocs réduits côté disque.
+  // paris, wrapped, objectifs, skins et blocs réduits côté disque.
   useEffect(() => {
     window.electronAPI.setLinkedPuuid(profile?.riot_puuid ?? null).then(() => {
       // Au tout premier rendu, `profile` part de `null` le temps que la
@@ -613,6 +613,19 @@ function App() {
     const updatedSettings = { ...settings, apiKey: trimmed };
     setSettings(updatedSettings);
     window.electronAPI.saveSettings(updatedSettings);
+  };
+
+  // Bascule la vue de l'app sur un autre joueur, à partir de juste son
+  // nom#tag (ex. un coéquipier cliqué dans le graphe de synergie) — même
+  // logique que la soumission de SearchBar, mais déclenchée depuis ailleurs
+  // dans l'app plutôt que depuis le champ de recherche. Sans spread de
+  // `settings` : le puuid de l'ancien profil consulté ne doit surtout pas
+  // être recopié dessus.
+  const viewOtherPlayer = (name, tag) => {
+    const nextSettings = { name, tag, apiKey: settings?.apiKey ?? '' };
+    window.electronAPI.saveSettings(nextSettings);
+    setSettings(nextSettings);
+    setActiveTab('stats');
   };
 
   // Resynchronise le pseudo/tag Riot lié — nécessaire quand un joueur change
@@ -814,6 +827,7 @@ function App() {
             matches={data.matches}
             loading={data.loading}
             myPuuid={profile?.riot_puuid}
+            onViewPlayer={viewOtherPlayer}
           />
         );
       case 'my-hall-of-fame':
@@ -830,10 +844,10 @@ function App() {
         return <SessionGuideTab settings={mySettings} matches={myMatches} loading={isViewingSelf && data.loading} />;
       case 'aim-trainer':
         return <AimTrainerTab myId={session.user.id} matches={myMatches} settings={mySettings} apiKey={settings?.apiKey} />;
-      case 'puzzle':
-        return <DailyPuzzleTab settings={mySettings} matches={myMatches} />;
       case 'wiki':
         return <WikiTab />;
+      case 'lineups':
+        return <LineupsTab myId={session.user.id} isAdmin={isAdmin} />;
       case 'admin':
         // Re-vérifié ici, pas seulement dans la nav : même si quelqu'un
         // forçait activeTab à 'admin' sans passer par le bouton (jamais

@@ -17,10 +17,6 @@ import {
   saveStrategy,
   getStrategiesForMap,
   deleteStrategy,
-  getPuzzleByDate,
-  savePuzzle,
-  answerPuzzle,
-  getPuzzleHistory,
   getNarrativeForWeek,
   getPreviousNarrative,
   saveNarrative,
@@ -58,7 +54,7 @@ app.commandLine.appendSwitch('disable-http-cache');
 const store = new Store();
 
 // Toutes les données "personnelles" (crosshairs, stratégies, paris,
-// évaluations, puzzles, wrapped, objectifs, skins) sont scopées par puuid —
+// évaluations, wrapped, objectifs, skins) sont scopées par puuid —
 // mais celui du compte MVP Tracker réellement LIÉ (Supabase), jamais celui
 // de "qui est actuellement affiché à l'écran" (valorantSettings.puuid change
 // à chaque recherche d'un autre joueur — utiliser ce champ ici recréait
@@ -637,6 +633,49 @@ ipcMain.handle('valorant:preview-account', async (_event, { name, tag, apiKey })
   return result;
 });
 
+// Aperçu rapide K/D + winrate sur les 10 derniers matchs d'un AUTRE joueur
+// (ex. coéquipier cliqué dans le graphe de synergie) — volontairement séparé
+// de valorant:get-matches, qui écrit `valorantSettings` sur disque (bascule
+// le "joueur suivi" de toute l'app) : un simple coup d'œil ne doit jamais
+// avoir cet effet de bord.
+const NON_STANDARD_MODE_IDS_MAIN = new Set(['deathmatch', 'custom', '', 'ggteam', 'hurm', 'console_hurm']);
+
+ipcMain.handle('valorant:preview-recent-stats', async (_event, { name, tag, apiKey }) => {
+  const cached = getPreviewCache('recent-stats', name, tag);
+  if (cached) return cached;
+
+  const account = await getAccount(name, tag, apiKey);
+  let rawMatches;
+  try {
+    rawMatches = await getMatchesWithFallback(account, name, tag, apiKey, { size: 10 });
+  } catch (err) {
+    console.error('[preview-recent-stats] échec de récupération des matchs :', err.message);
+    throw err;
+  }
+  const matches = rawMatches.filter((m) => !NON_STANDARD_MODE_IDS_MAIN.has(m.metadata?.mode_id));
+
+  let kills = 0;
+  let deaths = 0;
+  let wins = 0;
+  let games = 0;
+  matches.forEach((match) => {
+    const me = (match.players?.all_players || []).find((p) => p.puuid === account.puuid);
+    if (!me?.team) return;
+    games += 1;
+    kills += me.stats?.kills ?? 0;
+    deaths += me.stats?.deaths ?? 0;
+    if (match.teams?.[me.team.toLowerCase()]?.has_won) wins += 1;
+  });
+
+  const result = {
+    games,
+    kd: games > 0 ? kills / Math.max(deaths, 1) : null,
+    winrate: games > 0 ? (wins / games) * 100 : null,
+  };
+  setPreviewCache('recent-stats', name, tag, result);
+  return result;
+});
+
 ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => {
   const account = await getAccount(name, tag, apiKey);
   store.set('valorantSettings', { name, tag, apiKey, puuid: account.puuid });
@@ -1114,6 +1153,107 @@ ipcMain.handle('agent-select-overlay:set-suggestions', (_event, suggestions) => 
   agentSelectOverlayWindow.webContents.send('agent-select-overlay:suggestions', suggestions);
 });
 
+// --- Overlay d'achat du round 1 -------------------------------------------
+// Deuxième overlay, indépendant du premier : il n'apparaît qu'à l'entrée en
+// partie et rappelle quoi acheter au pistol round selon l'agent joué. Mêmes
+// contraintes que l'overlay de sélection (transparente, clic-traversante,
+// créée à la demande puis détruite) — voir createAgentSelectOverlay pour le
+// détail du pourquoi.
+let buyOverlayWindow = null;
+let buyOverlayTopmostInterval = null;
+
+function createBuyOverlay() {
+  buyOverlayWindow = new BrowserWindow({
+    width: 300,
+    height: 260,
+    show: false,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  buyOverlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  buyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  // En bas à gauche : la boutique Valorant occupe le centre/la droite de
+  // l'écran pendant la phase d'achat, l'overlay ne doit pas se poser dessus.
+  const display = screen.getPrimaryDisplay().workArea;
+  buyOverlayWindow.setPosition(display.x + 16, display.y + display.height - 276);
+
+  const query = 'view=buy-overlay';
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    buyOverlayWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
+  } else {
+    buyOverlayWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {
+      search: query,
+    });
+  }
+
+  buyOverlayWindow.webContents.on('console-message', (_e, _level, message) => {
+    console.log('[buy-overlay]', message);
+  });
+
+  buyOverlayWindow.showInactive();
+  if (!buyOverlayTopmostInterval) {
+    buyOverlayTopmostInterval = setInterval(() => {
+      try {
+        if (buyOverlayWindow && !buyOverlayWindow.isDestroyed()) {
+          buyOverlayWindow.moveTop();
+        }
+      } catch {
+        clearInterval(buyOverlayTopmostInterval);
+        buyOverlayTopmostInterval = null;
+      }
+    }, 1000);
+  }
+}
+
+function closeBuyOverlay() {
+  clearInterval(buyOverlayTopmostInterval);
+  buyOverlayTopmostInterval = null;
+  if (buyOverlayWindow && !buyOverlayWindow.isDestroyed()) {
+    try {
+      buyOverlayWindow.close();
+    } catch {
+      // déjà détruite entre le check et l'appel — rien à faire de plus.
+    }
+  }
+  buyOverlayWindow = null;
+}
+
+ipcMain.handle('buy-overlay:get-enabled', () => store.get('buyOverlayEnabled') ?? true);
+
+ipcMain.handle('buy-overlay:set-enabled', (_event, enabled) => {
+  store.set('buyOverlayEnabled', enabled);
+  if (!enabled) closeBuyOverlay();
+});
+
+ipcMain.handle('buy-overlay:set-visible', (_event, visible) => {
+  if (visible) {
+    const enabled = store.get('buyOverlayEnabled') ?? true;
+    if (enabled && (!buyOverlayWindow || buyOverlayWindow.isDestroyed())) {
+      createBuyOverlay();
+    }
+  } else {
+    closeBuyOverlay();
+  }
+});
+
+// Même principe que les suggestions d'agent : l'achat est résolu dans la
+// fenêtre principale (qui a déjà les noms/icônes de capacités et la langue),
+// l'overlay ne fait qu'afficher ce qu'on lui envoie.
+ipcMain.handle('buy-overlay:set-loadout', (_event, loadout) => {
+  if (!buyOverlayWindow || buyOverlayWindow.isDestroyed()) return;
+  buyOverlayWindow.webContents.send('buy-overlay:loadout', loadout);
+});
+
 ipcMain.handle('sync:matches', (_event, payload) => syncMatches(payload));
 
 ipcMain.handle('crosshair:list', () => (currentPuuid() ? getCrosshairs(currentPuuid()) : []));
@@ -1237,18 +1377,6 @@ ipcMain.handle('narrative:history', (_event, limit) =>
   currentPuuid() ? getNarrativeHistory(currentPuuid(), limit ?? 20) : [],
 );
 
-ipcMain.handle('puzzle:get', (_event, date) => (currentPuuid() ? getPuzzleByDate(currentPuuid(), date) : null));
-
-ipcMain.handle('puzzle:save', (_event, { date, situationJson }) =>
-  savePuzzle(currentPuuid(), date, situationJson),
-);
-
-ipcMain.handle('puzzle:answer', (_event, { date, choice, correct }) =>
-  answerPuzzle(currentPuuid(), date, choice, correct),
-);
-
-ipcMain.handle('puzzle:history', (_event, limit) => (currentPuuid() ? getPuzzleHistory(currentPuuid(), limit ?? 30) : []));
-
 ipcMain.handle('goals:get', () => {
   const key = scopedKey('personalGoals');
   return key ? store.get(key) || [] : [];
@@ -1311,6 +1439,11 @@ app.whenReady().then(() => {
       "media-src 'self' https:",
       "font-src 'self' data:",
       "connect-src 'self' https://api.henrikdev.xyz https://valorant-api.com https://*.valorant-api.com https://hbfqtrqztyrnsqrrvmep.supabase.co wss://hbfqtrqztyrnsqrrvmep.supabase.co",
+      // Lecteur intégré pour les techs vidéo communautaires du Wiki
+      // (TechLibrary.jsx) — YouTube uniquement, le seul lien qu'on embarque
+      // en iframe (voir techVideoEmbed.js : tout le reste s'ouvre à part
+      // dans le navigateur système).
+      "frame-src 'self' https://www.youtube-nocookie.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join('; ');

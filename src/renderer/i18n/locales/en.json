@@ -151,7 +151,6 @@
       "network": "Network",
       "session": "Guided session",
       "aimTrainer": "Aim Trainer",
-      "puzzle": "Daily puzzle",
       "playSessions": "Sessions",
       "crosshairs": "Crosshairs",
       "strategy": "Strategy",
@@ -161,7 +160,8 @@
       "wiki": "Wiki",
       "messages": "Messages",
       "friends": "Friends",
-      "account": "My account"
+      "account": "My account",
+      "lineups": "Lineups"
     },
     "rankUnavailable": "Rank unavailable",
     "searchPlaceholder": "Search a tab...",
@@ -246,7 +246,11 @@
     "gamesCount_other": "{{count}} games",
     "noMatchesYet": "No cached matches yet — click \"Refresh\".",
     "synergyTitle": "Team synergy",
-    "synergyHint": "Your winrate with each of your recurring teammates (at least 2 games together) — the thicker and greener the link, the better it goes when you're on the same team.",
+    "synergyHint": "Your winrate with each of your recurring teammates (at least 2 games together) — the thicker and greener the link, the better it goes when you're on the same team. Click a teammate to view their profile.",
+    "viewProfileOf": "View {{name}}'s profile",
+    "quickviewKd": "K/D (last 10)",
+    "quickviewWinrate10": "Winrate (last 10)",
+    "quickviewFullProfile": "View full profile",
     "agentNemesisTitle": "Your nemeses — agents",
     "agentNemesisHint": "The enemy agents against whom your kill/death ratio is lowest.",
     "notEnoughAgentDuels": "Not enough recorded duels against the same agent yet.",
@@ -476,7 +480,9 @@
       "popcorn": "Popcorn",
       "popcornDesc": "Several targets pop up and vanish fast, all over the screen — pure reaction under pressure.",
       "snapHold": "Snap-hold",
-      "snapHoldDesc": "A flick isn't enough: you need to stay settled on the target for a short beat for the shot to count — stops lucky flicks that land by accident."
+      "snapHoldDesc": "A flick isn't enough: you need to stay settled on the target for a short beat for the shot to count — stops lucky flicks that land by accident.",
+      "flashDodge": "Flash Dodge",
+      "flashDodgeDesc": "Classic target shooting, but a flash (Skye or Phoenix, at random) comes from an unpredictable direction — turn away in time to dodge it, or the screen goes white."
     },
     "sensSection": "Sensitivity",
     "sessionSection": "Session",
@@ -589,47 +595,6 @@
     "summaryCount": "{{count}} target(s)",
     "summarySize": "size {{size}}",
     "summarySpread": "spread {{deg}}°"
-  },
-  "puzzle": {
-    "options": {
-      "duelEarly": "Look for the duel from the start of the round",
-      "rushSite": "Rush a site with the team",
-      "waitInfo": "Play patient, wait for info before engaging",
-      "save": "Save, don't risk the loadout"
-    },
-    "reveal": {
-      "noAction": "You neither killed nor died that round (or it happened very late) — a quiet round for you.",
-      "firstKillAt": "You got your first kill at {{seconds}}s into the round.",
-      "diedAt": "You died at {{seconds}}s into the round.",
-      "roundWon": "The round was won.",
-      "roundLost": "The round was lost."
-    },
-    "title": "Daily tactical puzzle",
-    "description": "A real situation pulled from one of your matches, without the outcome. Pick what you would have done, then find out what actually happened — and whether it matches how you play.",
-    "notEnoughMatches": "Not enough cached ranked matches yet to generate a puzzle — come back after a few more games.",
-    "roundLabel": "Round {{n}}",
-    "scoreBefore": "Score before this round (you - them)",
-    "myEconomy": "Your economy",
-    "enemyEconomy": "Enemy economy (average)",
-    "sideLabel": "Side",
-    "sideAttack": "Attack",
-    "sideDefense": "Defense",
-    "sideUnknown": "?",
-    "question": "Given this context, what would you have done this round?",
-    "matchesReveal": "That matches what you did",
-    "notMatchReveal": "You played differently that round",
-    "choiceWas": "Your choice ({{choice}}) was classed as \"{{bucket}}\" — your actual play that round was \"{{actual}}\".",
-    "bucketAggressive": "aggressive",
-    "bucketPatient": "patient",
-    "bucketAggressiveFem": "aggressive",
-    "bucketPatientFem": "patient",
-    "historyTitle": "History",
-    "successRate": "Correct-decision rate",
-    "puzzlesSolved": "Puzzles solved",
-    "noHistory": "No puzzle solved yet.",
-    "notAnsweredYet": "Not answered yet",
-    "goodIntuition": "Good intuition",
-    "missed": "Missed"
   },
   "playSessions": {
     "title": "Current session",
@@ -1687,6 +1652,8 @@
     "apiKeyMissing": "Not set",
     "agentSelectOverlayLabel": "Agent select window over the game",
     "agentSelectOverlayHint": "Shows a small window over Valorant during agent select and the start of a match (ranks, suggestions). Turn it off if you never want an extra window on top of the game.",
+    "buyOverlayLabel": "Pistol round buy window",
+    "buyOverlayHint": "Shows a small window over Valorant at the start of each match, reminding you what to buy on round 1 based on your agent.",
     "autoLaunchLabel": "Launch MVP Tracker at Windows startup",
     "autoLaunchHint": "The app launches in the background when your PC starts, minimized to the system tray (icon near the clock) — ping and tilt detection keep running without a window open.",
     "signOut": "Sign out",
@@ -1795,6 +1762,19 @@
     "suggestCommunity": "community pick",
     "suggestFillsGap": "missing role"
   },
+  "buyOverlay": {
+    "title": "Pistol round",
+    "credits": "{{cost}} cr.",
+    "weapon": "Weapon",
+    "shield": "Shield",
+    "lightShield": "Light shield",
+    "keepClassic": "Keep the Classic",
+    "ability": "Ability",
+    "notes": {
+      "astraStars": "Place your stars to suit the map — your call which ones.",
+      "chamberBullets": "No Ghost: spend the rest of the budget on Headhunter bullets."
+    }
+  },
   "onboarding": {
     "welcomeTitle": "Welcome to MVP Tracker!",
     "welcomeText": "Quick tour to show you where to find the main features — 30 seconds, you can skip anytime.",
@@ -1816,5 +1796,26 @@
     "next": "Next →",
     "finish": "Finish",
     "skip": "Skip"
+  },
+  "lineups": {
+    "title": "Lineups",
+    "description": "Community-shared tech videos — lineups, one ways, ability combos. Filter by agent, map, or keyword.",
+    "publishTitle": "Share a tech",
+    "publishIntro": "Lineup, one way, ability combo... a short video is enough. Visible to the whole community.",
+    "chooseAgent": "Choose an agent",
+    "noSpecificMap": "No specific map",
+    "titlePlaceholder": "Title (e.g. Smoke one way site A)",
+    "videoUrlPlaceholder": "Video link (YouTube, Medal, Streamable...)",
+    "tagsPlaceholder": "Comma-separated keywords (e.g. one way, crossfire)",
+    "publish": "Publish",
+    "publishing": "Publishing...",
+    "needAccount": "Sign in to publish a tech.",
+    "allAgents": "All agents",
+    "allMaps": "All maps",
+    "searchPlaceholder": "Search (title, keywords)",
+    "loading": "Loading...",
+    "empty": "No tech published for this filter yet — be the first to share one.",
+    "deleteOwn": "Delete my tech",
+    "deleteAdmin": "Delete (admin)"
   }
 }

@@ -13,6 +13,7 @@ import App from './renderer/App.jsx';
 import TitleBar from './renderer/TitleBar.jsx';
 import AimTrainerGame from './renderer/AimTrainerGame.jsx';
 import AgentSelectOverlay from './renderer/AgentSelectOverlay.jsx';
+import BuyOverlay from './renderer/BuyOverlay.jsx';
 import { CollapsedBlocksProvider } from './renderer/CollapsedBlocksContext.jsx';
 import { E2EEProvider } from './renderer/E2EEContext.jsx';
 
@@ -67,6 +68,7 @@ function Root() {
 
   if (view === 'aim-trainer') return <AimTrainerGame config={gameConfig} />;
   if (view === 'agent-select-overlay') return <AgentSelectOverlay />;
+  if (view === 'buy-overlay') return <BuyOverlay />;
   return (
     <div className="app-frame">
       <TitleBar />

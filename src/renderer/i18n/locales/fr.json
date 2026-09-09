@@ -151,7 +151,6 @@
       "network": "Réseau",
       "session": "Session guidée",
       "aimTrainer": "Aim Trainer",
-      "puzzle": "Puzzle du jour",
       "playSessions": "Sessions",
       "crosshairs": "Crosshairs",
       "strategy": "Stratégie",
@@ -161,7 +160,8 @@
       "wiki": "Wiki",
       "messages": "Messages",
       "friends": "Amis",
-      "account": "Mon compte"
+      "account": "Mon compte",
+      "lineups": "Lineups"
     },
     "rankUnavailable": "Rang indisponible",
     "searchPlaceholder": "Chercher un onglet...",
@@ -246,7 +246,11 @@
     "gamesCount_other": "{{count}} parties",
     "noMatchesYet": "Aucun match en cache pour l'instant — clique sur « Rafraîchir ».",
     "synergyTitle": "Synergie d'équipe",
-    "synergyHint": "Ton winrate avec chacun de tes coéquipiers récurrents (au moins 2 parties ensemble) — plus le lien est épais et vert, mieux ça se passe quand vous êtes dans la même équipe.",
+    "synergyHint": "Ton winrate avec chacun de tes coéquipiers récurrents (au moins 2 parties ensemble) — plus le lien est épais et vert, mieux ça se passe quand vous êtes dans la même équipe. Clique sur un coéquipier pour voir son profil.",
+    "viewProfileOf": "Voir le profil de {{name}}",
+    "quickviewKd": "K/D (10 dernières)",
+    "quickviewWinrate10": "Winrate (10 dernières)",
+    "quickviewFullProfile": "Voir le profil complet",
     "agentNemesisTitle": "Tes nemesis — agents",
     "agentNemesisHint": "Les agents adverses contre qui ton ratio kills/morts est le plus faible.",
     "notEnoughAgentDuels": "Pas encore assez de duels enregistrés contre un même agent.",
@@ -476,7 +480,9 @@
       "popcorn": "Popcorn",
       "popcornDesc": "Plusieurs cibles apparaissent et disparaissent vite, un peu partout à l'écran — pure réactivité sous pression.",
       "snapHold": "Snap-hold",
-      "snapHoldDesc": "Un flick ne suffit pas : il faut rester stabilisé sur la cible un court instant pour que le tir compte — empêche de retomber dessus par chance."
+      "snapHoldDesc": "Un flick ne suffit pas : il faut rester stabilisé sur la cible un court instant pour que le tir compte — empêche de retomber dessus par chance.",
+      "flashDodge": "Dodge Flash",
+      "flashDodgeDesc": "Tir sur cible classique, mais un flash (Skye ou Phoenix, au hasard) arrive d'une direction imprévisible : tourne la caméra à temps pour l'esquiver, sinon l'écran blanchit."
     },
     "sensSection": "Sensibilité",
     "sessionSection": "Session",
@@ -589,47 +595,6 @@
     "summaryCount": "{{count}} cible(s)",
     "summarySize": "taille {{size}}",
     "summarySpread": "zone {{deg}}°"
-  },
-  "puzzle": {
-    "options": {
-      "duelEarly": "Chercher le duel dès le début du round",
-      "rushSite": "Rusher un site avec l'équipe",
-      "waitInfo": "Jouer patient, attendre une info avant d'engager",
-      "save": "Save, ne pas risquer le stuff"
-    },
-    "reveal": {
-      "noAction": "Tu n'as ni tué ni été tué ce round-là (ou c'est arrivé très tard) — un round discret pour toi.",
-      "firstKillAt": "Tu as fait ton premier kill à {{seconds}}s dans le round.",
-      "diedAt": "Tu es mort à {{seconds}}s dans le round.",
-      "roundWon": "Le round a été gagné.",
-      "roundLost": "Le round a été perdu."
-    },
-    "title": "Puzzle tactique du jour",
-    "description": "Une vraie situation tirée d'un de tes matchs, sans le résultat. Choisis ce que tu aurais fait, puis découvre ce qu'il s'est réellement passé — et si ça correspond à ta façon de jouer.",
-    "notEnoughMatches": "Pas encore assez de matchs classés en cache pour générer un puzzle — reviens après quelques parties.",
-    "roundLabel": "Round {{n}}",
-    "scoreBefore": "Score avant ce round (toi - eux)",
-    "myEconomy": "Ton économie",
-    "enemyEconomy": "Économie adverse (moyenne)",
-    "sideLabel": "Côté",
-    "sideAttack": "Attaque",
-    "sideDefense": "Défense",
-    "sideUnknown": "?",
-    "question": "Vu ce contexte, qu'aurais-tu fait ce round ?",
-    "matchesReveal": "Ça correspond à ce que tu as fait",
-    "notMatchReveal": "Ce round-là, tu as joué différemment",
-    "choiceWas": "Ton choix ({{choice}}) était classé « {{bucket}} » — ta façon de jouer ce round-là a été « {{actual}} ».",
-    "bucketAggressive": "agressif",
-    "bucketPatient": "patient",
-    "bucketAggressiveFem": "agressive",
-    "bucketPatientFem": "patiente",
-    "historyTitle": "Historique",
-    "successRate": "Taux de bonnes décisions",
-    "puzzlesSolved": "Puzzles résolus",
-    "noHistory": "Aucun puzzle résolu pour l'instant.",
-    "notAnsweredYet": "Pas encore répondu",
-    "goodIntuition": "Bonne intuition",
-    "missed": "Loupé"
   },
   "playSessions": {
     "title": "Session en cours",
@@ -1687,6 +1652,8 @@
     "apiKeyMissing": "Non renseignée",
     "agentSelectOverlayLabel": "Fenêtre de sélection d'agent par-dessus le jeu",
     "agentSelectOverlayHint": "Affiche une petite fenêtre par-dessus Valorant pendant la sélection d'agent et le début de partie (rangs, suggestions). Désactive-la si tu ne veux jamais de fenêtre supplémentaire par-dessus le jeu.",
+    "buyOverlayLabel": "Fenêtre d'achat au round pistolet",
+    "buyOverlayHint": "Affiche une petite fenêtre par-dessus Valorant au début de chaque partie, qui rappelle quoi acheter au round 1 selon ton agent.",
     "autoLaunchLabel": "Lancer MVP Tracker au démarrage de Windows",
     "autoLaunchHint": "L'app se lance en arrière-plan à l'allumage du PC, réduite dans la barre système (icône près de l'horloge) — le ping et la détection de tilt continuent sans garder la fenêtre ouverte.",
     "signOut": "Se déconnecter",
@@ -1795,6 +1762,19 @@
     "suggestCommunity": "recommandé par la communauté",
     "suggestFillsGap": "rôle manquant"
   },
+  "buyOverlay": {
+    "title": "Round pistolet",
+    "credits": "{{cost}} cr.",
+    "weapon": "Arme",
+    "shield": "Bouclier",
+    "lightShield": "Bouclier léger",
+    "keepClassic": "Garde le Classic",
+    "ability": "Capacité",
+    "notes": {
+      "astraStars": "Place tes étoiles selon la map — tu choisis lesquelles.",
+      "chamberBullets": "Pas de Ghost : mets le reste du budget en balles de Chasseur de têtes."
+    }
+  },
   "onboarding": {
     "welcomeTitle": "Bienvenue sur MVP Tracker !",
     "welcomeText": "Petit tour rapide pour te montrer où trouver les grandes fonctionnalités — 30 secondes, tu peux passer à tout moment.",
@@ -1816,5 +1796,26 @@
     "next": "Suivant →",
     "finish": "Terminer",
     "skip": "Passer"
+  },
+  "lineups": {
+    "title": "Lineups",
+    "description": "Techs vidéo partagées par la communauté — lineups, one ways, combos de capacités. Filtre par agent, par map ou par mot-clé.",
+    "publishTitle": "Partager une tech",
+    "publishIntro": "Lineup, one way, combo de capacités... une courte vidéo suffit. Visible par toute la communauté.",
+    "chooseAgent": "Choisir un agent",
+    "noSpecificMap": "Aucune map précise",
+    "titlePlaceholder": "Titre (ex. One way fumigène site A)",
+    "videoUrlPlaceholder": "Lien de la vidéo (YouTube, Medal, Streamable...)",
+    "tagsPlaceholder": "Mots-clés séparés par des virgules (ex. one way, crossfire)",
+    "publish": "Publier",
+    "publishing": "Publication...",
+    "needAccount": "Connecte-toi pour publier une tech.",
+    "allAgents": "Tous les agents",
+    "allMaps": "Toutes les maps",
+    "searchPlaceholder": "Rechercher (titre, mots-clés)",
+    "loading": "Chargement...",
+    "empty": "Aucune tech publiée pour ce filtre pour le moment — sois le premier à en partager une.",
+    "deleteOwn": "Supprimer ma tech",
+    "deleteAdmin": "Supprimer (admin)"
   }
 }

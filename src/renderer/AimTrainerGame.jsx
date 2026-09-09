@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Play,
   Footprints,
+  EyeOff,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import * as THREE from 'three';
@@ -95,6 +96,216 @@ function computePeekLayout(targetSize) {
   const bodyY = bodyTopY - bodyHeight / 2;
   const boxBottomY = bodyTopY - bodyHeight;
   return { headY: PEEK_HEAD_Y, bodyY, bodyHeight, boxY: boxBottomY + PEEK_BOX_HEIGHT / 2 };
+}
+
+// --- Mode Dodge Flash --------------------------------------------------------
+// Deux murs fixes à gauche et à droite de l'arène servent de point d'origine
+// aux flashs. Breach (ligne qui traverse le mur) et Yoru (balle qui
+// rebondit) retirés à l'usage — mal rendus/trop confus — au profit de deux
+// variantes gardées/ajoutées : Skye (oiseau) et Phoenix (balle courbe).
+// Mélangées AU HASARD dans une même session — pas un mode par agent, mais la
+// même compétence (repérer d'où ça vient et tourner à temps) testée sous des
+// formats de préavis et des animations différentes, comme en vraie partie où
+// on ne sait jamais à l'avance quel agent flashe.
+const FLASH_VARIANTS = [
+  // Skye (Éclaireuse) : petit oiseau qui vole visiblement jusqu'à
+  // destination.
+  { key: 'skye', color: '#3ddc84', telegraphMs: 1000 },
+  // Phoenix : boule de feu qui vire sur le côté avant de détoner, comme la
+  // vraie Balle courbe. 850ms jugé trop rapide, 1150ms jugé trop lent —
+  // entre les deux.
+  { key: 'phoenix', color: '#ff6a3d', telegraphMs: 1000 },
+];
+const FLASH_MIN_INTERVAL_MS = 3200;
+const FLASH_MAX_INTERVAL_MS = 6800;
+// Au-delà de cet écart angulaire avec le point de lancement, le regard est
+// considéré comme détourné. 100° obligeait à quasiment tourner le dos même
+// quand le projectile n'était déjà plus dans le champ de vision (~51° de
+// chaque côté au FOV par défaut) — signalé en vrai ("je ne le vois pas mais
+// je n'arrive pas à esquiver quand même"). Ramené à 65°, un peu au-delà du
+// demi-champ de vision par défaut : sortir le projectile de l'écran suffit
+// maintenant à esquiver, sans devoir se retourner complètement.
+const FLASH_DODGE_ANGLE_DEG = 65;
+const FLASH_BLIND_DURATION_MS = 2200;
+const FLASH_BURST_LIFETIME_MS = 260;
+
+// Position des deux murs — placés par ANGLE (comme les cibles, voir
+// randomTargetPosition plus bas) et à la MÊME distance que la zone de spawn
+// des cibles (SPAWN_DISTANCE), pour garantir la même visibilité qu'elles :
+// tout ce qui est assez près du centre pour voir les cibles voit aussi les
+// murs. 30° reste juste au-delà du cône de spawn de ce mode (28°, voir
+// preset flashDodge) tout en restant dans le champ de vision quel que soit
+// le FOV choisi (min réglable 70° ⇒ demi-champ 35°).
+const FLASH_WALL_YAW_DEG = 30;
+const FLASH_WALL_DISTANCE = SPAWN_DISTANCE;
+const FLASH_WALL_WIDTH = 3.4;
+const FLASH_WALL_HEIGHT = 6;
+const FLASH_WALL_DEPTH = 0.4;
+// Hauteur de lancement des projectiles depuis le mur : à peu près à hauteur
+// d'yeux (PEEK_HEAD_Y = 0), pas au ras du sol — sinon le trajet reste trop
+// bas pour être repéré facilement, même une fois dans le champ de vision
+// horizontal.
+const FLASH_LAUNCH_Y = 0;
+// Point d'arrivée des projectiles : près du joueur et à hauteur d'yeux —
+// c'est là que le flash doit "exploser au visage". Décalé vers le côté
+// OPPOSÉ au mur d'origine plutôt que pile au centre (signalé : les deux
+// murs visant le même point fixe, la trajectoire finissait par ressembler
+// à "ça fonce droit sur moi" dans les deux cas, sans direction de balayage
+// claire pour les distinguer) — donne un vrai balayage gauche→droite pour
+// un mur, droite→gauche pour l'autre.
+const FLASH_TARGET_OFFSET_X = 1.8;
+
+function flashTargetFor(side) {
+  const x = side === 'left' ? FLASH_TARGET_OFFSET_X : -FLASH_TARGET_OFFSET_X;
+  return new THREE.Vector3(x, FLASH_LAUNCH_Y, -1.5);
+}
+
+// Position du PIED du mur (pour le poser au sol) — mêmes X/Z que
+// flashWallPosition, seule la hauteur diffère.
+function flashWallBase(side) {
+  const yaw = (side === 'left' ? 1 : -1) * FLASH_WALL_YAW_DEG * DEG_TO_RAD;
+  // Cohérent avec yawTo() ci-dessous : yaw positif = vers la gauche (-X).
+  return new THREE.Vector3(-Math.sin(yaw) * FLASH_WALL_DISTANCE, FLOOR_Y, -Math.cos(yaw) * FLASH_WALL_DISTANCE);
+}
+
+// Angle de lancement des projectiles : plus proche du centre que le mur
+// lui-même (30°) — signalé : ils doivent partir du bord INTÉRIEUR du mur
+// (la droite du mur de gauche, la gauche du mur de droite), pas de son
+// centre, comme s'ils contournaient le coin. Même formule de position que
+// flashWallBase, juste avec un angle plus petit et à hauteur d'yeux (voir
+// FLASH_LAUNCH_Y) plutôt qu'au sol.
+const FLASH_LAUNCH_YAW_DEG = 20;
+
+function flashWallPosition(side) {
+  const yaw = (side === 'left' ? 1 : -1) * FLASH_LAUNCH_YAW_DEG * DEG_TO_RAD;
+  return new THREE.Vector3(-Math.sin(yaw) * FLASH_WALL_DISTANCE, FLASH_LAUNCH_Y, -Math.cos(yaw) * FLASH_WALL_DISTANCE);
+}
+
+// Cap (yaw) depuis le joueur (fixe à l'origine du monde, seule la caméra
+// tourne — voir la mise en place de la caméra plus bas) vers un point donné,
+// dans la MÊME convention de signe que `euler.y` (donc directement
+// comparable, voir son usage dans animate()) : yaw=0 droit devant en -Z,
+// positif en tournant vers la GAUCHE (-X) — c'est l'inverse du sens
+// "yaw=0..+X à droite" utilisé par randomTargetPosition ci-dessus, qui ne
+// sert lui qu'à placer des cibles en coordonnées monde et n'a jamais besoin
+// d'être comparé à l'orientation caméra. Vérifié empiriquement : à
+// euler.y = -90°, camera.getWorldDirection() pointe vers +X.
+function yawTo(point) {
+  return Math.atan2(-point.x, -point.z);
+}
+
+function randomFlashDelay(now) {
+  return now + FLASH_MIN_INTERVAL_MS + Math.random() * (FLASH_MAX_INTERVAL_MS - FLASH_MIN_INTERVAL_MS);
+}
+
+function initFlashState(now) {
+  return {
+    phase: 'idle', // 'idle' | 'telegraph' | 'blind'
+    variant: null,
+    side: 'left',
+    originYaw: 0,
+    telegraphStartedAt: 0,
+    blindStartedAt: 0,
+    nextEventAt: randomFlashDelay(now),
+    dodged: 0,
+    failed: 0,
+  };
+}
+
+// Réarme le mode Dodge Flash pour une nouvelle session/étape/reprise, en
+// retirant au passage un éventuel projectile resté en vol (un redémarrage en
+// plein préavis l'aurait sinon laissé orphelin dans la scène pour de bon).
+function resetFlashState(state, now) {
+  if (state.flashEffect) {
+    state.scene?.remove(state.flashEffect.object);
+    state.flashEffect = null;
+  }
+  state.flash = initFlashState(now);
+}
+
+// Écart angulaire le plus court entre deux caps (en radians), toujours dans
+// [0, PI] — la distance "à vol d'oiseau" entre deux directions, peu importe
+// de quel côté on tourne pour y aller.
+function angleDiff(a, b) {
+  const twoPi = Math.PI * 2;
+  const diff = Math.abs(a - b) % twoPi;
+  return diff > Math.PI ? twoPi - diff : diff;
+}
+
+// --- Effets visuels du mode Dodge Flash -------------------------------------
+// Un objet Three.js par variante, construit à la volée à chaque événement
+// (fréquence faible — un flash toutes les 3-7s — le coût de recréation est
+// négligeable) et retiré de la scène une fois la détonation passée.
+
+// Skye : un petit oiseau stylisé (corps + deux ailes plates) qui vole en
+// arc jusqu'à sa cible, ailes qui battent en continu.
+function createSkyeEffect(color) {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6, roughness: 0.4 });
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.42, 8), bodyMat);
+  body.rotation.x = Math.PI / 2;
+  group.add(body);
+
+  const wingGeo = new THREE.PlaneGeometry(0.34, 0.14);
+  const wingMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+  const wingLeft = new THREE.Mesh(wingGeo, wingMat);
+  wingLeft.position.set(-0.12, 0, 0);
+  const wingRight = new THREE.Mesh(wingGeo, wingMat);
+  wingRight.position.set(0.12, 0, 0);
+  group.add(wingLeft, wingRight);
+
+  group.userData.wingLeft = wingLeft;
+  group.userData.wingRight = wingRight;
+  return group;
+}
+
+function updateSkyeEffect(group, from, to, progress, elapsedMs) {
+  group.position.lerpVectors(from, to, progress);
+  // Arc en cloche (sinus) plutôt qu'une ligne droite : un vol plane, pas un
+  // tir tendu.
+  group.position.y += Math.sin(progress * Math.PI) * 1.4;
+  const ahead = new THREE.Vector3().lerpVectors(from, to, Math.min(progress + 0.05, 1));
+  ahead.y += Math.sin(Math.min(progress + 0.05, 1) * Math.PI) * 1.4;
+  group.lookAt(ahead);
+  const flap = Math.sin(elapsedMs * 0.025) * 0.6;
+  group.userData.wingLeft.rotation.z = flap;
+  group.userData.wingRight.rotation.z = -flap;
+}
+
+// Phoenix : une boule de feu qui vire sur le côté avant de détoner, comme la
+// vraie Balle courbe — décalage perpendiculaire à l'axe de vol, maximal à
+// mi-course, plus un léger arc vertical. Le sens du virage (gauche/droite)
+// est tiré au hasard à la création et gardé sur l'objet lui-même : plus
+// simple que d'étendre la signature d'updateFlashEffectObject pour un seul
+// cas particulier.
+const PHOENIX_CURVE_WIDTH = 2.2;
+
+function createPhoenixEffect(color) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 12, 12),
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1, roughness: 0.25 }),
+  );
+  mesh.userData.curveSide = Math.random() < 0.5 ? 1 : -1;
+  return mesh;
+}
+
+function updatePhoenixEffect(mesh, from, to, progress) {
+  mesh.position.lerpVectors(from, to, progress);
+  const dir = new THREE.Vector3().subVectors(to, from).normalize();
+  const perp = new THREE.Vector3(-dir.z, 0, dir.x);
+  const curve = Math.sin(progress * Math.PI) * PHOENIX_CURVE_WIDTH * mesh.userData.curveSide;
+  mesh.position.addScaledVector(perp, curve);
+  mesh.position.y += Math.sin(progress * Math.PI) * 0.9;
+}
+
+const FLASH_EFFECT_BUILDERS = {
+  skye: createSkyeEffect,
+  phoenix: createPhoenixEffect,
+};
+
+function updateFlashEffectObject(key, object, from, to, progress, elapsedMs) {
+  if (key === 'skye') updateSkyeEffect(object, from, to, progress, elapsedMs);
+  else if (key === 'phoenix') updatePhoenixEffect(object, from, to, progress);
 }
 
 // Modes d'entraînement. Chacun n'est qu'un préréglage + un comportement de
@@ -356,6 +567,19 @@ export const MODES = {
     holdMs: 350,
     lifetime: 2200,
     preset: { targetCount: 1, targetSize: 0.24, spread: 30, duration: 60 },
+  },
+  flashDodge: {
+    icon: EyeOff,
+    accent: '#ffb454',
+    labelKey: 'aimTrainer.modes.flashDodge',
+    descKey: 'aimTrainer.modes.flashDodgeDesc',
+    movement: 'none',
+    lifetime: null,
+    // Tir classique sur cible statique (comme Flick), avec en plus un flash
+    // qui arrive d'une direction aléatoire à intervalle irrégulier — voir la
+    // gestion dédiée dans la boucle d'animation et handleClick.
+    flashDodge: true,
+    preset: { targetCount: 1, targetSize: 0.28, spread: 28, duration: 60 },
   },
 };
 
@@ -687,6 +911,76 @@ function playTargetPop(ctx) {
   osc.stop(now + 0.1);
 }
 
+// Flash esquivé (mode Dodge Flash) : deux notes montantes, nettement plus
+// "positif" que le pop de cible touchée — c'est une récompense de réflexe,
+// pas une confirmation de tir.
+function playDodgeChime(ctx) {
+  const now = ctx.currentTime;
+  [[740, 0], [1180, 0.06]].forEach(([freq, delay]) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now + delay);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now + delay);
+    gain.gain.exponentialRampToValueAtTime(0.32, now + delay + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.16);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + delay);
+    osc.stop(now + delay + 0.17);
+  });
+}
+
+// Repères sonores propres à chaque variante du mode Dodge Flash, joués au
+// déclenchement (même instant que l'apparition du projectile) pour
+// apprendre à reconnaître Skye/Phoenix à l'oreille, pas seulement à l'œil.
+// Synthétisés (Web Audio, même technique que playGunshot/playTargetPop
+// au-dessus) plutôt qu'extraits du jeu : aucun fichier audio officiel n'est
+// distribuable ici, ni légalement ni techniquement (rien de ce genre n'est
+// accessible depuis cet environnement).
+
+// Skye : cri d'oiseau — deux notes courtes en triangle, glissando montant
+// puis qui retombe légèrement, façon cri de rapace stylisé.
+function playSkyeCall(ctx) {
+  const now = ctx.currentTime;
+  [
+    [0, 1500, 2300],
+    [0.1, 1750, 2500],
+  ].forEach(([delay, f0, f1]) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(f0, now + delay);
+    osc.frequency.exponentialRampToValueAtTime(f1, now + delay + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(f0 * 0.85, now + delay + 0.13);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, now + delay);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + delay + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.14);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now + delay);
+    osc.stop(now + delay + 0.15);
+  });
+}
+
+// Phoenix : souffle de flamme — bruit filtré dont la fréquence de coupure
+// monte rapidement, comme un "fwoosh" d'allumage.
+function playPhoenixWhoosh(ctx) {
+  const now = ctx.currentTime;
+  const noise = ctx.createBufferSource();
+  noise.buffer = createNoiseBuffer(ctx, 0.35);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.Q.value = 0.9;
+  filter.frequency.setValueAtTime(450, now);
+  filter.frequency.exponentialRampToValueAtTime(2100, now + 0.28);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.exponentialRampToValueAtTime(0.28, now + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+  noise.connect(filter).connect(gain).connect(ctx.destination);
+  noise.start(now);
+  noise.stop(now + 0.35);
+}
+
 function AimTrainerGame({ config: rawConfig }) {
   // Routine d'échauffement : une liste de modes enchaînés dans la même
   // fenêtre. L'étape courante remplace le mode et ses réglages de cibles ;
@@ -721,9 +1015,16 @@ function AimTrainerGame({ config: rawConfig }) {
   const isLastStep = !activeList || step >= activeList.length - 1;
 
   const mountRef = useRef(null);
+  // Voile blanc + indicateur directionnel du mode Dodge Flash : opacité/
+  // rotation pilotées à la main depuis la boucle d'animation (60 fps), pas
+  // via setState — même logique que les tracers/impacts, qui passent par
+  // Three.js plutôt que par React pour rester fluides.
+  const flashOverlayRef = useRef(null);
+  const flashIndicatorRef = useRef(null);
   const [phase, setPhase] = useState('ready'); // ready | running | paused | done
   const [timeLeft, setTimeLeft] = useState(config.duration);
   const [stats, setStats] = useState({ hits: 0, misses: 0, times: [] });
+  const [flashStats, setFlashStats] = useState({ dodged: 0, failed: 0 });
   const [locked, setLocked] = useState(false);
   // Diagnostic visible directement dans l'app (pas besoin d'ouvrir la
   // console) : certains testeurs sur Discord ont signalé une sensation de
@@ -885,6 +1186,30 @@ function AimTrainerGame({ config: rawConfig }) {
       );
       strip.position.set(x, FLOOR_Y + WALL_HEIGHT * 0.45, -WALL_HALF + 0.05);
       arena.add(strip);
+    });
+
+    // --- Murs du mode Dodge Flash --------------------------------------------
+    // Repères fixes à gauche/à droite (voir FLASH_WALL_YAW_DEG/DISTANCE plus
+    // haut), à la même distance que la zone de spawn des cibles pour garantir
+    // la même visibilité qu'elles — c'est de là que partent Skye et Phoenix.
+    // Toujours visibles (pas seulement en mode Dodge Flash) : les laisser en
+    // place tout le temps évite de reconstruire l'arène au changement de
+    // mode, et un mur bas sur le côté ne gêne pas les autres modes.
+    const flashWallGeo = new THREE.BoxGeometry(FLASH_WALL_WIDTH, FLASH_WALL_HEIGHT, FLASH_WALL_DEPTH);
+    const flashWallCrestMat = new THREE.MeshBasicMaterial({ color: 0xff4655, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+    ['left', 'right'].forEach((side) => {
+      const pos = flashWallBase(side);
+      const wallPanel = new THREE.Mesh(flashWallGeo, wallMat);
+      wallPanel.position.set(pos.x, FLOOR_Y + FLASH_WALL_HEIGHT / 2, pos.z);
+      // Face le joueur (origine du monde) — mêmes conventions que les
+      // projectiles qui en partent (voir flashWallPosition/yawTo).
+      wallPanel.lookAt(0, FLOOR_Y + FLASH_WALL_HEIGHT / 2, 0);
+      arena.add(wallPanel);
+
+      const crest = new THREE.Mesh(new THREE.PlaneGeometry(FLASH_WALL_WIDTH, 0.18), flashWallCrestMat);
+      crest.position.set(pos.x, FLOOR_Y + FLASH_WALL_HEIGHT - 0.12, pos.z);
+      crest.lookAt(0, FLOOR_Y + FLASH_WALL_HEIGHT - 0.12, 0);
+      arena.add(crest);
     });
 
     // --- Cibles ------------------------------------------------------------
@@ -1108,6 +1433,14 @@ function AimTrainerGame({ config: rawConfig }) {
       isTrackingHeld: false,
       lastTrackSample: 0,
       trackBeam: null,
+      // Mode Dodge Flash : état global (pas par cible, l'écran entier est
+      // concerné) — voir FLASH_VARIANTS/initFlashState plus haut.
+      flash: initFlashState(performance.now()),
+      // Objet 3D du projectile en vol (oiseau Skye, boule de feu Phoenix) le
+      // temps du préavis, et éclats de détonation en cours de fondu — même
+      // principe que `sparks` pour les impacts de tir.
+      flashEffect: null,
+      flashBursts: [],
     };
 
     // --- Modèle mains + arme (CC0, voir src/assets/models/CREDITS.md) -------
@@ -1165,6 +1498,125 @@ function AimTrainerGame({ config: rawConfig }) {
 
       const mode = MODES[configRef.current.mode] ?? MODES.flick;
       const cfg = configRef.current;
+
+      // --- Mode Dodge Flash --------------------------------------------------
+      // État global (pas par cible) : idle → telegraph (le projectile 3D vole
+      // du mur vers le joueur) → blind (raté) ou retour direct à idle
+      // (esquivé). Voir FLASH_VARIANTS/FLASH_DODGE_ANGLE_DEG plus haut.
+      if (mode.flashDodge && phaseRef.current === 'running') {
+        const flash = state.flash;
+        if (flash.phase === 'idle' && now >= flash.nextEventAt) {
+          flash.variant = FLASH_VARIANTS[Math.floor(Math.random() * FLASH_VARIANTS.length)];
+          flash.side = Math.random() < 0.5 ? 'left' : 'right';
+          const from = flashWallPosition(flash.side);
+          flash.originYaw = yawTo(from);
+          flash.telegraphStartedAt = now;
+          flash.phase = 'telegraph';
+          const object = FLASH_EFFECT_BUILDERS[flash.variant.key](flash.variant.color);
+          scene.add(object);
+          state.flashEffect = { key: flash.variant.key, object, from, to: flashTargetFor(flash.side) };
+          state.audioCtx.resume();
+          if (flash.variant.key === 'skye') playSkyeCall(state.audioCtx);
+          else if (flash.variant.key === 'phoenix') playPhoenixWhoosh(state.audioCtx);
+        } else if (flash.phase === 'telegraph') {
+          const elapsedMs = now - flash.telegraphStartedAt;
+          const progress = Math.min(elapsedMs / flash.variant.telegraphMs, 1);
+          if (state.flashEffect) {
+            updateFlashEffectObject(
+              state.flashEffect.key,
+              state.flashEffect.object,
+              state.flashEffect.from,
+              state.flashEffect.to,
+              progress,
+              elapsedMs,
+            );
+          }
+          if (elapsedMs >= flash.variant.telegraphMs) {
+            // Détonation : le projectile disparaît, remplacé par un éclat —
+            // qu'on l'ait esquivé ou non, il explose bel et bien (seul le
+            // voile blanc dépend de si on regardait ailleurs à temps).
+            if (state.flashEffect) {
+              scene.remove(state.flashEffect.object);
+              state.flashBursts.push({
+                position: state.flashEffect.to.clone(),
+                color: flash.variant.color,
+                createdAt: now,
+              });
+              state.flashEffect = null;
+            }
+            const diffDeg = angleDiff(state.euler.y, flash.originYaw) * (180 / Math.PI);
+            if (diffDeg >= FLASH_DODGE_ANGLE_DEG) {
+              flash.phase = 'idle';
+              flash.nextEventAt = randomFlashDelay(now);
+              setFlashStats((prev) => ({ ...prev, dodged: prev.dodged + 1 }));
+              state.audioCtx.resume();
+              playDodgeChime(state.audioCtx);
+            } else {
+              flash.blindStartedAt = now;
+              flash.phase = 'blind';
+              setFlashStats((prev) => ({ ...prev, failed: prev.failed + 1 }));
+            }
+          }
+        } else if (flash.phase === 'blind' && now - flash.blindStartedAt >= FLASH_BLIND_DURATION_MS) {
+          flash.phase = 'idle';
+          flash.nextEventAt = randomFlashDelay(now);
+        }
+
+        // Voile blanc : monte à 1 instantanément (c'est la détonation), puis
+        // redescend sur toute la durée de l'aveuglement — racine carrée pour
+        // que la fin de fondu (où l'œil est le plus sensible) soit plus lente
+        // que le début, comme le vrai flash Valorant.
+        if (flashOverlayRef.current) {
+          flashOverlayRef.current.style.opacity =
+            flash.phase === 'blind'
+              ? String(Math.max(0, 1 - (now - flash.blindStartedAt) / FLASH_BLIND_DURATION_MS) ** 0.5)
+              : '0';
+        }
+
+        // Indicateur directionnel pendant le préavis : repositionné à chaque
+        // frame en fonction du cap ACTUEL du joueur (pas figé à l'apparition)
+        // pour donner un vrai repère "tourne par là" qui suit le regard, en
+        // plus du projectile 3D lui-même (qui peut sortir du champ de vision).
+        if (flashIndicatorRef.current) {
+          if (flash.phase === 'telegraph') {
+            const relativeYaw = flash.originYaw - state.euler.y;
+            flashIndicatorRef.current.style.opacity = '1';
+            flashIndicatorRef.current.style.setProperty('--flash-color', flash.variant.color);
+            flashIndicatorRef.current.style.transform = `translate(-50%, -50%) rotate(${relativeYaw}rad)`;
+          } else {
+            flashIndicatorRef.current.style.opacity = '0';
+          }
+        }
+      }
+
+      // Éclats de détonation des flashs (Skye/Phoenix) : même principe
+      // que les impacts de tir juste plus bas (grossissent puis s'effacent),
+      // en plus grand et dans la couleur de la variante.
+      state.flashBursts = state.flashBursts.filter((burst) => {
+        const age = now - burst.createdAt;
+        if (age > FLASH_BURST_LIFETIME_MS) {
+          scene.remove(burst.mesh ?? burst.light);
+          return false;
+        }
+        if (!burst.mesh) {
+          const sprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+              map: impactTexture,
+              color: burst.color,
+              transparent: true,
+              depthTest: false,
+              blending: THREE.AdditiveBlending,
+            }),
+          );
+          sprite.position.copy(burst.position);
+          scene.add(sprite);
+          burst.mesh = sprite;
+        }
+        const t = age / FLASH_BURST_LIFETIME_MS;
+        burst.mesh.material.opacity = 1 - t;
+        burst.mesh.scale.setScalar(1.4 + t * 2.2);
+        return true;
+      });
 
       state.targets.forEach((entry) => {
         // Pulsation à l'apparition — rend le spawn lisible.
@@ -1430,6 +1882,12 @@ function AimTrainerGame({ config: rawConfig }) {
       const { camera } = state;
       if (!camera) return;
 
+      // Mode Dodge Flash, en plein aveuglement : le tir est ignoré, comme en
+      // vrai partie où viser pendant un flash ne sert à rien — voir le
+      // choix fait par l'utilisateur (pas de pénalité de précision en plus,
+      // le tir ne compte juste pas).
+      if (state.flash?.phase === 'blind') return;
+
       // Tracking : pas de tir discret, il faut rester appuyé sur la cible en
       // mouvement — le pourcentage se calcule en continu dans la boucle
       // d'animation (voir plus bas), pas ici.
@@ -1675,10 +2133,12 @@ function AimTrainerGame({ config: rawConfig }) {
 
   const startSession = () => {
     setStats({ hits: 0, misses: 0, times: [] });
+    setFlashStats({ dodged: 0, failed: 0 });
     setTimeLeft(config.duration);
     stateRef.current.sessionEnded = false;
     clearTrackingHold();
     const now = performance.now();
+    resetFlashState(stateRef.current, now);
     const mode = MODES[config.mode] ?? MODES.flick;
     stateRef.current.targets?.forEach((entry) => {
       resetTargetForMode(entry, mode, config, now, stateRef.current);
@@ -1700,9 +2160,11 @@ function AimTrainerGame({ config: rawConfig }) {
   const nextStep = () => {
     setStep((s) => s + 1);
     setStats({ hits: 0, misses: 0, times: [] });
+    setFlashStats({ dodged: 0, failed: 0 });
     stateRef.current.sessionEnded = false;
     clearTrackingHold();
     const now = performance.now();
+    resetFlashState(stateRef.current, now);
 
     if (playlistSteps) {
       const nextConfig = playlistSteps[step + 1];
@@ -1732,6 +2194,13 @@ function AimTrainerGame({ config: rawConfig }) {
   };
 
   const resumeSession = () => {
+    // Un flash en plein préavis/aveuglement au moment de la pause verrait le
+    // temps réel écoulé pendant la pause compté comme s'il s'était écoulé en
+    // jeu — sans ça, reprendre juste après une pause détonerait le flash
+    // instantanément, sans laisser la moindre chance de réagir.
+    if (stateRef.current.flash && stateRef.current.flash.phase !== 'idle') {
+      resetFlashState(stateRef.current, performance.now());
+    }
     // C'est le cas le plus exposé au cooldown Chromium : reprendre juste
     // après avoir quitté via Échap, l'action même qui déclenche ce cooldown.
     // Reste en "paused" si le verrouillage échoue — le bouton "Reprendre"
@@ -1802,6 +2271,12 @@ function AimTrainerGame({ config: rawConfig }) {
           ) : (
             <div className="aim-trainer-crosshair" />
           )}
+          {MODES[config.mode]?.flashDodge && (
+            <>
+              <div ref={flashIndicatorRef} className="aim-flash-indicator" aria-hidden="true" />
+              <div ref={flashOverlayRef} className="aim-flash-overlay" aria-hidden="true" />
+            </>
+          )}
           <div className="aim-game-hud">
             <div className="aim-game-hud-item">
               <span className="aim-game-hud-value">{timeLeft}</span>
@@ -1815,6 +2290,12 @@ function AimTrainerGame({ config: rawConfig }) {
               <span className="aim-game-hud-value">{accuracy === null ? '—' : `${accuracy.toFixed(0)}%`}</span>
               <span className="aim-game-hud-label">précision</span>
             </div>
+            {MODES[config.mode]?.flashDodge && (
+              <div className="aim-game-hud-item">
+                <span className="aim-game-hud-value">{flashStats.dodged}/{flashStats.dodged + flashStats.failed}</span>
+                <span className="aim-game-hud-label">flashs esquivés</span>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -1855,6 +2336,9 @@ function AimTrainerGame({ config: rawConfig }) {
                 )}
                 {MODES[config.mode]?.movement === 'snap' && (
                   <p className="aim-game-tip"><Icon icon={Hourglass} size={16} /> Un flick ne suffit pas : reste stabilisé sur la cible un instant pour que le tir compte.</p>
+                )}
+                {MODES[config.mode]?.flashDodge && (
+                  <p className="aim-game-tip"><Icon icon={EyeOff} size={16} /> Un flash arrive d'une direction aléatoire : tourne la caméra à l'opposé avant qu'il parte pour l'esquiver, sinon l'écran blanchit et tes tirs ne comptent plus le temps que ça dure.</p>
                 )}
 
                 <div className="aim-game-controls">
@@ -1949,6 +2433,16 @@ function AimTrainerGame({ config: rawConfig }) {
                     <span className="aim-game-result-value">{config.duration}s</span>
                     <span className="aim-game-result-label">Durée</span>
                   </div>
+                  {MODES[config.mode]?.flashDodge && (
+                    <div className="aim-game-result">
+                      <span className="aim-game-result-value">
+                        {flashStats.dodged + flashStats.failed === 0
+                          ? '—'
+                          : `${flashStats.dodged}/${flashStats.dodged + flashStats.failed}`}
+                      </span>
+                      <span className="aim-game-result-label">Flashs esquivés</span>
+                    </div>
+                  )}
                 </div>
 
                 <p className="aim-game-tip">

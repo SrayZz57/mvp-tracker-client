@@ -5,6 +5,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  resolveClipMetadata: (url) => ipcRenderer.invoke('clips:resolve-clip-metadata', url),
   onRecoveryDeepLink: (callback) => {
     const listener = (_event, tokens) => callback(tokens);
     ipcRenderer.on('deep-link:recovery', listener);

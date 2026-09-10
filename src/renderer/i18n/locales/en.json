@@ -161,7 +161,8 @@
       "messages": "Messages",
       "friends": "Friends",
       "account": "My account",
-      "lineups": "Lineups"
+      "lineups": "Lineups",
+      "clips": "Clips"
     },
     "rankUnavailable": "Rank unavailable",
     "searchPlaceholder": "Search a tab...",
@@ -1817,5 +1818,42 @@
     "empty": "No tech published for this filter yet — be the first to share one.",
     "deleteOwn": "Delete my tech",
     "deleteAdmin": "Delete (admin)"
+  },
+  "clips": {
+    "title": "Clips",
+    "description": "The community feed — share your best moments (clutches, aces, fails) via a YouTube, Medal.tv or Streamable link.",
+    "publishTitle": "Publish a clip",
+    "publishIntro": "Paste a link to your clip, add a title. The platform is detected automatically.",
+    "urlPlaceholder": "Clip link (YouTube, Medal.tv, Streamable)",
+    "titlePlaceholder": "Title (e.g. 1v4 clutch on Bind)",
+    "descriptionPlaceholder": "Description (optional)",
+    "noAgent": "No agent",
+    "noMap": "No map",
+    "publish": "Publish",
+    "publishing": "Publishing...",
+    "needAccount": "Sign in to publish a clip.",
+    "unsupportedLink": "This link isn't from YouTube, Medal.tv or Streamable — only these platforms are supported.",
+    "detectedPlatform": "Detected platform: {{platform}}",
+    "allAgents": "All agents",
+    "allMaps": "All maps",
+    "loading": "Loading...",
+    "empty": "No clip published for this filter yet — be the first to share one.",
+    "like": "Like",
+    "comments": "Comments",
+    "noComments": "No comments yet.",
+    "commentPlaceholder": "Add a comment...",
+    "report": "Report",
+    "alreadyReported": "Already reported",
+    "reportedByCount": "Reported {{count}} times",
+    "openExternal": "Open in browser",
+    "deleteOwn": "Delete my clip",
+    "deleteAdmin": "Delete (admin)",
+    "platform": {
+      "youtube": "YouTube",
+      "medal": "Medal.tv",
+      "streamable": "Streamable"
+    },
+    "close": "Close",
+    "openExternalHint": "This platform can't play directly inside the app — open in browser"
   }
 }

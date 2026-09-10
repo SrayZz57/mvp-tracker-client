@@ -452,6 +452,59 @@ const createWindow = () => {
 
 ipcMain.handle('shell:open-external', (_event, url) => shell.openExternal(url));
 
+// Medal.tv refuse d'être intégré en iframe (x-frame-options: SAMEORIGIN,
+// vérifié) — mais Discord/Twitter arrivent bien à lire les clips Medal
+// intégrés dans leurs propres embeds, et à en afficher une vraie miniature :
+// ils ne mettent pas la PAGE en iframe, ils lisent le lien MP4 direct et
+// l'image de miniature exposés dans les balises Open Graph/Twitter Card de
+// la page (og:video/twitter:player:stream, og:image/twitter:image) et les
+// passent à leur propre lecteur/à une <img>. Même principe ici — voir
+// clipEmbed.js et ClipsFeed.jsx. Marche aussi pour Streamable (qui expose
+// les mêmes balises), même si leur page s'intègre déjà en iframe sans souci
+// — seule sa miniature manquait.
+//
+// Fait depuis le PROCESS PRINCIPAL, pas le renderer : la CSP du renderer
+// (connect-src) ne liste ni medal.tv ni streamable.com pour du fetch brut,
+// et il n'y a aucune raison de l'y ajouter juste pour ce seul usage — Node
+// n'a pas cette restriction.
+//
+// Le lien vidéo est signé et propre à chaque requête (paramètres d'auth
+// dans l'URL) : résolu à la volée à chaque lecture plutôt que mis en cache
+// (voir ClipPlayer/MedalPlayer). La miniature, elle aussi signée mais avec
+// une bien plus longue durée de validité (~1 an), est résolue UNE SEULE
+// FOIS à la publication et stockée en base (clips.thumbnail_url) — la
+// rescraper à chaque affichage du fil pour chaque visiteur serait inutile
+// et lent.
+ipcMain.handle('clips:resolve-clip-metadata', async (_event, clipUrl) => {
+  const empty = { video: null, thumbnail: null };
+  try {
+    // `fetch` n'a aucun délai par défaut côté Node — sans ça, une plateforme
+    // qui traîne ou ne répond jamais laisserait l'appelant coincé en
+    // attente indéfiniment (l'IPC ne renverrait tout simplement jamais).
+    const res = await fetch(clipUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return empty;
+    const html = await res.text();
+    const videoMatch =
+      html.match(/<meta property="og:video(?::secure_url)?" content="([^"]+)"/) ||
+      html.match(/<meta name="twitter:player:stream" content="([^"]+)"/);
+    const thumbnailMatch =
+      html.match(/<meta property="og:image(?::secure_url)?" content="([^"]+)"/) ||
+      html.match(/<meta name="twitter:image" content="([^"]+)"/);
+    // Les entités HTML (&amp; dans le HTML source) doivent être décodées
+    // avant de servir ces URL telles quelles à un <video src>/<img src>.
+    return {
+      video: videoMatch ? videoMatch[1].replace(/&amp;/g, '&') : null,
+      thumbnail: thumbnailMatch ? thumbnailMatch[1].replace(/&amp;/g, '&') : null,
+    };
+  } catch (err) {
+    console.error('[clips] échec de résolution des métadonnées :', err.message);
+    return empty;
+  }
+});
+
 ipcMain.handle('window:minimize', () => mainWindow?.minimize());
 ipcMain.handle('window:toggle-maximize', () => {
   if (!mainWindow) return;
@@ -1439,11 +1492,13 @@ app.whenReady().then(() => {
       "media-src 'self' https:",
       "font-src 'self' data:",
       "connect-src 'self' https://api.henrikdev.xyz https://valorant-api.com https://*.valorant-api.com https://hbfqtrqztyrnsqrrvmep.supabase.co wss://hbfqtrqztyrnsqrrvmep.supabase.co",
-      // Lecteur intégré pour les techs vidéo communautaires du Wiki
-      // (TechLibrary.jsx) — YouTube uniquement, le seul lien qu'on embarque
-      // en iframe (voir techVideoEmbed.js : tout le reste s'ouvre à part
-      // dans le navigateur système).
-      "frame-src 'self' https://www.youtube-nocookie.com",
+      // Lecteurs intégrés en iframe (YouTube/Streamable) pour Lineups
+      // (TechLibrary.jsx) et Clips (ClipsFeed.jsx) — voir VideoPlayer.jsx et
+      // clipEmbed.js, partagés par les deux. Pas medal.tv : leurs pages
+      // refusent l'intégration en iframe hors leur propre site
+      // (x-frame-options: SAMEORIGIN, vérifié) — ouvert dans le navigateur
+      // système/lu via <video> à la place, jamais en iframe.
+      "frame-src 'self' https://www.youtube-nocookie.com https://streamable.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join('; ');

@@ -161,7 +161,8 @@
       "messages": "Messages",
       "friends": "Amis",
       "account": "Mon compte",
-      "lineups": "Lineups"
+      "lineups": "Lineups",
+      "clips": "Clips"
     },
     "rankUnavailable": "Rang indisponible",
     "searchPlaceholder": "Chercher un onglet...",
@@ -1817,5 +1818,42 @@
     "empty": "Aucune tech publiée pour ce filtre pour le moment — sois le premier à en partager une.",
     "deleteOwn": "Supprimer ma tech",
     "deleteAdmin": "Supprimer (admin)"
+  },
+  "clips": {
+    "title": "Clips",
+    "description": "Le fil de la communauté — partage tes meilleurs moments (clutchs, aces, fails) via un lien YouTube, Medal.tv ou Streamable.",
+    "publishTitle": "Publier un clip",
+    "publishIntro": "Colle un lien vers ton clip, ajoute un titre. La plateforme est détectée automatiquement.",
+    "urlPlaceholder": "Lien du clip (YouTube, Medal.tv, Streamable)",
+    "titlePlaceholder": "Titre (ex. Clutch 1v4 sur Bind)",
+    "descriptionPlaceholder": "Description (optionnel)",
+    "noAgent": "Aucun agent",
+    "noMap": "Aucune map",
+    "publish": "Publier",
+    "publishing": "Publication...",
+    "needAccount": "Connecte-toi pour publier un clip.",
+    "unsupportedLink": "Ce lien ne vient pas de YouTube, Medal.tv ou Streamable — seules ces plateformes sont prises en charge.",
+    "detectedPlatform": "Plateforme détectée : {{platform}}",
+    "allAgents": "Tous les agents",
+    "allMaps": "Toutes les maps",
+    "loading": "Chargement...",
+    "empty": "Aucun clip publié pour ce filtre pour le moment — sois le premier à en partager un.",
+    "like": "Like",
+    "comments": "Commentaires",
+    "noComments": "Aucun commentaire pour le moment.",
+    "commentPlaceholder": "Ajouter un commentaire...",
+    "report": "Signaler",
+    "alreadyReported": "Déjà signalé",
+    "reportedByCount": "Signalé {{count}} fois",
+    "openExternal": "Ouvrir dans le navigateur",
+    "deleteOwn": "Supprimer mon clip",
+    "deleteAdmin": "Supprimer (admin)",
+    "platform": {
+      "youtube": "YouTube",
+      "medal": "Medal.tv",
+      "streamable": "Streamable"
+    },
+    "close": "Fermer",
+    "openExternalHint": "Cette plateforme ne peut pas être lue directement dans l'app — ouvrir dans le navigateur"
   }
 }

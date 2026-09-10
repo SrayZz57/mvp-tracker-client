@@ -6162,6 +6162,272 @@ input[type='color'] {
   color: var(--text-muted);
 }
 
+/* =========================================================================
+   CLIPS — mini réseau social de highlights (ClipsFeed.jsx). Réutilise
+   largement les classes .tech-*/.comp-published-* déjà en place pour
+   Lineups/Compositions (même esthétique de carte) — uniquement ce qui est
+   propre aux clips (lecteur, likes/commentaires/signalement) est ajouté ici.
+   ========================================================================= */
+.clip-publish-form {
+  grid-template-columns: 1fr;
+}
+
+.clip-list {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.clip-video-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% + 2rem);
+  margin: 0 -1rem 0.75rem;
+  aspect-ratio: 16 / 9;
+  border: none;
+  background: var(--surface) center / cover no-repeat;
+  cursor: pointer;
+}
+
+.clip-video-thumb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
+}
+
+.clip-video-platform {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 1;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(10, 12, 16, 0.65);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.clip-video-play {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #12151d;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.clip-video-thumb:hover .clip-video-play {
+  transform: scale(1.08);
+}
+
+.clip-video-frame {
+  position: relative;
+  width: calc(100% + 2rem);
+  margin: 0 -1rem 0.75rem;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.clip-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.clip-description {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.clip-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.clip-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.clip-action-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.clip-action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.clip-action-btn.liked {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(255, 70, 85, 0.1);
+}
+
+.clip-action-btn.reported {
+  border-color: var(--warning, #ffc857);
+  color: var(--warning, #ffc857);
+}
+
+.clip-report-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--warning, #ffc857);
+}
+
+.clip-comments {
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.clip-comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+
+.clip-comment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.clip-comment-text {
+  margin: 0;
+  flex: 1;
+  min-width: 60%;
+  font-size: 0.8rem;
+}
+
+.clip-comment-form {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.clip-comment-form input {
+  flex: 1;
+}
+
+/* Carte compacte du fil entièrement cliquable (ouvre ClipDetailModal) — les
+   zones interactives (actions, footer) stoppent la propagation pour ne pas
+   ouvrir la modale par-dessus leur propre clic. */
+.clip-item-clickable {
+  cursor: pointer;
+}
+
+/* Compteur de commentaires : même look que les boutons d'action, mais pas
+   interactif dans la carte compacte (les commentaires ne vivent que dans la
+   vue en grand) — pas de curseur pointeur ni d'effet hover. */
+.clip-action-static {
+  cursor: default;
+}
+
+.clip-action-static:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--surface);
+}
+
+/* =========================================================================
+   VUE EN GRAND D'UN CLIP (ClipDetailModal) — réutilise .modal-overlay/
+   .modal-card déjà en place (Wiki, etc.), juste la largeur resserrée : un
+   clip vidéo n'a pas besoin de la largeur max des modales de fiche (900px).
+   ========================================================================= */
+.clip-detail-modal {
+  max-width: 620px;
+}
+
+.clip-video-frame-large {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 0.9rem;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #000;
+}
+
+.clip-video-frame-large iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.clip-video-frame-large video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* `contain`, pas `cover` : un clip Medal n'est pas forcément en 16:9 (crop
+     variable selon l'enregistrement) — mieux vaut des bandes noires que
+     rogner l'image et perdre un bout du clip. */
+  object-fit: contain;
+  background: #000;
+}
+
+.clip-video-external-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 0.9rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.clip-video-external-cta:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.clip-detail-title {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 1.1rem;
+}
+
 .profile-adn-card {
   background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 70, 85, 0.08) 100%);
 }

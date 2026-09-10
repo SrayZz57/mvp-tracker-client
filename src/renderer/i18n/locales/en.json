@@ -162,7 +162,8 @@
       "friends": "Friends",
       "account": "My account",
       "lineups": "Lineups",
-      "clips": "Clips"
+      "clips": "Clips",
+      "teamListings": "Team Search"
     },
     "rankUnavailable": "Rank unavailable",
     "searchPlaceholder": "Search a tab...",
@@ -178,7 +179,9 @@
     "unreadMessages": "Messages",
     "friendsTitle": "Friends",
     "discordTitle": "Join the Discord",
-    "updateReady": "Update ready — Restart"
+    "updateReady": "Update ready — Restart",
+    "profileLoadFailed": "Could not load your profile — check your internet connection.",
+    "retry": "Retry"
   },
   "common": {
     "language": "Language",
@@ -1855,5 +1858,49 @@
     },
     "close": "Close",
     "openExternalHint": "This platform can't play directly inside the app — open in browser"
+  },
+  "teamListings": {
+    "title": "Team Search",
+    "description": "The community classifieds — find a team, or players for yours. Replying sends a real friend request, same as everywhere else in the app.",
+    "publishTitle": "Post a listing",
+    "typeLookingForTeam": "Looking for a team",
+    "typeLookingForPlayers": "My team is recruiting",
+    "noMin": "No minimum",
+    "noMax": "No maximum",
+    "availabilityPlaceholder": "Availability (e.g. weekday evenings, weekends)",
+    "teamNamePlaceholder": "Team name",
+    "slotsPlaceholder": "Open slots",
+    "descriptionPlaceholder": "Describe what you're looking for (280 characters)",
+    "publish": "Publish",
+    "publishing": "Publishing...",
+    "needAccount": "Sign in to post a listing.",
+    "myListingsTitle": "My listings",
+    "close": "Close",
+    "renew": "Renew (14 days)",
+    "status": {
+      "active": "Active",
+      "closed": "Closed"
+    },
+    "responsesReceived": "{{count}} response(s) received",
+    "allTypes": "All types",
+    "anyRole": "Any",
+    "anyRank": "Any",
+    "loading": "Loading...",
+    "empty": "No listing for this filter yet — be the first to post one.",
+    "respond": "Respond",
+    "responseSent": "Friend request sent with your message.",
+    "deleteOwn": "Delete my listing",
+    "deleteAdmin": "Delete (admin)",
+    "expired": "Expired",
+    "slotsAvailable": "{{count}} slot(s)",
+    "unranked": "Unranked",
+    "defaultMessageLookingForTeam": "Interested in your listing — I'm looking for a team!",
+    "defaultMessageLookingForPlayers": "Interested in your team listing",
+    "messagePlaceholder": "Your message (optional)",
+    "discordPlaceholder": "Your Discord handle (e.g. username#0000)",
+    "discordRequired": "A Discord handle is required to apply.",
+    "discordLabel": "Discord:",
+    "sending": "Sending...",
+    "sendResponse": "Send my application"
   }
 }

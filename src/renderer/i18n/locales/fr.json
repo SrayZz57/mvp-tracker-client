@@ -162,7 +162,8 @@
       "friends": "Amis",
       "account": "Mon compte",
       "lineups": "Lineups",
-      "clips": "Clips"
+      "clips": "Clips",
+      "teamListings": "Recherche de Team"
     },
     "rankUnavailable": "Rang indisponible",
     "searchPlaceholder": "Chercher un onglet...",
@@ -178,7 +179,9 @@
     "unreadMessages": "Messages",
     "friendsTitle": "Amis",
     "discordTitle": "Rejoindre le Discord",
-    "updateReady": "Mise à jour prête — Redémarrer"
+    "updateReady": "Mise à jour prête — Redémarrer",
+    "profileLoadFailed": "Impossible de charger ton profil — vérifie ta connexion internet.",
+    "retry": "Réessayer"
   },
   "common": {
     "language": "Langue",
@@ -1855,5 +1858,49 @@
     },
     "close": "Fermer",
     "openExternalHint": "Cette plateforme ne peut pas être lue directement dans l'app — ouvrir dans le navigateur"
+  },
+  "teamListings": {
+    "title": "Recherche de Team",
+    "description": "Le fil des petites annonces — trouve une team ou des joueurs pour la tienne. Répondre envoie une vraie demande d'ami, comme partout ailleurs dans l'app.",
+    "publishTitle": "Publier une annonce",
+    "typeLookingForTeam": "Je cherche une team",
+    "typeLookingForPlayers": "Ma team cherche des joueurs",
+    "noMin": "Pas de mini",
+    "noMax": "Pas de maxi",
+    "availabilityPlaceholder": "Disponibilités (ex. soirs en semaine, weekend)",
+    "teamNamePlaceholder": "Nom de la team",
+    "slotsPlaceholder": "Places dispo",
+    "descriptionPlaceholder": "Décris ce que tu cherches (280 caractères)",
+    "publish": "Publier",
+    "publishing": "Publication...",
+    "needAccount": "Connecte-toi pour publier une annonce.",
+    "myListingsTitle": "Mes annonces",
+    "close": "Clôturer",
+    "renew": "Renouveler (14 jours)",
+    "status": {
+      "active": "Active",
+      "closed": "Clôturée"
+    },
+    "responsesReceived": "{{count}} réponse(s) reçue(s)",
+    "allTypes": "Tous types",
+    "anyRole": "Peu importe",
+    "anyRank": "Peu importe",
+    "loading": "Chargement...",
+    "empty": "Aucune annonce pour ce filtre pour le moment — sois le premier à en publier une.",
+    "respond": "Répondre",
+    "responseSent": "Demande d'ami envoyée avec ton message.",
+    "deleteOwn": "Supprimer mon annonce",
+    "deleteAdmin": "Supprimer (admin)",
+    "expired": "Expirée",
+    "slotsAvailable": "{{count}} place(s)",
+    "unranked": "Non classé",
+    "defaultMessageLookingForTeam": "Intéressé par ton annonce — je cherche une team !",
+    "defaultMessageLookingForPlayers": "Intéressé par ton annonce de recherche de team",
+    "messagePlaceholder": "Ton message (optionnel)",
+    "discordPlaceholder": "Ton pseudo Discord (ex. pseudo#0000)",
+    "discordRequired": "Le pseudo Discord est obligatoire pour candidater.",
+    "discordLabel": "Discord :",
+    "sending": "Envoi...",
+    "sendResponse": "Envoyer ma candidature"
   }
 }

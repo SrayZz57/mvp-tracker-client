@@ -28,6 +28,8 @@ import {
   Compass,
   Layers,
   Video,
+  Film,
+  Swords,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
@@ -55,6 +57,8 @@ import SessionGuideTab from './tabs/SessionGuideTab.jsx';
 import AimTrainerTab from './tabs/AimTrainerTab.jsx';
 import WikiTab from './tabs/WikiTab.jsx';
 import LineupsTab from './tabs/LineupsTab.jsx';
+import TeamListingsTab from './tabs/TeamListingsTab.jsx';
+import ClipsTab from './tabs/ClipsTab.jsx';
 import GoalsWidget from './GoalsWidget.jsx';
 import WeeklyRecapCard from './WeeklyRecapCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
@@ -124,6 +128,8 @@ const NAV_SECTIONS = [
       { id: 'composition', labelKey: 'nav.tabs.composition', icon: PuzzleIcon },
       { id: 'buy-simulator', labelKey: 'nav.tabs.buySimulator', icon: Wallet },
       { id: 'lineups', labelKey: 'nav.tabs.lineups', icon: Video },
+      { id: 'clips', labelKey: 'nav.tabs.clips', icon: Film },
+      { id: 'team-listings', labelKey: 'nav.tabs.teamListings', icon: Users },
       { id: 'wiki', labelKey: 'nav.tabs.wiki', icon: BookOpen },
     ],
   },
@@ -172,10 +178,18 @@ function SidebarProfile({ settings, rank, onClick }) {
 // `badge` (rouge) = quelque chose qui demande une action (message non lu,
 // demande d'ami en attente). `dot` (vert) = simple statut informatif (un ami
 // est en ligne) — jamais rouge, pour ne pas le confondre avec une demande.
-function TopbarIconButton({ icon, badge, dot, active, onClick, title }) {
+function TopbarIconButton({ icon, label, badge, dot, active, onClick, title }) {
+  const className = [
+    'topbar-icon-button',
+    label && 'topbar-icon-button-labeled',
+    active && 'active',
+  ]
+    .filter(Boolean)
+    .join(' ');
   return (
-    <button className={active ? 'topbar-icon-button active' : 'topbar-icon-button'} onClick={onClick} title={title}>
+    <button className={className} onClick={onClick} title={title}>
       <span><Icon icon={icon} /></span>
+      {label && <span className="topbar-icon-label">{label}</span>}
       {badge > 0 && <span className="topbar-icon-badge">{badge}</span>}
       {!badge && dot && <span className="topbar-icon-dot" />}
     </button>
@@ -226,6 +240,62 @@ function App() {
   const { t, i18n } = useTranslation();
   const [settings, setSettings] = useState(undefined);
   const [activeTab, setActiveTab] = useState('stats');
+  // Boutons latéraux de la souris (précédent/suivant) : demandé en vrai —
+  // navigue dans l'historique des ONGLETS visités, comme précédent/suivant
+  // dans un navigateur. Pas un state React (un historique n'a pas besoin de
+  // redéclencher de rendu pour lui-même, seul `activeTab` en a besoin) —
+  // juste des refs mises à jour par l'effet ci-dessous à chaque changement
+  // d'onglet, sauf quand CE changement vient lui-même d'un clic précédent/
+  // suivant (sinon on écraserait l'avenir qu'on vient de rouvrir).
+  const tabHistoryRef = useRef([activeTab]);
+  const tabHistoryIndexRef = useRef(0);
+  const navigatingHistoryRef = useRef(false);
+  const tabHistoryMountedRef = useRef(false);
+
+  useEffect(() => {
+    if (!tabHistoryMountedRef.current) {
+      tabHistoryMountedRef.current = true;
+      return;
+    }
+    if (navigatingHistoryRef.current) {
+      navigatingHistoryRef.current = false;
+      return;
+    }
+    // Nouvelle navigation "normale" : tronque l'historique après la position
+    // courante (comme un navigateur — revenir en arrière puis cliquer
+    // ailleurs abandonne l'ancien "suivant") et empile le nouvel onglet.
+    tabHistoryIndexRef.current += 1;
+    tabHistoryRef.current = [...tabHistoryRef.current.slice(0, tabHistoryIndexRef.current), activeTab];
+  }, [activeTab]);
+
+  useEffect(() => {
+    // `button` 3/4 = boutons latéraux précédent/suivant, valeurs standard de
+    // l'API MouseEvent (pas spécifiques à Electron) — `auxclick` plutôt que
+    // `mouseup`/`click` : c'est l'événement dédié aux boutons non-primaires,
+    // il ne se déclenche jamais pour le clic gauche normal d'un bouton/lien.
+    const handleAuxClick = (event) => {
+      if (event.button === 3) {
+        event.preventDefault();
+        const index = tabHistoryIndexRef.current;
+        if (index > 0) {
+          navigatingHistoryRef.current = true;
+          tabHistoryIndexRef.current = index - 1;
+          setActiveTab(tabHistoryRef.current[index - 1]);
+        }
+      } else if (event.button === 4) {
+        event.preventDefault();
+        const index = tabHistoryIndexRef.current;
+        if (index < tabHistoryRef.current.length - 1) {
+          navigatingHistoryRef.current = true;
+          tabHistoryIndexRef.current = index + 1;
+          setActiveTab(tabHistoryRef.current[index + 1]);
+        }
+      }
+    };
+    window.addEventListener('auxclick', handleAuxClick);
+    return () => window.removeEventListener('auxclick', handleAuxClick);
+  }, []);
+
   const data = useValorantData(settings);
   // Les catégories du menu (Performance, Mon compte...) partagent le même
   // magasin persistant que les blocs réduits (CollapsibleCard) — un identifiant
@@ -250,6 +320,18 @@ function App() {
   const [pendingOpenFriendId, setPendingOpenFriendId] = useState(null);
   const [session, setSession] = useState(undefined); // undefined = chargement, null = déconnecté
   const [profile, setProfile] = useState(undefined); // undefined = chargement, null = pas encore lié
+  // Signalé en vrai : un compte fraîchement créé restait sur un écran tout
+  // noir, sans rien à l'écran ni message d'erreur — `profile` bloqué à
+  // `undefined` pour de bon (voir loadProfile ci-dessous) si les 3 tentatives
+  // de lecture du profil échouent toutes, sans aucun retour visuel. `true`
+  // uniquement quand ce cas précis se produit, pour distinguer "en cours de
+  // chargement" (écran vide normal, bref) de "ça a vraiment échoué" (écran
+  // vide permanent, jamais normal).
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+  // Incrémenté par le bouton "Réessayer" de l'écran d'échec ci-dessous —
+  // relance l'effet de chargement du profil (qui ne dépend sinon que de
+  // `session`, inchangée à ce moment-là).
+  const [profileRetryNonce, setProfileRetryNonce] = useState(0);
   // true dès que le lien "mot de passe oublié" a rouvert l'app avec une
   // session de récupération active — force l'écran de nouveau mot de passe
   // avant tout le reste, peu importe l'état de connexion en cours.
@@ -528,6 +610,7 @@ function App() {
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
+    setProfileLoadFailed(false);
 
     // Au tout premier lancement de l'app, le service réseau de Chromium peut
     // mettre un instant à se stabiliser (voir le commentaire plus haut dans
@@ -545,6 +628,19 @@ function App() {
         console.error('[profiles] échec de la lecture du profil :', error.message);
         if (attempt < 3) {
           setTimeout(() => loadProfile(attempt + 1), 1000 * (attempt + 1));
+        } else {
+          // Les 3 tentatives ont échoué : `profile` resterait bloqué à
+          // `undefined` pour de bon sans ça, et l'app entière n'affiche
+          // rien (voir le rendu plus bas) — jamais montré à l'utilisateur,
+          // juste un écran noir, signalé en vrai par un testeur qui venait
+          // de créer son compte.
+          setProfileLoadFailed(true);
+          // Remonté dans PostHog : sans ça, la vraie cause (réseau ? RLS ?
+          // autre chose ?) ne serait jamais visible que dans la console
+          // DevTools de la personne concernée, qu'on ne voit jamais.
+          window.electronAPI?.captureException(session.user.id, new Error(error.message), {
+            context: 'profile-load-exhausted-retries',
+          });
         }
         return;
       }
@@ -555,7 +651,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, profileRetryNonce]);
 
   // Lie le compte au Riot ID uniquement suite à un passage volontaire par
   // l'écran de recherche (linkingRiot), une fois le puuid résolu — jamais à
@@ -695,6 +791,27 @@ function App() {
   }
 
   if (profile === undefined) {
+    if (profileLoadFailed) {
+      return (
+        <div className="welcome-screen">
+          <div className="welcome-bg" aria-hidden="true">
+            <span className="welcome-orb welcome-orb-1" />
+            <span className="welcome-orb welcome-orb-2" />
+            <span className="welcome-orb welcome-orb-3" />
+            <span className="welcome-orb welcome-orb-4" />
+          </div>
+          <p className="label">{t('nav.profileLoadFailed')}</p>
+          <div className="account-settings-actions">
+            <button className="refresh" onClick={() => setProfileRetryNonce((n) => n + 1)}>
+              {t('nav.retry')}
+            </button>
+            <button className="sidebar-signout account-signout" onClick={() => supabase.auth.signOut().then(lockMessagingKey)}>
+              {t('account.signOut')}
+            </button>
+          </div>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -848,6 +965,18 @@ function App() {
         return <WikiTab />;
       case 'lineups':
         return <LineupsTab myId={session.user.id} isAdmin={isAdmin} />;
+      case 'clips':
+        return <ClipsTab myId={session.user.id} isAdmin={isAdmin} />;
+      case 'team-listings':
+        return (
+          <TeamListingsTab
+            myId={session.user.id}
+            isAdmin={isAdmin}
+            myRank={myRank}
+            profile={profile}
+            apiKey={settings?.apiKey}
+          />
+        );
       case 'admin':
         // Re-vérifié ici, pas seulement dans la nav : même si quelqu'un
         // forçait activeTab à 'admin' sans passer par le bouton (jamais
@@ -1064,6 +1193,13 @@ function App() {
             dot={onlineFriendIds.size > 0}
             active={activeTab === 'friends'}
             onClick={() => setActiveTab('friends')}
+          />
+          <TopbarIconButton
+            icon={Swords}
+            label={t('nav.tabs.teamListings')}
+            title={t('nav.tabs.teamListings')}
+            active={activeTab === 'team-listings'}
+            onClick={() => setActiveTab('team-listings')}
           />
           <TopbarAccountButton
             profile={profile}

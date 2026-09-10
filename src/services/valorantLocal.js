@@ -171,18 +171,57 @@ function pdBaseFromGlz(glz) {
 const mmrCache = new Map(); // puuid -> { tier, expiresAt }
 const MMR_CACHE_MS = 5 * 60 * 1000;
 
+// `LatestCompetitiveUpdate.SeasonID` pointe vers la saison du DERNIER match
+// classé joué — pas forcément l'acte en cours. Un joueur qui n'a pas encore
+// touché au classé cet acte-ci s'y retrouve avec la saison PRÉCÉDENTE, et le
+// tier qui va avec est donc son rang de FIN d'acte précédent (son "peak"),
+// pas son rang actuel — signalé en vrai ("ça m'affiche mon peak elo de
+// l'acte précédent" sur ~1 partie sur 3, cohérent : arrive pour tout
+// coéquipier n'ayant pas encore joué classé cet acte). Sans vérifier l'acte
+// en cours, rien ne permet de distinguer ce cas de "vraiment classé cet
+// acte" — les deux ont un SeasonID renseigné.
+let currentActCache = null; // { id, expiresAt }
+const CURRENT_ACT_CACHE_MS = 6 * 60 * 60 * 1000; // 6h — un acte dure des semaines, inutile de revérifier souvent
+
+async function getCurrentActId() {
+  if (currentActCache && currentActCache.expiresAt > Date.now()) return currentActCache.id;
+  try {
+    const res = await fetch('https://valorant-api.com/v1/seasons');
+    if (!res.ok) return null;
+    const json = await res.json();
+    const now = Date.now();
+    const currentAct = (json.data ?? []).find(
+      (season) =>
+        season.type === 'EAresSeasonType::Act' &&
+        new Date(season.startTime).getTime() <= now &&
+        (!season.endTime || new Date(season.endTime).getTime() > now),
+    );
+    const id = currentAct?.uuid ?? null;
+    currentActCache = { id, expiresAt: now + CURRENT_ACT_CACHE_MS };
+    return id;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchMmrTier(pdBase, headers, puuid) {
   const cached = mmrCache.get(puuid);
   if (cached && cached.expiresAt > Date.now()) return cached.tier;
 
   try {
-    const res = await fetch(`${pdBase}/mmr/v1/players/${puuid}`, { headers });
+    const [res, currentActId] = await Promise.all([fetch(`${pdBase}/mmr/v1/players/${puuid}`, { headers }), getCurrentActId()]);
     if (!res.ok) return 0;
     const json = await res.json();
     const seasonId = json.LatestCompetitiveUpdate?.SeasonID;
-    const tier = seasonId
-      ? json.QueueSkills?.competitive?.SeasonalInfoBySeasonID?.[seasonId]?.CompetitiveTier ?? 0
-      : 0;
+    // `currentActId` null (seasons.valorant-api.com injoignable) : on ne
+    // peut pas vérifier la fraîcheur, on fait confiance à Riot plutôt que de
+    // tout masquer — seul le cas qu'on sait identifier avec certitude
+    // (acte différent de l'acte en cours) est neutralisé.
+    const isStaleAct = currentActId && seasonId && seasonId !== currentActId;
+    const tier =
+      seasonId && !isStaleAct
+        ? json.QueueSkills?.competitive?.SeasonalInfoBySeasonID?.[seasonId]?.CompetitiveTier ?? 0
+        : 0;
     mmrCache.set(puuid, { tier, expiresAt: Date.now() + MMR_CACHE_MS });
     return tier;
   } catch {

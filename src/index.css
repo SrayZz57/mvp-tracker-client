@@ -6157,14 +6157,16 @@ input[type='color'] {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  /* --role-color posée par TeamListings.jsx sur les rôles recherchés —
+     retombe sur la bordure neutre habituelle partout ailleurs (Lineups). */
+  border: 1px solid var(--role-color, var(--border));
   font-size: 0.68rem;
   color: var(--text-muted);
 }
 
 /* =========================================================================
    CLIPS — mini réseau social de highlights (ClipsFeed.jsx). Réutilise
-   largement les classes .tech-*/.comp-published-* déjà en place pour
+   largement les classes tech-* et comp-published-* déjà en place pour
    Lineups/Compositions (même esthétique de carte) — uniquement ce qui est
    propre aux clips (lecteur, likes/commentaires/signalement) est ajouté ici.
    ========================================================================= */
@@ -6426,6 +6428,85 @@ input[type='color'] {
 .clip-detail-title {
   margin: 0.6rem 0 0.3rem;
   font-size: 1.1rem;
+}
+
+/* =========================================================================
+   RECHERCHE DE TEAM (LFG) — TeamListings.jsx. Réutilise .tech-item/
+   .comp-published-* déjà en place (même esthétique de carte que Lineups/
+   Clips), juste les quelques éléments propres aux annonces en plus.
+   ========================================================================= */
+.lfg-item {
+  padding-top: 1rem;
+}
+
+.lfg-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.lfg-type-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.lfg-type-badge.seeking {
+  background: rgba(78, 201, 245, 0.14);
+  border: 1px solid rgba(78, 201, 245, 0.35);
+  color: #4ec9f5;
+}
+
+.lfg-type-badge.recruiting {
+  background: rgba(255, 70, 85, 0.14);
+  border: 1px solid rgba(255, 70, 85, 0.3);
+  color: var(--accent, #ff4655);
+}
+
+.lfg-expired-badge {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lfg-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.lfg-reply {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.lfg-owner-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.lfg-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lfg-reply-form textarea {
+  width: 100%;
+  min-height: 60px;
+}
+
+.lfg-response-discord {
+  font-weight: 600;
+  color: var(--text);
 }
 
 .profile-adn-card {
@@ -7663,6 +7744,21 @@ input[type='color'] {
 .topbar-icon-button.active {
   border-color: var(--accent);
   box-shadow: 0 0 10px rgba(255, 70, 85, 0.25);
+}
+
+/* Variante avec un libellé visible à côté de l'icône (ex. Recherche de
+   Team) — largeur libre au lieu du carré 42×42 fixe des autres boutons de
+   la barre du haut, qui restent icône seule + infobulle. */
+.topbar-icon-button-labeled {
+  width: auto;
+  gap: 0.4rem;
+  padding: 0 0.7rem;
+}
+
+.topbar-icon-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .topbar-lang-label {

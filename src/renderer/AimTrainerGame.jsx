@@ -1192,11 +1192,12 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
     // Repères fixes à gauche/à droite (voir FLASH_WALL_YAW_DEG/DISTANCE plus
     // haut), à la même distance que la zone de spawn des cibles pour garantir
     // la même visibilité qu'elles — c'est de là que partent Skye et Phoenix.
-    // Toujours visibles (pas seulement en mode Dodge Flash) : les laisser en
-    // place tout le temps évite de reconstruire l'arène au changement de
-    // mode, et un mur bas sur le côté ne gêne pas les autres modes.
+    // Construits une seule fois (pas de reconstruction d'arène au changement
+    // de mode) mais visibles UNIQUEMENT en Dodge Flash — voir le
+    // `.visible = mode.flashDodge` dans la boucle d'animation plus bas.
     const flashWallGeo = new THREE.BoxGeometry(FLASH_WALL_WIDTH, FLASH_WALL_HEIGHT, FLASH_WALL_DEPTH);
     const flashWallCrestMat = new THREE.MeshBasicMaterial({ color: 0xff4655, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+    const flashWallMeshes = [];
     ['left', 'right'].forEach((side) => {
       const pos = flashWallBase(side);
       const wallPanel = new THREE.Mesh(flashWallGeo, wallMat);
@@ -1205,11 +1206,13 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       // projectiles qui en partent (voir flashWallPosition/yawTo).
       wallPanel.lookAt(0, FLOOR_Y + FLASH_WALL_HEIGHT / 2, 0);
       arena.add(wallPanel);
+      flashWallMeshes.push(wallPanel);
 
       const crest = new THREE.Mesh(new THREE.PlaneGeometry(FLASH_WALL_WIDTH, 0.18), flashWallCrestMat);
       crest.position.set(pos.x, FLOOR_Y + FLASH_WALL_HEIGHT - 0.12, pos.z);
       crest.lookAt(0, FLOOR_Y + FLASH_WALL_HEIGHT - 0.12, 0);
       arena.add(crest);
+      flashWallMeshes.push(crest);
     });
 
     // --- Cibles ------------------------------------------------------------
@@ -1498,6 +1501,13 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
 
       const mode = MODES[configRef.current.mode] ?? MODES.flick;
       const cfg = configRef.current;
+
+      // Murs Dodge Flash : visibles seulement dans ce mode (voir leur
+      // construction plus haut) — un simple set() ne coûte rien même appelé
+      // à chaque frame, pas besoin de le limiter aux changements de mode.
+      for (let i = 0; i < flashWallMeshes.length; i += 1) {
+        flashWallMeshes[i].visible = mode.flashDodge === true;
+      }
 
       // --- Mode Dodge Flash --------------------------------------------------
       // État global (pas par cible) : idle → telegraph (le projectile 3D vole

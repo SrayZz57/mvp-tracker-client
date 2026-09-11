@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2, Star } from 'lucide-react';
+import { Trash2, Star, Play } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { DEFAULT_CONFIG, MODES } from './AimTrainerGame.jsx';
 
@@ -46,7 +46,7 @@ function savePresets(presets) {
 // et 'edit' (les curseurs, pour en créer un nouveau). On ouvre direct sur
 // 'edit' tant qu'aucun preset n'existe encore — pas la peine d'afficher une
 // liste vide en premier.
-function CustomModeConfig({ onClose, onSaved }) {
+function CustomModeConfig({ onClose, onSaved, onLaunch }) {
   const { t } = useTranslation();
   const stored = loadStoredConfig();
   const [presets, setPresets] = useState(loadPresets);
@@ -89,6 +89,21 @@ function CustomModeConfig({ onClose, onSaved }) {
     });
   };
 
+  // Lance directement une SESSION avec ce preset — jusqu'ici, il fallait
+  // construire une playlist d'une seule étape pour lancer un preset sans
+  // repasser par le bouton "Jouer" général (demandé, trop de détours).
+  const launchPreset = (preset) => {
+    const values = {
+      duration: preset.duration,
+      targetSize: preset.targetSize,
+      targetCount: preset.targetCount,
+      spread: preset.spread,
+    };
+    const next = { ...stored, mode: 'custom', ...values };
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
+    onLaunch({ mode: 'custom', ...values });
+  };
+
   const deletePreset = (id) => {
     const next = presets.filter((p) => p.id !== id);
     setPresets(next);
@@ -115,7 +130,10 @@ function CustomModeConfig({ onClose, onSaved }) {
     setView('edit');
   };
 
-  const savePreset = () => {
+  // `launchAfter` : true quand on vient du bouton "Enregistrer et lancer"
+  // plutôt que du simple "Enregistrer" — même preset créé dans les deux cas,
+  // seule la suite change (fermer la fenêtre vs. démarrer la session).
+  const savePreset = (launchAfter) => {
     const trimmed = name.trim();
     if (!trimmed) {
       setNameError(true);
@@ -132,7 +150,13 @@ function CustomModeConfig({ onClose, onSaved }) {
     const next = [...presets, preset];
     setPresets(next);
     savePresets(next);
-    activateAndClose({ duration, targetSize, targetCount, spread });
+    const values = { duration, targetSize, targetCount, spread };
+    if (launchAfter) {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...stored, mode: 'custom', ...values }));
+      onLaunch({ mode: 'custom', ...values });
+    } else {
+      activateAndClose(values);
+    }
   };
 
   return (
@@ -166,7 +190,10 @@ function CustomModeConfig({ onClose, onSaved }) {
                     </span>
                   </div>
                   <div className="custom-preset-actions">
-                    <button className="refresh" onClick={() => loadPreset(preset)}>
+                    <button className="refresh aim-preset-launch-btn" onClick={() => launchPreset(preset)}>
+                      <Icon icon={Play} size={14} /> {t('aimTrainer.playlistLaunch')}
+                    </button>
+                    <button className="account-forgot-password" onClick={() => loadPreset(preset)}>
                       {t('aimTrainer.presetLoad')}
                     </button>
                     <button
@@ -263,8 +290,11 @@ function CustomModeConfig({ onClose, onSaved }) {
               <button className="account-forgot-password" onClick={() => (presets.length > 0 ? setView('list') : onClose())}>
                 {t('aimTrainer.customCancel')}
               </button>
-              <button className="refresh" onClick={savePreset}>
+              <button className="refresh" onClick={() => savePreset(false)}>
                 {t('aimTrainer.customSave')}
+              </button>
+              <button className="refresh aim-preset-launch-btn" onClick={() => savePreset(true)}>
+                <Icon icon={Play} size={14} /> {t('aimTrainer.customSaveLaunch')}
               </button>
             </div>
           </>

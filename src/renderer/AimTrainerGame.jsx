@@ -981,7 +981,7 @@ function playPhoenixWhoosh(ctx) {
   noise.stop(now + 0.35);
 }
 
-function AimTrainerGame({ config: rawConfig }) {
+function AimTrainerGame({ config: rawConfig, onExit }) {
   // Routine d'échauffement : une liste de modes enchaînés dans la même
   // fenêtre. L'étape courante remplace le mode et ses réglages de cibles ;
   // le nombre de cibles reste celui du départ (elles sont créées une seule
@@ -2481,9 +2481,15 @@ function AimTrainerGame({ config: rawConfig }) {
               </>
             )}
 
-            <button className="aim-game-close" onClick={() => window.electronAPI.closeAimTrainer()}>
-              Fermer la fenêtre
-            </button>
+            {onExit ? (
+              <button className="aim-game-close" onClick={onExit}>
+                Retour au menu
+              </button>
+            ) : (
+              <button className="aim-game-close" onClick={() => window.electronAPI.closeAimTrainer()}>
+                Fermer la fenêtre
+              </button>
+            )}
           </div>
         </div>
       )}

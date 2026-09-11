@@ -562,6 +562,19 @@ ipcMain.handle('aim-trainer:open', (_event, config) => {
     if (input.type === 'keyDown' && input.key === 'F12') {
       aimTrainerWindow.webContents.toggleDevTools();
     }
+    // F9 : bascule la fenêtre plein écran vers l'écran suivant — pratique en
+    // dev pour tester le rendu sur un second moniteur à une autre résolution
+    // (ex. 1920x1080) sans changer la résolution de l'écran principal.
+    if (input.type === 'keyDown' && input.key === 'F9') {
+      const displays = screen.getAllDisplays();
+      if (displays.length < 2) return;
+      const current = screen.getDisplayMatching(aimTrainerWindow.getBounds());
+      const currentIndex = displays.findIndex((d) => d.id === current.id);
+      const next = displays[(currentIndex + 1) % displays.length];
+      aimTrainerWindow.setFullScreen(false);
+      aimTrainerWindow.setBounds(next.bounds);
+      aimTrainerWindow.setFullScreen(true);
+    }
   });
 
   // Sans ça, les erreurs de la fenêtre de jeu (échec d'enregistrement d'un

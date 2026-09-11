@@ -36,6 +36,7 @@
 
   --font-display: 'Chakra Petch', 'Segoe UI', sans-serif;
   --font-body: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-hero: 'Bebas Neue', 'Chakra Petch', 'Segoe UI', sans-serif;
 
   /* Élévation à deux couches : une ombre de contact courte et dense + une
      ombre ambiante large et diffuse. Une seule ombre floue donne toujours cet
@@ -3504,6 +3505,13 @@ li {
   filter: drop-shadow(0 0 6px rgba(255, 200, 87, 0.8));
 }
 
+.aim-theme-agent-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .aim-mode-name {
   font-family: var(--font-display);
   font-weight: 700;
@@ -3886,6 +3894,11 @@ li {
   padding: 0.8rem 2rem;
 }
 
+.aim-preset-launch-btn {
+  font-size: 0.85rem;
+  padding: 0.5rem 0.9rem;
+}
+
 .aim-game-tip {
   font-size: 0.8rem;
   color: var(--text-faint, var(--text-dim));
@@ -3977,6 +3990,837 @@ li {
 
 .aim-game-close:hover {
   color: var(--accent);
+}
+
+/* --- Hub Aim Trainer (menu principal plein écran) ------------------------ */
+
+.aim-hub-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 70, 85, 0.16), transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(78, 201, 245, 0.08), transparent 50%),
+    var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+/* Voile noir utilisé pour le fondu d'entrée (à l'ouverture de la fenêtre) et
+   le fondu de sortie (avant de fermer la fenêtre vers MVP Tracker) — un seul
+   élément réutilisé dans les deux sens plutôt que deux animations séparées. */
+.aim-hub-fade-veil {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 1;
+  pointer-events: none;
+  z-index: 50;
+  animation: aim-hub-veil-in 0.5s var(--ease-out) forwards;
+}
+
+@keyframes aim-hub-veil-in {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.aim-hub-exiting .aim-hub-fade-veil {
+  animation: aim-hub-veil-out 0.26s var(--ease-in-out) forwards;
+}
+
+@keyframes aim-hub-veil-out {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.aim-hub-exiting {
+  pointer-events: none;
+}
+
+.aim-hub-screen {
+  animation: aim-hub-screen-in 0.32s var(--ease-out);
+}
+
+@keyframes aim-hub-screen-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Écran d'accueil façon dashboard de jeu (menu principal d'un FPS type
+   Warzone) : une barre du haut, un héros en bas à gauche (titre + bouton
+   Jouer), des cartes empilées à droite pour les autres destinations — pas de
+   grande image de fond, juste le rendu du personnage tiré au hasard
+   (fullPortrait, asset public valorant-api.com déjà utilisé ailleurs dans
+   l'app) sur le fond sombre uni du reste de MVP Tracker. */
+.aim-hub-home {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  /* Toutes les tailles de cet écran (rem/px fixes) sont pensées pour un
+     écran ~2560px de large. `--hub-fit` les multiplie toutes ensemble sur un
+     écran plus petit à la même proportion (1920/2560 = 0.75 pile) — sans
+     `zoom` (qui ne touche pas les unités vh et laissait un vide en bas) ni
+     devoir retoucher chaque taille une par une. */
+  --hub-fit: 1;
+}
+
+@media (min-width: 1151px) and (max-width: 1920px) {
+  .aim-hub-home {
+    --hub-fit: 0.75;
+  }
+}
+
+
+/* Diaporama de maps en fond — le plus en arrière-plan possible (z-index
+   négatif : derrière la grille technique, le personnage et l'interface),
+   change de map toutes les 10s avec un fondu lent. Un voile sombre uni
+   par-dessus garde le texte lisible quelle que soit la map affichée. */
+.aim-hub-map-slideshow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.aim-hub-map-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.03);
+  transition: opacity 1.6s var(--ease-in-out);
+}
+
+.aim-hub-map-slide.active {
+  opacity: 0.55;
+}
+
+.aim-hub-map-slideshow-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 7, 10, 0.6);
+}
+
+/* Les zones sans carte ni personnage restaient du noir plat, ce qui se lit
+   comme un manque plutôt qu'un choix — une grille technique très discrète
+   (façon sol d'un vrai stand de tir) + une lueur colorée derrière le
+   personnage comblent ça sans ajouter de nouveaux blocs de contenu. */
+.aim-hub-home::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--hub-accent, var(--accent)) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--hub-accent, var(--accent)) 14%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(ellipse 65% 60% at 68% 62%, black 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 65% 60% at 68% 62%, black 0%, transparent 72%);
+}
+
+.aim-hub-home::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse 55% 55% at 68% 68%, color-mix(in srgb, var(--hub-accent, var(--accent)) 22%, transparent), transparent 70%);
+}
+
+.aim-hub-topbar {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.4rem 2rem;
+}
+
+.aim-hub-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+/* Logo MVP Tracker centré dans la barre du haut — rappelle que l'Aim
+   Trainer est un module de l'app (pas un jeu totalement à part), tout en
+   servant de raccourci évident pour y revenir. Centré par rapport à toute
+   la largeur de la barre (position absolute), pas juste "entre" la marque
+   Aim Trainer et le profil qui n'ont pas la même largeur. */
+.aim-hub-mvp-brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  pointer-events: none;
+}
+
+.aim-hub-mvp-brand img {
+  height: 38px;
+  width: auto;
+}
+
+.aim-hub-mvp-brand span {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .aim-hub-mvp-brand {
+    display: none;
+  }
+}
+
+.aim-hub-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.aim-hub-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.4rem;
+  background: rgba(22, 25, 34, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.aim-hub-profile-chip:hover {
+  border-color: var(--hub-accent, var(--accent));
+}
+
+.aim-hub-topbar-exit {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.8rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.aim-hub-topbar-exit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Bandeau d'astuces sous la barre du haut : comblait un grand vide, et fait
+   tourner un conseil différent toutes les 7s (fondu à chaque changement). */
+.aim-hub-tip-banner {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--hub-fit) * 0.7rem);
+  width: min(calc(var(--hub-fit) * 920px), 66vw);
+  margin: 0 4vw;
+  padding: calc(var(--hub-fit) * 0.85rem) calc(var(--hub-fit) * 1.3rem);
+  background: rgba(22, 25, 34, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--hub-accent, var(--accent));
+  border-radius: var(--r-sm);
+}
+
+.aim-hub-tip-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--hub-accent, var(--accent));
+}
+
+.aim-hub-tip-label {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: calc(var(--hub-fit) * 0.72rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.aim-hub-tip-text {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: calc(var(--hub-fit) * 0.95rem);
+  line-height: 1.4;
+  animation: aim-hub-tip-fade 0.4s var(--ease-out);
+}
+
+@keyframes aim-hub-tip-fade {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 1150px) {
+  .aim-hub-tip-banner {
+    display: none;
+  }
+}
+
+/* Fond dynamique : un héros (rendu d'agent) à la fois, en fondu vers celui
+   de l'entrée survolée — un seul point focal qui change plutôt que 4 blocs
+   identiques figés à l'écran, pour casser la monotonie sans surcharger. */
+.aim-hub-home-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.aim-hub-bg-portrait {
+  position: absolute;
+  right: 8vw;
+  bottom: 0;
+  height: 132vh;
+  max-height: calc(var(--hub-fit) * 1420px);
+  object-fit: contain;
+  object-position: bottom;
+  opacity: 0;
+  transform: translateY(3%) scale(1.01);
+  filter: drop-shadow(0 30px 70px rgba(0, 0, 0, 0.7));
+  transition: opacity 0.5s var(--ease-in-out), transform 0.6s var(--ease-out);
+}
+
+.aim-hub-bg-portrait.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.aim-hub-home-bg-fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--bg-deep) 0%, var(--bg-deep) 28%, rgba(6, 7, 10, 0.55) 48%, transparent 72%),
+    linear-gradient(0deg, var(--bg-deep) 0%, transparent 30%);
+}
+
+/* Nom du héros affiché en fond, en filigrane près du bord — détail de vrai
+   écran-titre (le perso choisi est toujours nommé), et ça comble le vide en
+   bas à droite sans ajouter de vrai contenu interactif à cet endroit. */
+.aim-hub-hero-watermark {
+  position: absolute;
+  right: 6.4vw;
+  bottom: 2.2vh;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-dim);
+  font-family: var(--font-hero);
+  font-size: 1.1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.aim-hub-hero-watermark img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
+}
+
+/* Panneau flottant à droite, étiré du haut jusqu'en bas de l'écran (pas
+   juste dimensionné à son contenu) : défi du jour, stats rapides,
+   progression et classement entre amis — tout ce qui était soit ailleurs
+   (écran Stats) soit absent, plutôt que de laisser un grand vide sous les
+   deux premières cartes. La dernière carte (amis) s'étire pour occuper le
+   reste de la hauteur, avec son propre défilement si la liste est longue. */
+.aim-hub-side-panel {
+  position: absolute;
+  z-index: 1;
+  top: 6.5rem;
+  bottom: 2.2vh;
+  right: 3vw;
+  width: min(320px, 30vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.aim-hub-side-card {
+  background: rgba(22, 25, 34, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--elev-1);
+}
+
+.aim-hub-challenge-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-hero);
+  font-size: 1.3rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin: 0.3rem 0 0.4rem;
+}
+
+.aim-hub-side-card-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hub-accent, var(--accent)) 22%, transparent);
+  color: var(--hub-accent, var(--accent));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.aim-hub-side-card-desc {
+  margin: 0 0 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.aim-hub-side-card-cta {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--hub-accent, var(--accent));
+  border: none;
+  border-radius: var(--r-sm);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.aim-hub-side-card-cta:hover {
+  filter: brightness(1.08);
+}
+
+.aim-hub-challenge-card .aim-board {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.aim-hub-stats-card {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+
+.aim-hub-stats-card:hover {
+  border-color: var(--hub-accent, var(--accent));
+}
+
+.aim-hub-stats-card-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.aim-hub-stats-card-item strong {
+  font-family: var(--font-hero);
+  font-size: 1.7rem;
+  color: var(--text);
+  line-height: 1;
+}
+
+.aim-hub-stats-card-item span {
+  margin-top: 0.2rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.aim-hub-progress-card .aim-progress-chart {
+  margin-top: 0.6rem;
+  width: 100%;
+}
+
+/* Dernière carte de la colonne : prend tout l'espace restant plutôt qu'une
+   hauteur figée, pour que le panneau touche vraiment le bas de l'écran. */
+.aim-hub-friends-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.aim-hub-friends-card .aim-board {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+@media (max-width: 1150px) {
+  .aim-hub-side-panel {
+    display: none;
+  }
+}
+
+/* Panneau de navigation à gauche : titre, bouton Jouer dominant, puis une
+   liste compacte pour les 3 autres destinations — hiérarchie claire (une
+   action principale + une liste secondaire) plutôt que 4 pavés du même
+   poids visuel, pour une navigation plus intuitive. */
+.aim-hub-nav-panel {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--hub-fit) * 2.4rem);
+  width: min(760px, 94vw);
+  padding: 0 4vw 4vh;
+}
+
+.aim-hub-nav-title h1 {
+  font-family: var(--font-hero);
+  font-size: calc(var(--hub-fit) * clamp(4.4rem, 9vw, 8rem));
+  line-height: 0.9;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0;
+  color: var(--text);
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+}
+
+.aim-hub-nav-title p {
+  margin: 0.6rem 0 0;
+  color: var(--text-muted);
+  font-size: calc(var(--hub-fit) * 1.35rem);
+  letter-spacing: 0.03em;
+}
+
+.aim-hub-play-btn {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--hub-fit) * 1rem);
+  width: fit-content;
+  padding: calc(var(--hub-fit) * 1.6rem) calc(var(--hub-fit) * 3.8rem);
+  background: var(--hub-accent, var(--accent));
+  border: none;
+  border-radius: var(--r-sm);
+  color: #fff;
+  font-family: var(--font-hero);
+  font-size: calc(var(--hub-fit) * 2.4rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 35px color-mix(in srgb, var(--hub-accent, var(--accent)) 55%, transparent);
+  transition: transform 0.15s var(--ease-out), filter 0.15s;
+}
+
+.aim-hub-play-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.aim-hub-play-hint {
+  margin: calc(var(--hub-fit) * -1.6rem) 0 0;
+  color: var(--text-muted);
+  font-size: calc(var(--hub-fit) * 1.1rem);
+}
+
+.aim-hub-nav-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  margin-top: 0.4rem;
+}
+
+.aim-hub-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--hub-fit) * 1.4rem);
+  padding: calc(var(--hub-fit) * 1.7rem) calc(var(--hub-fit) * 0.4rem) calc(var(--hub-fit) * 1.7rem) calc(var(--hub-fit) * 1.3rem);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s, padding-left 0.2s var(--ease-out);
+}
+
+.aim-hub-nav-item-bar {
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 4px;
+  background: var(--hub-accent, var(--accent));
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.2s var(--ease-out);
+}
+
+.aim-hub-nav-item.active {
+  color: var(--text);
+  padding-left: calc(var(--hub-fit) * 1.7rem);
+}
+
+.aim-hub-nav-item.active .aim-hub-nav-item-bar {
+  transform: scaleY(1);
+}
+
+.aim-hub-nav-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--hub-fit) * 56px);
+  height: calc(var(--hub-fit) * 56px);
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-alt);
+  color: inherit;
+  transition: color 0.15s, background 0.15s;
+}
+
+.aim-hub-nav-item.active .aim-hub-nav-item-icon {
+  color: var(--hub-accent, var(--accent));
+  background: color-mix(in srgb, var(--hub-accent, var(--accent)) 16%, var(--surface-alt));
+}
+
+.aim-hub-nav-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.aim-hub-nav-item-label {
+  font-family: var(--font-hero);
+  font-size: calc(var(--hub-fit) * 2.3rem);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.aim-hub-nav-item-hint {
+  font-size: calc(var(--hub-fit) * 1.05rem);
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aim-hub-nav-item-chevron {
+  display: flex;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.2s, transform 0.2s var(--ease-out);
+}
+
+.aim-hub-nav-item.active .aim-hub-nav-item-chevron {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (max-width: 900px) {
+  .aim-hub-home {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  .aim-hub-bg-portrait {
+    opacity: 0.22 !important;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) !important;
+  }
+  .aim-hub-home-bg-fade {
+    background: linear-gradient(180deg, rgba(6, 7, 10, 0.4) 0%, var(--bg-deep) 75%);
+  }
+  .aim-hub-nav-panel {
+    width: auto;
+    padding: 1.5rem 1.4rem 2.5rem;
+    justify-content: flex-start;
+  }
+  .aim-hub-hero-watermark {
+    display: none;
+  }
+  /* En dessous de 1150px la carte flottante disparaît (pas la place) — mais
+     sous 900px, l'écran redevient une page qui défile normalement, donc on
+     la fait réapparaître, empilée sous le menu plutôt que flottante : au
+     moins le Défi du jour reste visible (les autres cartes restent cachées
+     pour ne pas allonger le défilement outre mesure). */
+  .aim-hub-side-panel {
+    display: flex;
+    position: static;
+    width: auto;
+    margin: 0 1.4rem 2rem;
+  }
+  .aim-hub-stats-card,
+  .aim-hub-progress-card,
+  .aim-hub-friends-card {
+    display: none;
+  }
+}
+
+.aim-hub-panel {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 4.5rem 2rem 3rem;
+}
+
+.aim-hub-panel h2 {
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  margin-bottom: 1.2rem;
+}
+
+.aim-hub-launch-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.aim-hub-back,
+.aim-hub-mute {
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.aim-hub-back {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.aim-hub-mute {
+  padding: 0.5rem;
+}
+
+/* Version flottante en coin haut, utilisée sur les écrans autres que
+   l'accueil (qui a déjà ce bouton intégré à sa propre barre du haut). */
+.aim-hub-back,
+.aim-hub-mute-floating {
+  position: fixed;
+  top: 1.5rem;
+}
+
+.aim-hub-back {
+  left: 1.5rem;
+}
+
+.aim-hub-mute-floating {
+  right: 1.5rem;
+}
+
+.aim-hub-back:hover,
+.aim-hub-mute:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.aim-hub-launcher-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+/* Avatar/nom/rang réutilisés à la fois par la puce profil du topbar
+   (.aim-hub-profile-chip) et pourraient l'être ailleurs — tailles pensées
+   pour une puce compacte, pas un grand bandeau. */
+.aim-hub-profile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1.5px solid var(--hub-accent, var(--accent));
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--hub-accent, var(--accent));
+}
+
+.aim-hub-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aim-hub-profile-info {
+  min-width: 0;
+  text-align: left;
+}
+
+.aim-hub-profile-name {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.aim-hub-profile-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.aim-hub-profile-rank img {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 900px) {
+  .aim-hub-profile-name {
+    max-width: 100px;
+  }
 }
 
 .crosshair-grid {

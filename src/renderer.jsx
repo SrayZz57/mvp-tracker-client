@@ -1,17 +1,21 @@
 // Polices bundlées localement (pas de CDN) : l'app doit garder son identité
 // visuelle même sans connexion. Chakra Petch = titres/chiffres (même police
-// que le site vitrine), Inter = texte courant.
+// que le site vitrine), Inter = texte courant, Bebas Neue = grosses accroches
+// façon écran de jeu (cartes d'accueil de l'Aim Trainer notamment) — condensée
+// et en capitales, elle porte bien mieux un gros texte qu'une police normale
+// à cette taille.
 import '@fontsource/chakra-petch/latin-500.css';
 import '@fontsource/chakra-petch/latin-600.css';
 import '@fontsource/chakra-petch/latin-700.css';
 import '@fontsource-variable/inter';
+import '@fontsource/bebas-neue/latin-400.css';
 import './index.css';
 import './renderer/i18n/index.js';
 import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './renderer/App.jsx';
 import TitleBar from './renderer/TitleBar.jsx';
-import AimTrainerGame from './renderer/AimTrainerGame.jsx';
+import AimTrainerHub from './renderer/AimTrainerHub.jsx';
 import AgentSelectOverlay from './renderer/AgentSelectOverlay.jsx';
 import BuyOverlay from './renderer/BuyOverlay.jsx';
 import { CollapsedBlocksProvider } from './renderer/CollapsedBlocksContext.jsx';
@@ -66,7 +70,12 @@ function Root() {
     });
   }, []);
 
-  if (view === 'aim-trainer') return <AimTrainerGame config={gameConfig} />;
+  // La fenêtre plein écran s'ouvre toujours sur le hub (menu principal) —
+  // c'est lui qui décide quand monter AimTrainerGame, pas cette route : la
+  // fenêtre reste la même du menu jusqu'à la fin de la session, sans se
+  // recharger, pour permettre un vrai fondu entre les deux (voir
+  // AimTrainerHub.jsx).
+  if (view === 'aim-trainer') return <AimTrainerHub config={gameConfig} />;
   if (view === 'agent-select-overlay') return <AgentSelectOverlay />;
   if (view === 'buy-overlay') return <BuyOverlay />;
   return (

@@ -36,7 +36,7 @@ function WeaknessTab({ settings, matches, onNavigate }) {
                 <div className="weakness-item-title">{t(`profile.weakness.${w.key}.title`)}</div>
                 <p className="label">{t(`profile.weakness.${w.key}.text`)}</p>
               </div>
-              <button className="refresh" onClick={() => onNavigate(w.tab)}>
+              <button className="refresh" onClick={() => onNavigate(w.tab, w.mode)}>
                 {t(`profile.weakness.${w.key}.action`)}
               </button>
             </div>

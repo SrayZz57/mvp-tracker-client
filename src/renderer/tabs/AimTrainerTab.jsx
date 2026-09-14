@@ -46,7 +46,7 @@ function AimTrainerTutorialModal({ onClose, t }) {
   );
 }
 
-function AimTrainerTab({ myId, matches, settings, apiKey, rank, profile }) {
+function AimTrainerTab({ myId, matches, settings, apiKey, rank, profile, requestedMode, onRequestedModeConsumed }) {
   const { t } = useTranslation();
   const [showTutorial, setShowTutorial] = useState(false);
   const [history, setHistory] = useState([]);
@@ -71,7 +71,7 @@ function AimTrainerTab({ myId, matches, settings, apiKey, rank, profile }) {
     return window.electronAPI.onAimTrainerClosed(refresh);
   }, [refresh]);
 
-  const openHub = useCallback(() => {
+  const openHub = useCallback((extra = {}) => {
     // name/tag/rank/avatar passent par la config au lancement (lus une seule
     // fois à l'ouverture de la fenêtre) plutôt que d'être re-fetchés dans le
     // hub : cette fenêtre plein écran est un rendu autonome, ces infos sont
@@ -84,8 +84,18 @@ function AimTrainerTab({ myId, matches, settings, apiKey, rank, profile }) {
       rank: rank ? { tierId: rank.tierId, tierName: rank.tierName, cardUuid: rank.cardUuid } : null,
       avatarCardUuid: profile?.avatar_card_uuid ?? rank?.cardUuid ?? null,
       displayName: profile?.display_name ?? null,
+      ...extra,
     });
   }, [myId, apiKey, settings?.name, settings?.tag, rank, profile]);
+
+  // Point à travailler ouvert depuis "Mon compte" (voir WeaknessTab) : lance
+  // directement le mode conseillé au lieu de rouvrir sur le menu principal.
+  useEffect(() => {
+    if (!requestedMode) return;
+    openHub({ mode: requestedMode });
+    onRequestedModeConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedMode]);
 
   const { platforms, platform, setPlatform, filteredMatches } = usePlatformFilter(matches, 'pc');
   const impact = useMemo(
@@ -98,7 +108,7 @@ function AimTrainerTab({ myId, matches, settings, apiKey, rank, profile }) {
       <div className="card aim-hub-launcher-card">
         <h3>{t('aimTrainer.title')}</h3>
         <p className="label">{t('aimTrainer.hint')}</p>
-        <button className="refresh aim-launch-btn" onClick={openHub}>
+        <button className="refresh aim-launch-btn" onClick={() => openHub()}>
           <Icon icon={Play} size={16} /> {t('aimTrainer.topbarTitle')}
         </button>
         <p className="label" style={{ marginTop: '0.5rem' }}>{t('aimTrainer.launchHint')}</p>

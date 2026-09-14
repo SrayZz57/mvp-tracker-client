@@ -133,7 +133,7 @@ function ClipComments({ clipId, myId, isAdmin, t }) {
 // lourd pour une info qu'on ne consulte qu'en ouvrant le clip qui intéresse.
 function ClipDetailModal({ clip, myId, isAdmin, liked, reported, onToggleLike, onReport, onDelete, onClose, agentIcons, t }) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay modal-overlay-center" onClick={onClose}>
       <div className="modal-card clip-detail-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-close" onClick={onClose}>{t('clips.close')}</button>
 

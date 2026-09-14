@@ -27,9 +27,18 @@ import {
   UserRound,
   Check,
 } from 'lucide-react';
-import AimTrainerGame, { DEFAULT_CONFIG, MODES } from './AimTrainerGame.jsx';
+import AimTrainerGame, { DEFAULT_CONFIG, MODES, WEAPON_MODELS } from './AimTrainerGame.jsx';
 import Icon from './Icon.jsx';
 import mvpTrackerLogo from '../assets/logo.png';
+import weaponDefaultPreview from '../assets/weapon-default-preview.png';
+import weaponVandalPreview from '../assets/weapon-vandal-preview.png';
+
+// Vignettes des cartes de sélection d'arme (Réglages → Modèle d'arme) —
+// 'default' est géré séparément (toujours présent), le reste couvre les
+// clés de WEAPON_MODELS au fur et à mesure qu'elles sont ajoutées.
+const WEAPON_PREVIEWS = {
+  vandal: weaponVandalPreview,
+};
 import { useAgentsData } from './agentIcons.js';
 import { useMapsData } from './mapImages.js';
 import { usePlayerCardArt, useRankTiers } from './rankData.js';
@@ -421,7 +430,7 @@ function HomeProgressCard({ modeLabel, accent, progression, t }) {
         <>
           <ProgressionChart scores={progression} accent={accent} />
           <p className="aim-hub-side-card-desc">
-            {t('aimTrainer.progressMeta', {
+            {t('aimTrainer.progressMeta.score', {
               count: progression.length,
               best: Math.max(...progression),
               last: progression[progression.length - 1],
@@ -673,6 +682,17 @@ function AimTrainerHub({ config: initialRawConfig }) {
     [config, myId],
   );
 
+  // Ouvert depuis un "point à travailler" (voir WeaknessTab → AimTrainerTab) :
+  // le mode conseillé arrive dans le config de lancement de la fenêtre — on
+  // saute directement en jeu dessus, sans repasser par le menu/la sélection
+  // de mode.
+  useEffect(() => {
+    const requestedMode = initialRawConfig?.mode;
+    if (!requestedMode || !MODES[requestedMode]) return;
+    launch({ mode: requestedMode, ...MODES[requestedMode].preset });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const exitGame = useCallback(() => {
     setPlaying(false);
     setLaunchConfig(null);
@@ -702,10 +722,43 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const challengeDone = dailyBoard.some((row) => row.user_id === myId);
   const activeModeLabel = MODES[config.mode] ? t(MODES[config.mode].labelKey) : t('aimTrainer.customTitle');
   const activeModeAccent = MODES[config.mode]?.accent ?? '#8a8f9c';
+  // Trois courbes de progression possibles (voir ProgressionChart) : score
+  // (comme avant), temps de réaction moyen, et taux de ratés — les deux
+  // dernières demandées sur Discord, déjà enregistrées en base
+  // (avg_reaction/accuracy) mais jamais exploitées ici. Le mode affiché est
+  // choisi séparément du mode actif (progressionMode, sélecteur dans la
+  // carte) — sinon impossible de consulter sa progression sur un mode qu'on
+  // ne s'apprête pas à relancer.
+  const [progressionMetric, setProgressionMetric] = useState('score');
+  const [progressionMode, setProgressionMode] = useState(config.mode);
+  const progressionModeLabel = MODES[progressionMode] ? t(MODES[progressionMode].labelKey) : progressionMode;
+  const progressionModeAccent = MODES[progressionMode]?.accent ?? '#8a8f9c';
+  const progressionRows = useMemo(
+    () => history.filter((row) => row.mode === progressionMode).slice(0, 20).reverse(),
+    [history, progressionMode],
+  );
   const progression = useMemo(() => {
-    const rows = history.filter((row) => row.mode === config.mode).slice(0, 20).reverse();
-    return rows.map((row) => row.score);
-  }, [history, config.mode]);
+    if (progressionMetric === 'reaction') {
+      return progressionRows.filter((row) => row.avg_reaction != null).map((row) => row.avg_reaction);
+    }
+    if (progressionMetric === 'missRate') {
+      return progressionRows
+        .filter((row) => row.accuracy != null)
+        .map((row) => Math.round((100 - row.accuracy) * 10) / 10);
+    }
+    return progressionRows.map((row) => row.score);
+  }, [progressionRows, progressionMetric]);
+  // Toujours le score (jamais réaction/ratés) : utilisé par l'aperçu compact
+  // de l'accueil (HomeProgressCard), indépendant de l'onglet choisi dans
+  // l'écran Stats.
+  const scoreProgression = useMemo(() => progressionRows.map((row) => row.score), [progressionRows]);
+  // Score : plus haut = mieux (record). Réaction/ratés : plus bas = mieux.
+  const progressionBest = progression.length
+    ? progressionMetric === 'score'
+      ? Math.max(...progression)
+      : Math.min(...progression)
+    : null;
+  const progressionLast = progression.length ? progression[progression.length - 1] : null;
   const allModeEntries = useMemo(
     () => Object.entries(MODES).filter(([id]) => !TRACKING_MODE_IDS.includes(id) && !PATROL_MODE_IDS.includes(id)),
     [],
@@ -883,7 +936,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
                 t={t}
               />
               <HomeStatsCard sessions={history.length} streak={streak} records={recordsCount} onClick={() => navigate('stats')} t={t} />
-              <HomeProgressCard modeLabel={activeModeLabel} accent={activeModeAccent} progression={progression} t={t} />
+              <HomeProgressCard modeLabel={activeModeLabel} accent={activeModeAccent} progression={scoreProgression} t={t} />
               <HomeFriendsCard
                 friendsBoard={friendsBoard}
                 myId={myId}
@@ -1026,17 +1079,40 @@ function AimTrainerHub({ config: initialRawConfig }) {
 
             <div className="aim-bottom-row">
               <div className="card">
-                <h4 className="account-subsection-title">{t('aimTrainer.progressTitle', { mode: activeModeLabel })}</h4>
+                <div className="aim-progress-header">
+                  <h4 className="account-subsection-title">{t('aimTrainer.progressTitle', { mode: progressionModeLabel })}</h4>
+                  <select
+                    className="aim-progress-mode-select"
+                    value={progressionMode}
+                    onChange={(e) => setProgressionMode(e.target.value)}
+                  >
+                    {Object.entries(MODES).map(([id, mode]) => (
+                      <option key={id} value={id}>{t(mode.labelKey)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="aim-progress-metric-tabs">
+                  {['score', 'reaction', 'missRate'].map((metric) => (
+                    <button
+                      key={metric}
+                      type="button"
+                      className={progressionMetric === metric ? 'aim-progress-metric-tab active' : 'aim-progress-metric-tab'}
+                      onClick={() => setProgressionMetric(metric)}
+                    >
+                      {t(`aimTrainer.progressMetric.${metric}`)}
+                    </button>
+                  ))}
+                </div>
                 {progression.length < 2 ? (
                   <p className="label">{t('aimTrainer.progressNotEnough')}</p>
                 ) : (
                   <>
-                    <ProgressionChart scores={progression} accent={activeModeAccent} />
+                    <ProgressionChart scores={progression} accent={progressionModeAccent} />
                     <p className="label">
-                      {t('aimTrainer.progressMeta', {
+                      {t(`aimTrainer.progressMeta.${progressionMetric}`, {
                         count: progression.length,
-                        best: Math.max(...progression),
-                        last: progression[progression.length - 1],
+                        best: progressionBest,
+                        last: progressionLast,
                       })}
                     </p>
                   </>
@@ -1141,6 +1217,35 @@ function AimTrainerHub({ config: initialRawConfig }) {
                   {t('aimTrainer.resetDefaults')}
                 </button>
               </div>
+
+              {config.showWeapon && (
+                <div className="aim-config-block">
+                  <h4 className="account-subsection-title">{t('aimTrainer.weaponSection')}</h4>
+                  <div className="aim-weapon-cards">
+                    <button
+                      type="button"
+                      className={config.weaponModel === 'default' ? 'aim-weapon-card active' : 'aim-weapon-card'}
+                      onClick={() => set({ weaponModel: 'default' })}
+                    >
+                      <img src={weaponDefaultPreview} alt="" />
+                      <span>{t('aimTrainer.weaponDefault')}</span>
+                      {config.weaponModel === 'default' && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
+                    </button>
+                    {Object.entries(WEAPON_MODELS).map(([id, weapon]) => (
+                      <button
+                        type="button"
+                        key={id}
+                        className={config.weaponModel === id ? 'aim-weapon-card active' : 'aim-weapon-card'}
+                        onClick={() => set({ weaponModel: id })}
+                      >
+                        <img src={WEAPON_PREVIEWS[id] ?? weaponDefaultPreview} alt="" />
+                        <span>{t(weapon.labelKey)}</span>
+                        {config.weaponModel === id && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="aim-config-block">
                 <h4 className="account-subsection-title">{t('aimTrainer.crosshairSection')}</h4>

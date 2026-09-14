@@ -486,7 +486,9 @@
       "snapHold": "Snap-hold",
       "snapHoldDesc": "A flick isn't enough: you need to stay settled on the target for a short beat for the shot to count — stops lucky flicks that land by accident.",
       "flashDodge": "Flash Dodge",
-      "flashDodgeDesc": "Classic target shooting, but a flash (Skye or Phoenix, at random) comes from an unpredictable direction — turn away in time to dodge it, or the screen goes white."
+      "flashDodgeDesc": "Classic target shooting, but a flash (Skye or Phoenix, at random) comes from an unpredictable direction — turn away in time to dodge it, or the screen goes white.",
+      "spray": "Recoil control",
+      "sprayDesc": "Hold the click on a fixed target and steer the mouse to counter the recoil and stay on it, like real spray training."
     },
     "sensSection": "Sensitivity",
     "sessionSection": "Session",
@@ -502,6 +504,10 @@
     "targetColorLabel": "Target color",
     "fovLabel": "Field of view: {{fov}}°",
     "showWeaponLabel": "Show weapon and hands",
+    "weaponSection": "Weapon",
+    "weaponModelLabel": "Weapon model",
+    "weaponDefault": "Default",
+    "weaponVandal": "Vandal (animated)",
     "darkThemeLabel": "Dark room (no blue sky or bright floor)",
     "crosshairSection": "Crosshair",
     "crosshairEmpty": "No crosshair in your library yet — add one from the Crosshairs tab.",
@@ -532,7 +538,16 @@
     "impactFootnote": "Across {{trained}} matches on training days and {{untrained}} on other days. A correlation, not proof of causation.",
     "progressTitle": "Your progress — {{mode}}",
     "progressNotEnough": "Play at least two sessions on this mode to see your curve.",
-    "progressMeta": "last {{count}} sessions · best {{best}} · latest {{last}}",
+    "progressMetric": {
+      "score": "Score",
+      "reaction": "Reaction",
+      "missRate": "Misses"
+    },
+    "progressMeta": {
+      "score": "last {{count}} sessions · best {{best}} · latest {{last}}",
+      "reaction": "last {{count}} sessions · best time {{best}} ms · latest {{last}} ms",
+      "missRate": "last {{count}} sessions · best miss rate {{best}}% · latest {{last}}%"
+    },
     "friendsTitle": "Friends leaderboard",
     "friendsEmpty": "No scores on this mode among your friends yet.",
     "hoverSettings": "Settings",
@@ -582,6 +597,11 @@
     "presetNameRequired": "Give this preset a name before saving it.",
     "presetFavorite": "Add to favorites",
     "presetUnfavorite": "Remove from favorites",
+    "presetExport": "Copy code (share)",
+    "presetImport": "Import a code",
+    "presetImportPlaceholder": "Paste a preset code here",
+    "presetImportError": "This code isn't valid.",
+    "presetImportConfirm": "Import",
     "playlistsTitle": "Playlists",
     "playlistsIntro": "Chain several of your custom presets together in the same session.",
     "playlistsEmpty": "No playlist created yet.",

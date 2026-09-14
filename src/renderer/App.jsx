@@ -240,6 +240,14 @@ function App() {
   const { t, i18n } = useTranslation();
   const [settings, setSettings] = useState(undefined);
   const [activeTab, setActiveTab] = useState('stats');
+  // Mode Aim Trainer à lancer automatiquement au prochain passage sur l'onglet
+  // (voir WeaknessTab → "Ouvrir l'Aim Trainer" sur un point à travailler) —
+  // consommé puis remis à null par AimTrainerTab une fois le lancement fait.
+  const [pendingAimTrainerMode, setPendingAimTrainerMode] = useState(null);
+  const handleWeaknessNavigate = (tab, mode) => {
+    if (mode) setPendingAimTrainerMode(mode);
+    setActiveTab(tab);
+  };
   // Boutons latéraux de la souris (précédent/suivant) : demandé en vrai —
   // navigue dans l'historique des ONGLETS visités, comme précédent/suivant
   // dans un navigateur. Pas un state React (un historique n'a pas besoin de
@@ -950,7 +958,7 @@ function App() {
       case 'my-hall-of-fame':
         return <HallOfFameTab settings={mySettings} matches={myMatches} loading={isViewingSelf && data.loading} />;
       case 'my-weakness':
-        return <WeaknessTab settings={mySettings} matches={myMatches} onNavigate={setActiveTab} />;
+        return <WeaknessTab settings={mySettings} matches={myMatches} onNavigate={handleWeaknessNavigate} />;
       case 'my-skins-collection':
         return <MySkinsCollectionTab myId={session.user.id} />;
       case 'buy-simulator':
@@ -960,7 +968,18 @@ function App() {
       case 'session':
         return <SessionGuideTab settings={mySettings} matches={myMatches} loading={isViewingSelf && data.loading} />;
       case 'aim-trainer':
-        return <AimTrainerTab myId={session.user.id} matches={myMatches} settings={mySettings} apiKey={settings?.apiKey} rank={myRank} profile={profile} />;
+        return (
+          <AimTrainerTab
+            myId={session.user.id}
+            matches={myMatches}
+            settings={mySettings}
+            apiKey={settings?.apiKey}
+            rank={myRank}
+            profile={profile}
+            requestedMode={pendingAimTrainerMode}
+            onRequestedModeConsumed={() => setPendingAimTrainerMode(null)}
+          />
+        );
       case 'wiki':
         return <WikiTab />;
       case 'lineups':

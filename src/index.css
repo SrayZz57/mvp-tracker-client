@@ -3192,6 +3192,46 @@ li {
   margin: 0.5rem 0 0.75rem;
 }
 
+.aim-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.aim-progress-mode-select {
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 0.78rem;
+  max-width: 160px;
+}
+
+.aim-progress-metric-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.1rem;
+}
+
+.aim-progress-metric-tab {
+  padding: 0.3rem 0.7rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.aim-progress-metric-tab.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 .aim-game-step {
   font-size: 1rem;
   color: var(--text-dim);
@@ -3232,7 +3272,7 @@ li {
 
 .custom-config-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 520px;
   max-height: 85vh;
   overflow-y: auto;
   display: flex;
@@ -3263,6 +3303,24 @@ li {
   margin-top: 0.5rem;
 }
 
+.custom-preset-import {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.custom-preset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.custom-preset-header .label {
+  margin: 0;
+}
+
 .custom-preset-list {
   display: flex;
   flex-direction: column;
@@ -3275,8 +3333,9 @@ li {
 .custom-preset-item {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
   padding: 0.6rem 0.8rem;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -3307,6 +3366,7 @@ li {
 
 .custom-preset-info {
   display: flex;
+  flex: 1 1 150px;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
@@ -3321,8 +3381,10 @@ li {
 .custom-preset-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
   flex-shrink: 0;
+  justify-content: flex-end;
 }
 
 .tracking-picker-card {
@@ -3700,6 +3762,60 @@ li {
 .aim-config-check input {
   width: auto;
   accent-color: var(--accent);
+}
+
+.aim-weapon-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.aim-weapon-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 108px;
+  padding: 0.4rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.aim-weapon-card:hover {
+  transform: translateY(-2px);
+}
+
+.aim-weapon-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg-deep);
+}
+
+.aim-weapon-card.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.aim-weapon-card-check {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
 }
 
 .aim-launch-row {
@@ -4099,13 +4215,13 @@ li {
 }
 
 .aim-hub-map-slide.active {
-  opacity: 0.55;
+  opacity: 0.7;
 }
 
 .aim-hub-map-slideshow-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(6, 7, 10, 0.6);
+  background: rgba(6, 7, 10, 0.4);
 }
 
 /* Les zones sans carte ni personnage restaient du noir plat, ce qui se lit
@@ -4317,8 +4433,12 @@ li {
 .aim-hub-home-bg-fade {
   position: absolute;
   inset: 0;
+  /* Zone opaque réduite à la largeur du texte (le menu de gauche fait
+     ~25% de la largeur) plutôt que jusqu'à 28-72% — sinon la carte en fond
+     ne se voyait quasiment plus, cachée par ce dégradé avant même d'arriver
+     au personnage. */
   background:
-    linear-gradient(90deg, var(--bg-deep) 0%, var(--bg-deep) 28%, rgba(6, 7, 10, 0.55) 48%, transparent 72%),
+    linear-gradient(90deg, var(--bg-deep) 0%, var(--bg-deep) 18%, rgba(6, 7, 10, 0.45) 34%, transparent 55%),
     linear-gradient(0deg, var(--bg-deep) 0%, transparent 30%);
 }
 
@@ -4976,6 +5096,22 @@ li {
   margin-top: 0.5rem;
 }
 
+.match-day-header {
+  margin: 0.6rem 0 0.1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--text-muted);
+}
+
+.match-day-header:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 .match-row {
   display: flex;
   align-items: center;
@@ -5218,11 +5354,22 @@ li {
 }
 
 .match-row.clickable:hover {
-  border-color: var(--accent);
+  border-color: var(--border);
   transform: scale(1.015);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   position: relative;
   z-index: 1;
+}
+
+/* Au survol, la bordure garde la couleur de résultat (vert/rouge) plutôt que
+   de toujours virer au rouge de l'accent — un match gagné ne doit pas donner
+   l'impression d'une défaite juste parce qu'on passe la souris dessus. */
+.match-row.match-win.clickable:hover {
+  border-color: #3ddc84;
+}
+
+.match-row.match-loss.clickable:hover {
+  border-color: var(--accent);
 }
 
 .modal-overlay {
@@ -7216,6 +7363,16 @@ input[type='color'] {
    ========================================================================= */
 .clip-detail-modal {
   max-width: 620px;
+}
+
+/* La fenêtre Clip/Lineup en grand est plus courte que les autres modales
+   (match détaillé, etc.) — collée en haut comme les autres (voir
+   .modal-overlay), elle laissait un grand vide en dessous. Centrée
+   verticalement seulement pour ce cas via cette classe ajoutée en plus de
+   .modal-overlay, sans toucher aux modales plus hautes qui ont besoin du
+   défilement depuis le haut. */
+.modal-overlay-center {
+  align-items: center;
 }
 
 .clip-video-frame-large {

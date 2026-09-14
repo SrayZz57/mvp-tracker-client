@@ -22,11 +22,20 @@ import {
   Play,
   Footprints,
   EyeOff,
+  Flame,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import fpsRifleHandsUrl from '../assets/models/fps-rifle-hands.glb';
+import vandalArmsUrl from '../assets/models/vandal-arms.glb';
+
+// Arme alternative (CC-BY 4.0, voir src/assets/models/CREDITS.md) — mains +
+// arme avec un vrai jeu d'animations (tir, rechargement, sprint...), choix
+// exposé dans Réglages → Modèle d'arme.
+export const WEAPON_MODELS = {
+  vandal: { labelKey: 'aimTrainer.weaponVandal', url: vandalArmsUrl },
+};
 import floorColorUrl from '../assets/textures/floor-color.jpg';
 import floorNormalUrl from '../assets/textures/floor-normal.jpg';
 import floorRoughnessUrl from '../assets/textures/floor-roughness.jpg';
@@ -50,6 +59,11 @@ const POP_DURATION_MS = 130; // apparition/disparition des cibles
 // arène qui paraît à l'échelle, au lieu de la sensation "d'être tout petit".
 const FLOOR_Y = -2.6;
 const TARGET_MIN_CLEARANCE = 0.6; // marge minimale entre une cible et le sol
+// Géométrie de l'arène (construite plus bas) — remontée ici au niveau module
+// pour être réutilisable par le calcul du rectangle du mode Spray ci-dessous.
+const WALL_HEIGHT = 7;
+const WALL_HALF = 24;
+
 
 // --- Mode Peek -------------------------------------------------------------
 // Vitesse de course avec une arme principale sortie dans Valorant : 6.75 m/s
@@ -581,7 +595,69 @@ export const MODES = {
     flashDodge: true,
     preset: { targetCount: 1, targetSize: 0.28, spread: 28, duration: 60 },
   },
+  spray: {
+    icon: Flame,
+    accent: '#ff6b35',
+    labelKey: 'aimTrainer.modes.spray',
+    descKey: 'aimTrainer.modes.sprayDesc',
+    // Apparition positionnée EXACTEMENT comme Flick (même
+    // pickNonOverlappingPosition/randomTargetPosition, même cône ancré sur
+    // l'axe -Z du monde — la barre rouge du décor), pas de repositionnement
+    // relatif à la caméra : ancrer la cible sur la direction actuelle du
+    // joueur (mouvante, imprévisible pendant un spray) s'est révélé plus
+    // fragile qu'un repère fixe et familier que le joueur retrouve à chaque
+    // nouvelle cible. Une fois apparue, léger déplacement (comme Tracking)
+    // DANS ce même cône — pas verrouillé sur l'axe horizontal (driftLockY),
+    // sinon la trajectoire ne fait qu'un aller-retour gauche-droite parfaitement
+    // lisible. Changements de cap plus fréquents pour une trajectoire moins
+    // prévisible (le cône reste celui de Flick, donc la hauteur reste
+    // raisonnable même sans verrou).
+    movement: 'drift',
+    driftSpeed: [1.4, 2.2],
+    driftChangeInterval: [700, 1400],
+    lifetime: null,
+    // Contrôle de recul : clic MAINTENU déclenche un tir automatique en
+    // rafale (voir SPRAY_PATTERN/fireSprayShot dans la boucle principale) —
+    // il faut compenser le recul à la souris pour rester dessus. La cible a
+    // des PV (200) et chaque tir fait des dégâts fixes (40, soit 5 tirs pour
+    // la casser) : une fois détruite, elle réapparaît à un nouvel endroit
+    // aléatoire — voir entry.hp dans fireSprayShot.
+    recoilControl: true,
+    maxHp: 200,
+    damagePerHit: 40,
+    preset: { targetCount: 1, targetSize: 0.34, spread: 28, duration: 40 },
+  },
 };
+
+// Recul façon Vandal — Riot ne publie AUCUNE donnée chiffrée officielle (pas
+// de coordonnées par balle), donc impossible d'avoir les vraies valeurs.
+// Ce pattern reste fait main, mais recalé sur ce que les guides communautaires
+// décrivent unanimement pour ce fusil (esports.net, PCGamesN, ProGameGuides,
+// TheGlobalGaming...) plutôt qu'inventé au hasard comme la première version :
+// - balles 1 à ~10 : montée quasi purement VERTICALE (c'est la fenêtre où la
+//   précision reste bonne, d'où le conseil unanime "vise la tête sur les 10
+//   premières balles") ;
+// - balles ~10 à 15 : le recul part d'abord à GAUCHE ;
+// - balles ~16 à 22 : puis un mouvement plus large vers la DROITE ;
+// - balles 23+ : de plus en plus erratique/imprévisible (encore un point
+//   commun à tous les guides). Unités en degrés, appliquées à la caméra à
+//   chaque coup — voir fireSprayShot(). 30 coups ≈ un chargeur.
+export const SPRAY_PATTERN = [
+  // 1–10 : vertical, à peine de bruit latéral.
+  { x: 0, y: 0.3 }, { x: 0.02, y: 0.5 }, { x: -0.02, y: 0.65 }, { x: 0.02, y: 0.78 },
+  { x: -0.02, y: 0.88 }, { x: 0.02, y: 0.95 }, { x: -0.02, y: 1.0 }, { x: 0.02, y: 1.0 },
+  { x: -0.02, y: 0.95 }, { x: 0.02, y: 0.9 },
+  // 11–15 : part à gauche.
+  { x: -0.3, y: 0.6 }, { x: -0.45, y: 0.5 }, { x: -0.6, y: 0.45 }, { x: -0.7, y: 0.4 }, { x: -0.75, y: 0.35 },
+  // 16–22 : puis à droite, plus large.
+  { x: -0.4, y: 0.35 }, { x: 0.1, y: 0.3 }, { x: 0.5, y: 0.3 }, { x: 0.8, y: 0.28 },
+  { x: 1.0, y: 0.28 }, { x: 1.05, y: 0.25 }, { x: 0.9, y: 0.25 },
+  // 23–30 : erratique.
+  { x: 0.5, y: 0.2 }, { x: -0.3, y: 0.2 }, { x: 0.7, y: 0.18 }, { x: -0.6, y: 0.18 },
+  { x: 0.4, y: 0.16 }, { x: -0.8, y: 0.16 }, { x: 0.6, y: 0.15 }, { x: -0.5, y: 0.15 },
+];
+
+const SPRAY_SHOT_INTERVAL_MS = 100; // ≈ 600 coups/min, plausible pour un fusil d'assaut
 
 export const DEFAULT_CONFIG = {
   mode: 'flick',
@@ -594,6 +670,9 @@ export const DEFAULT_CONFIG = {
   spread: 28,
   fov: 103,
   showWeapon: true,
+  // 'default' = mains + arme CC0 (fps-rifle-hands.glb) ; sinon une clé de
+  // WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
+  weaponModel: 'default',
   // 'day' (défaut, ciel + sol clair) ou 'dark' (suggéré sur Discord — salle
   // fermée, sans ciel bleu ni sol blanc). Version simple validée avec
   // l'utilisateur : teintes assombries + ciel remplacé par une couleur
@@ -1150,8 +1229,6 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       [8, 2],
       { metalness: 0.45, side: THREE.DoubleSide, color: isDark ? 0x3a3f4a : 0xffffff },
     );
-    const WALL_HEIGHT = 7;
-    const WALL_HALF = 24;
     const wallY = FLOOR_Y + WALL_HEIGHT / 2;
     const wallPlacements = [
       { pos: [0, wallY, -WALL_HALF], rot: 0 },
@@ -1337,6 +1414,9 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
         numberLabel,
         order: null,
         hitsRemaining: null,
+        // PV de la cible (mode Spray uniquement — voir MODES.spray.maxHp) ;
+        // null pour les autres modes, qui ne s'en servent pas.
+        hp: MODES[config.mode]?.maxHp ?? null,
         snapArmedAt: null,
         peekLayout,
         spawnedAt: performance.now(),
@@ -1426,6 +1506,12 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       audioCtx: new (window.AudioContext || window.webkitAudioContext)(),
       mixer: null,
       fireAction: null,
+      idleAction: null,
+      // Mode Spray (contrôle de recul) : tir auto tant que le clic est
+      // maintenu — voir fireSprayShot() et handleClick/handleRelease.
+      sprayHeld: false,
+      sprayIndex: 0,
+      nextSprayShotAt: 0,
       lastFrameTime: performance.now(),
       tracers: [],
       sparks: [],
@@ -1446,10 +1532,62 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       flashBursts: [],
     };
 
-    // --- Modèle mains + arme (CC0, voir src/assets/models/CREDITS.md) -------
+    // --- Modèle mains + arme (voir src/assets/models/CREDITS.md pour les
+    // licences/attributions — CC0 pour le modèle par défaut, CC-BY 4.0 pour
+    // les modèles alternatifs de WEAPON_MODELS) ------------------------------
     if (config.showWeapon) {
-      new GLTFLoader().load(fpsRifleHandsUrl, (gltf) => {
+      const altWeapon = WEAPON_MODELS[config.weaponModel];
+      const weaponUrl = altWeapon?.url ?? fpsRifleHandsUrl;
+      new GLTFLoader().load(weaponUrl, (gltf) => {
         const model = gltf.scene;
+
+        // Certains exports Sketchfab embarquent un décor de démo (sol,
+        // repères...) en plus du modèle lui-même — le retirer avant de
+        // calculer la boîte englobante, sinon la normalisation de taille
+        // ci-dessous se base sur le décor plutôt que sur l'arme.
+        const toRemove = [];
+        model.traverse((obj) => {
+          if (/environment/i.test(obj.name)) toRemove.push(obj);
+        });
+        toRemove.forEach((obj) => obj.parent?.remove(obj));
+
+        // Certains rigs FPS (le modèle Vandal) incluent un OS "camera_02"
+        // (+ sa pointe "camera_end_075") représentant où la caméra du joueur
+        // doit se trouver et regarder par rapport à l'arme. Une première
+        // tentative avait juste annulé la matrice monde de cet os en
+        // supposant que son "-Z" local pointait vers l'avant (canon pointé
+        // vers le ciel au lieu du joueur) — faux : pour un OS Blender, l'axe
+        // qui pointe vers son enfant/sa pointe est +Y, pas -Z. On calcule
+        // donc la direction RÉELLE (os → pointe) et on aligne CETTE direction
+        // sur -Z (le regard de la caméra Three.js), sans supposer d'axe.
+        const cameraBone = model.getObjectByName('camera_02');
+        const cameraBoneTip = model.getObjectByName('camera_end_075');
+        const aligned = Boolean(cameraBone && cameraBoneTip);
+        if (aligned) {
+          model.updateMatrixWorld(true);
+          const camPos = new THREE.Vector3();
+          const tipPos = new THREE.Vector3();
+          cameraBone.getWorldPosition(camPos);
+          cameraBoneTip.getWorldPosition(tipPos);
+          const forward = tipPos.clone().sub(camPos).normalize();
+          const rotateToForward = new THREE.Quaternion().setFromUnitVectors(forward, new THREE.Vector3(0, 0, -1));
+          model.applyMatrix4(new THREE.Matrix4().makeTranslation(-camPos.x, -camPos.y, -camPos.z));
+          model.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(rotateToForward));
+          model.updateMatrixWorld(true);
+        }
+
+        // Certains matériaux importés ne sont éclairés/texturés que sur une
+        // face (celle prévue par l'auteur) — vus sous un autre angle que
+        // prévu (notre positionnement caméra étant approximatif, voir plus
+        // bas), on se retrouvait à voir l'intérieur creux/non texturé des
+        // manches. Le double face évite ce trou visuel, quel que soit l'angle.
+        model.traverse((obj) => {
+          if (!obj.isMesh || !obj.material) return;
+          const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+          materials.forEach((m) => {
+            m.side = THREE.DoubleSide;
+          });
+        });
 
         // Le modèle vient d'une source externe : sa taille d'origine est
         // inconnue (ici ~10 unités de long, d'où le rendu "à l'intérieur de
@@ -1459,32 +1597,59 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
         const size = new THREE.Vector3();
         box.getSize(size);
         const longestSide = Math.max(size.x, size.y, size.z) || 1;
-        model.scale.setScalar(0.75 / longestSide);
+        model.scale.setScalar((aligned ? 1.9 : 0.75) / longestSide);
 
-        // Recentre le modèle sur son propre pivot avant de le placer, sinon
-        // l'offset interne du fichier décale tout.
-        const center3 = new THREE.Vector3();
-        new THREE.Box3().setFromObject(model).getCenter(center3);
-        model.position.sub(center3);
-
-        // Le modèle est déjà orienté canon vers -Z (sa dimension dominante va
-        // de Z=-6.5 à Z=+2.7), c'est-à-dire dans la direction où regarde la
-        // caméra en Three.js — aucune rotation de retournement à appliquer.
-        // Un léger lacet/tangage suffit pour l'angle "viewmodel" classique.
         const holder = new THREE.Group();
         holder.add(model);
-        holder.position.set(0.22, -0.2, -0.45);
+        if (aligned) {
+          // L'ancre (repère "camera_02") est déjà calée sur l'origine locale
+          // ET orientée -Z — PAS de recentrage sur la boîte englobante ici,
+          // ça déplacerait cette ancre. Juste un léger décalage "arme tenue
+          // à la main" plutôt que collée pile sur l'œil de la caméra.
+          holder.position.set(0.12, -0.14, -0.1);
+        } else {
+          // Recentre le modèle sur son propre pivot avant de le placer, sinon
+          // l'offset interne du fichier décale tout.
+          const center3 = new THREE.Vector3();
+          new THREE.Box3().setFromObject(model).getCenter(center3);
+          model.position.sub(center3);
+          // Le modèle est déjà orienté canon vers -Z (sa dimension dominante
+          // va de Z=-6.5 à Z=+2.7), c'est-à-dire dans la direction où regarde
+          // la caméra en Three.js — aucune rotation de retournement à
+          // appliquer. Un léger lacet/tangage suffit pour l'angle
+          // "viewmodel" classique.
+          holder.position.set(0.22, -0.2, -0.45);
+        }
         holder.rotation.set(0.03, -0.06, 0);
         camera.add(holder);
 
         if (gltf.animations?.length > 0) {
           const mixer = new THREE.AnimationMixer(model);
-          const clip = THREE.AnimationClip.findByName(gltf.animations, 'fire') ?? gltf.animations[0];
+          // 'fire' pour le modèle par défaut, sinon on cherche un nom de
+          // clip contenant "shoot"/"fire" (ex. "wpn_val_shoot") avant de se
+          // rabattre sur le premier clip du fichier.
+          const clip =
+            THREE.AnimationClip.findByName(gltf.animations, 'fire') ??
+            gltf.animations.find((c) => /shoot|fire/i.test(c.name)) ??
+            gltf.animations[0];
           const action = mixer.clipAction(clip);
           action.setLoop(THREE.LoopOnce);
           action.clampWhenFinished = true;
           stateRef.current.mixer = mixer;
           stateRef.current.fireAction = action;
+
+          // Animation "idle" en boucle quand le fichier en fournit une
+          // (le modèle par défaut n'en a pas, il reste juste sur sa pose de
+          // repos) — mise en pause pendant le tir, reprise une fois terminé.
+          const idleClip = gltf.animations.find((c) => /idle/i.test(c.name) && c !== clip);
+          if (idleClip) {
+            const idleAction = mixer.clipAction(idleClip);
+            idleAction.play();
+            stateRef.current.idleAction = idleAction;
+            mixer.addEventListener('finished', (e) => {
+              if (e.action === action) idleAction.reset().play();
+            });
+          }
         }
       });
     }
@@ -1507,6 +1672,15 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       // à chaque frame, pas besoin de le limiter aux changements de mode.
       for (let i = 0; i < flashWallMeshes.length; i += 1) {
         flashWallMeshes[i].visible = mode.flashDodge === true;
+      }
+
+      // --- Mode Spray (contrôle de recul) -------------------------------------
+      // Tir automatique tant que le clic est maintenu (voir handleClick) —
+      // fireSprayShot vit dans l'effet des écouteurs souris, rappelée via
+      // stateRef pour rester joignable depuis cette boucle-ci.
+      if (mode.recoilControl && state.sprayHeld && phaseRef.current === 'running' && now >= state.nextSprayShotAt) {
+        state.fireSprayShot?.();
+        state.nextSprayShotAt = now + SPRAY_SHOT_INTERVAL_MS;
       }
 
       // --- Mode Dodge Flash --------------------------------------------------
@@ -1886,6 +2060,92 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       camera.quaternion.setFromEuler(euler);
     };
 
+    // Mode Spray : un coup du chargeur — recul appliqué à la caméra AVANT le
+    // test de touche (comme en vrai jeu, le recul de CE coup affecte où il
+    // part), cible fixe (jamais repositionnée, contrairement aux autres
+    // modes) puisque le but est de rester dessus malgré le recul, pas de
+    // viser un nouveau point à chaque tir.
+    const fireSprayShot = () => {
+      const state = stateRef.current;
+      const { camera, euler, targets, raycaster, center, muzzleTip, scene, impactTexture } = state;
+      if (!camera) return;
+
+      // Le recul est un déplacement de caméra fixe (comme dans le vrai jeu),
+      // PAS un mouvement de souris — donc aucune mise à l'échelle par la
+      // sensibilité ici, contrairement à handleMouseMove juste au-dessus.
+      // euler.x augmente quand on regarde vers le HAUT (même convention que
+      // handleMouseMove : mouse vers le haut → movementY négatif → euler.x
+      // augmente) — le recul doit donc l'AUGMENTER pour pousser la vue vers
+      // le haut, pas la diminuer.
+      const kick = SPRAY_PATTERN[state.sprayIndex % SPRAY_PATTERN.length];
+      euler.y -= kick.x * DEG_TO_RAD;
+      euler.x += kick.y * DEG_TO_RAD;
+      euler.x = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, euler.x));
+      camera.quaternion.setFromEuler(euler);
+      state.sprayIndex += 1;
+
+      raycaster.setFromCamera(center, camera);
+      const meshes = targets.filter((entry) => entry.mesh.visible).map((entry) => entry.mesh);
+      const intersections = raycaster.intersectObjects(meshes);
+      const hitMesh = intersections[0]?.object ?? null;
+
+      const muzzleWorldPos = new THREE.Vector3();
+      muzzleTip.getWorldPosition(muzzleWorldPos);
+      const endPoint = hitMesh
+        ? intersections[0].point
+        : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(30).add(camera.position);
+
+      const tracerMesh = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([muzzleWorldPos, endPoint]),
+        new THREE.LineBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 1 }),
+      );
+      scene.add(tracerMesh);
+      state.tracers.push({ mesh: tracerMesh, createdAt: performance.now() });
+
+      state.flashUntil = performance.now() + MUZZLE_FLASH_LIFETIME_MS;
+      if (state.fireAction) {
+        state.idleAction?.stop();
+        state.fireAction.stop();
+        state.fireAction.play();
+      }
+      state.audioCtx.resume();
+      playGunshot(state.audioCtx);
+
+      const spark = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: impactTexture, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }),
+      );
+      spark.position.copy(endPoint);
+      spark.scale.setScalar(0.35);
+      scene.add(spark);
+      state.sparks.push({ mesh: spark, createdAt: performance.now() });
+
+      if (hitMesh) {
+        playTargetPop(state.audioCtx);
+        const entry = targets.find((tgt) => tgt.mesh === hitMesh);
+        const mode = MODES[configRef.current.mode] ?? MODES.flick;
+        if (entry && mode.maxHp) {
+          entry.hp = (entry.hp ?? mode.maxHp) - (mode.damagePerHit ?? mode.maxHp);
+          if (entry.hp <= 0) {
+            // Cible détruite : réapparaît dans le même cône que Flick,
+            // ancré sur l'axe -Z du monde (la barre rouge du décor) — un
+            // repère fixe et familier plutôt que la direction actuelle de la
+            // caméra (voir MODES.spray).
+            entry.mesh.position.copy(
+              pickNonOverlappingPosition(configRef.current.spread, configRef.current.targetSize, targets, entry),
+            );
+            entry.anchor.copy(entry.mesh.position);
+            entry.hp = mode.maxHp;
+          }
+        }
+        setStats((prev) => ({ ...prev, hits: prev.hits + 1 }));
+      } else {
+        setStats((prev) => ({ ...prev, misses: prev.misses + 1 }));
+      }
+    };
+    // Rappelée depuis la boucle d'animation (autre effet — voir plus haut
+    // dans le fichier) tant que le clic est maintenu en mode Spray.
+    stateRef.current.fireSprayShot = fireSprayShot;
+
     const handleClick = () => {
       if (phaseRef.current !== 'running') return;
       const state = stateRef.current;
@@ -1897,6 +2157,16 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
       // choix fait par l'utilisateur (pas de pénalité de précision en plus,
       // le tir ne compte juste pas).
       if (state.flash?.phase === 'blind') return;
+
+      // Mode Spray : le clic ARME le tir automatique (voir fireSprayShot,
+      // rappelé dans la boucle d'animation tant que le bouton est maintenu)
+      // plutôt que de tirer un coup unique ici.
+      if (MODES[configRef.current.mode]?.recoilControl) {
+        state.sprayHeld = true;
+        state.sprayIndex = 0;
+        state.nextSprayShotAt = 0;
+        return;
+      }
 
       // Tracking : pas de tir discret, il faut rester appuyé sur la cible en
       // mouvement — le pourcentage se calcule en continu dans la boucle
@@ -1937,6 +2207,7 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
 
       state.flashUntil = performance.now() + MUZZLE_FLASH_LIFETIME_MS;
       if (state.fireAction) {
+        state.idleAction?.stop();
         state.fireAction.stop();
         state.fireAction.play();
       }
@@ -2023,6 +2294,7 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
 
     const handleRelease = () => {
       const state = stateRef.current;
+      state.sprayHeld = false;
       if (!state.isTrackingHeld) return;
       state.isTrackingHeld = false;
       if (state.trackBeam) {
@@ -2350,6 +2622,9 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
                 {MODES[config.mode]?.flashDodge && (
                   <p className="aim-game-tip"><Icon icon={EyeOff} size={16} /> Un flash arrive d'une direction aléatoire : tourne la caméra à l'opposé avant qu'il parte pour l'esquiver, sinon l'écran blanchit et tes tirs ne comptent plus le temps que ça dure.</p>
                 )}
+                {MODES[config.mode]?.recoilControl && (
+                  <p className="aim-game-tip"><Icon icon={Flame} size={16} /> La cible ne bouge jamais : maintiens le clic et tire le viseur vers le bas pour compenser le recul et rester dessus.</p>
+                )}
 
                 <div className="aim-game-controls">
                   <span>
@@ -2357,8 +2632,8 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
                   </span>
                   {!MODES[config.mode]?.passiveTrack && (
                     <span>
-                      <kbd>{MODES[config.mode]?.holdTracking ? 'Clic maintenu' : 'Clic gauche'}</kbd>{' '}
-                      {MODES[config.mode]?.holdTracking ? 'suivre' : 'tirer'}
+                      <kbd>{MODES[config.mode]?.holdTracking || MODES[config.mode]?.recoilControl ? 'Clic maintenu' : 'Clic gauche'}</kbd>{' '}
+                      {MODES[config.mode]?.holdTracking ? 'suivre' : MODES[config.mode]?.recoilControl ? 'spray' : 'tirer'}
                     </span>
                   )}
                   <span>

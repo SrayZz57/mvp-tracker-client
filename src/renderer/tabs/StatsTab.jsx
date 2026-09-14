@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import Icon from '../Icon.jsx';
@@ -33,6 +33,18 @@ import CountUp from '../CountUp.jsx';
 import LoadingState from '../LoadingState.jsx';
 
 const MATCH_HISTORY_PAGE_SIZE = 10;
+
+// Même format que achievements.js/HallOfFame.jsx (jour + mois court + année) —
+// sert d'intercalaire de date dans l'historique des matchs, un par jour civil
+// plutôt qu'une date répétée sur chaque ligne.
+function formatMatchDay(locale, ms) {
+  return new Date(ms).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 // `id` reste la vraie valeur de filtrage (comparée à match.metadata.mode_id),
 // seul le libellé affiché passe par la traduction (voir `labelKey`).
@@ -170,7 +182,7 @@ function MapCards({ rows, mapImages, onRowClick }) {
 }
 
 function StatsTab({ settings, matches, rank, loading }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const agentIcons = useAgentIcons();
   const agentPortraits = useAgentPortraits();
   const agentRoles = useAgentRoles();
@@ -580,36 +592,47 @@ function StatsTab({ settings, matches, rank, loading }) {
           </select>
         </div>
         <div className="match-list">
-          {(showAllMatches ? filteredMatches : filteredMatches.slice(0, MATCH_HISTORY_PAGE_SIZE)).map((match) => {
-            const me = findMe(match, settings.name, settings.tag);
-            const { hsPercent, bsPercent, lsPercent } = hitStats(me);
-            const label = resultLabel(match, me);
-            const displayLabel = resultLabelKey(label) ? t(resultLabelKey(label)) : label;
-            const score = matchScore(match, me);
-            const resultClass = label === 'Victoire' ? 'match-win' : label === 'Défaite' ? 'match-loss' : '';
-            return (
-              <div
-                key={match.metadata?.matchid}
-                className={`match-row ${resultClass} clickable`}
-                onClick={() => setSelectedMatch(match)}
-              >
-                <span className="match-info">
-                  {match.metadata?.mode ?? '?'} — {match.metadata?.map ?? '?'} — {' '}
-                  {me?.character && agentIcons.get(me.character) && (
-                    <img src={agentIcons.get(me.character)} alt="" className="agent-icon" />
+          {(() => {
+            let lastDayKey = null;
+            return (showAllMatches ? filteredMatches : filteredMatches.slice(0, MATCH_HISTORY_PAGE_SIZE)).map((match) => {
+              const me = findMe(match, settings.name, settings.tag);
+              const { hsPercent, bsPercent, lsPercent } = hitStats(me);
+              const label = resultLabel(match, me);
+              const displayLabel = resultLabelKey(label) ? t(resultLabelKey(label)) : label;
+              const score = matchScore(match, me);
+              const resultClass = label === 'Victoire' ? 'match-win' : label === 'Défaite' ? 'match-loss' : '';
+              const gameStart = match.metadata?.game_start;
+              const dayKey = gameStart ? new Date(gameStart * 1000).toDateString() : null;
+              const showDayHeader = dayKey !== null && dayKey !== lastDayKey;
+              lastDayKey = dayKey;
+              return (
+                <Fragment key={match.metadata?.matchid}>
+                  {showDayHeader && (
+                    <div className="match-day-header">{formatMatchDay(i18n.language, gameStart * 1000)}</div>
                   )}
-                  {me?.character ?? '?'} — {' '}
-                  {me?.stats?.kills ?? '?'}/{me?.stats?.deaths ?? '?'}/{me?.stats?.assists ?? '?'}
-                  {hsPercent !== null &&
-                    t('stats.hitBreakdown', { hs: hsPercent.toFixed(0), bs: bsPercent.toFixed(0), ls: lsPercent.toFixed(0) })}
-                </span>
-                <span className={`result-badge ${resultClass}`}>
-                  {displayLabel}
-                  {score && ` (${score})`}
-                </span>
-              </div>
-            );
-          })}
+                  <div
+                    className={`match-row ${resultClass} clickable`}
+                    onClick={() => setSelectedMatch(match)}
+                  >
+                    <span className="match-info">
+                      {match.metadata?.mode ?? '?'} — {match.metadata?.map ?? '?'} — {' '}
+                      {me?.character && agentIcons.get(me.character) && (
+                        <img src={agentIcons.get(me.character)} alt="" className="agent-icon" />
+                      )}
+                      {me?.character ?? '?'} — {' '}
+                      {me?.stats?.kills ?? '?'}/{me?.stats?.deaths ?? '?'}/{me?.stats?.assists ?? '?'}
+                      {hsPercent !== null &&
+                        t('stats.hitBreakdown', { hs: hsPercent.toFixed(0), bs: bsPercent.toFixed(0), ls: lsPercent.toFixed(0) })}
+                    </span>
+                    <span className={`result-badge ${resultClass}`}>
+                      {displayLabel}
+                      {score && ` (${score})`}
+                    </span>
+                  </div>
+                </Fragment>
+              );
+            });
+          })()}
         </div>
         {filteredMatches.length > MATCH_HISTORY_PAGE_SIZE && (
           <button className="show-more-btn" onClick={() => setShowAllMatches(!showAllMatches)}>

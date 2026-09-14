@@ -53,7 +53,7 @@ function TechDetailModal({ tech, myId, isAdmin, onDelete, onClose, agentIcons, t
   const platform = useMemo(() => detectClipPlatform(tech.video_url), [tech.video_url]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay modal-overlay-center" onClick={onClose}>
       <div className="modal-card clip-detail-modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-close" onClick={onClose}>{t('clips.close')}</button>
 

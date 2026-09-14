@@ -486,7 +486,9 @@
       "snapHold": "Snap-hold",
       "snapHoldDesc": "Un flick ne suffit pas : il faut rester stabilisé sur la cible un court instant pour que le tir compte — empêche de retomber dessus par chance.",
       "flashDodge": "Dodge Flash",
-      "flashDodgeDesc": "Tir sur cible classique, mais un flash (Skye ou Phoenix, au hasard) arrive d'une direction imprévisible : tourne la caméra à temps pour l'esquiver, sinon l'écran blanchit."
+      "flashDodgeDesc": "Tir sur cible classique, mais un flash (Skye ou Phoenix, au hasard) arrive d'une direction imprévisible : tourne la caméra à temps pour l'esquiver, sinon l'écran blanchit.",
+      "spray": "Contrôle de recul",
+      "sprayDesc": "Maintiens le clic sur une cible fixe et compense le recul à la souris pour rester dessus, comme un vrai entraînement de spray."
     },
     "sensSection": "Sensibilité",
     "sessionSection": "Session",
@@ -502,6 +504,10 @@
     "targetColorLabel": "Couleur des cibles",
     "fovLabel": "Champ de vision : {{fov}}°",
     "showWeaponLabel": "Afficher l'arme et les mains",
+    "weaponSection": "Arme",
+    "weaponModelLabel": "Modèle d'arme",
+    "weaponDefault": "Défaut",
+    "weaponVandal": "Vandal (animée)",
     "darkThemeLabel": "Salle sombre (sans ciel bleu ni sol clair)",
     "crosshairSection": "Crosshair",
     "crosshairEmpty": "Aucun crosshair dans ta bibliothèque — ajoutes-en un dans l'onglet Crosshairs.",
@@ -532,7 +538,16 @@
     "impactFootnote": "Sur {{trained}} parties les jours d'entraînement et {{untrained}} les autres jours. Une corrélation, pas une preuve de cause à effet.",
     "progressTitle": "Ta progression — {{mode}}",
     "progressNotEnough": "Joue au moins deux séances sur ce mode pour voir ta courbe.",
-    "progressMeta": "{{count}} dernières séances · record {{best}} · dernière {{last}}",
+    "progressMetric": {
+      "score": "Score",
+      "reaction": "Réaction",
+      "missRate": "Ratés"
+    },
+    "progressMeta": {
+      "score": "{{count}} dernières séances · record {{best}} · dernière {{last}}",
+      "reaction": "{{count}} dernières séances · meilleur temps {{best}} ms · dernier {{last}} ms",
+      "missRate": "{{count}} dernières séances · meilleur taux de ratés {{best}}% · dernier {{last}}%"
+    },
     "friendsTitle": "Classement entre amis",
     "friendsEmpty": "Aucun score sur ce mode parmi tes amis pour l'instant.",
     "hoverSettings": "Réglages",
@@ -582,6 +597,11 @@
     "presetNameRequired": "Donne un nom à ce preset avant de l'enregistrer.",
     "presetFavorite": "Mettre en favori",
     "presetUnfavorite": "Retirer des favoris",
+    "presetExport": "Copier le code (partager)",
+    "presetImport": "Importer un code",
+    "presetImportPlaceholder": "Colle un code de preset ici",
+    "presetImportError": "Ce code n'est pas valide.",
+    "presetImportConfirm": "Importer",
     "playlistsTitle": "Playlists",
     "playlistsIntro": "Enchaîne plusieurs de tes presets personnalisés dans la même session.",
     "playlistsEmpty": "Aucune playlist créée pour l'instant.",

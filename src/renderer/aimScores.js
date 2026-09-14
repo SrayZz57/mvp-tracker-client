@@ -77,13 +77,14 @@ export async function loadGlobalBests() {
   return bests;
 }
 
-// Historique complet de l'utilisateur : sert à la courbe de progression et au
-// calcul de la série de jours consécutifs.
+// Historique complet de l'utilisateur : sert aux courbes de progression
+// (score, temps de réaction, précision) et au calcul de la série de jours
+// consécutifs.
 export async function loadHistory(userId, limit = 300) {
   if (!userId) return [];
   const { data, error } = await supabase
     .from('aim_trainer_scores')
-    .select('mode, score, accuracy, created_at')
+    .select('mode, score, accuracy, avg_reaction, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);

@@ -1444,11 +1444,10 @@ app.whenReady().then(() => {
     }
   });
 
-  // Télécharge/met en cache les icônes de référence pour le matching
-  // d'agent (voir agentIconMatch.js) — en tâche de fond, sans bloquer le
-  // lancement : la détection reste simplement inactive (agent non identifié)
-  // tant que ce n'est pas prêt.
-  ensureAgentIconCache().catch((err) => console.error('[agentIconMatch] échec du cache initial', err));
+  // Mis de côté pour la 1.10.6 avec le reste de l'overlay d'achat auto (voir
+  // pollBuySuggestion plus haut) — aucune raison de télécharger/mettre en
+  // cache les portraits de référence tant que rien ne les utilise.
+  // ensureAgentIconCache().catch((err) => console.error('[agentIconMatch] échec du cache initial', err));
 });
 
 // macOS lance ce lien via 'open-url' plutôt que les arguments de démarrage.

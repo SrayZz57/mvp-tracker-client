@@ -20,19 +20,6 @@ export const PISTOL_WEAPONS = {
 export const LIGHT_SHIELD_COST = 400;
 export const PISTOL_ROUND_CREDITS = 800;
 
-// Modes sans vraie économie de round 1 à 800 crédits : l'overlay n'a rien de
-// pertinent à dire, donc il ne doit jamais s'y afficher.
-//   - 'deathmatch' (Combat à mort) et 'hurm'/'console_hurm' (Combat à mort
-//     par équipe) : pas de phase d'achat, armes aléatoires en boucle.
-//   - 'spikerush' : loadout aléatoire imposé à chaque round, pas d'achat.
-//   - 'skirmish' : partie contre des bots, seulement pour s'entraîner —
-//     valeur non confirmée officiellement (aucune doc publique ne liste les
-//     queueId), à corriger si elle s'avère fausse en jeu.
-// `data.mode` vient de `QueueID` (sélection) ou `ModeID` (partie) côté
-// valorantLocal.js — mêmes valeurs dans les deux cas (vérifié via le filtre
-// déjà en place sur 'competitive' dans fillMissingRanks).
-export const NO_STANDARD_BUY_MODE_IDS = new Set(['deathmatch', 'hurm', 'console_hurm', 'spikerush', 'skirmish']);
-
 // `weapon: null` = on garde le Classic (gratuit, donné à chaque round 1).
 // `shield: 'light'` = bouclier léger. `note` = précision affichée telle
 // quelle quand l'achat ne se résume pas à une liste fixe.

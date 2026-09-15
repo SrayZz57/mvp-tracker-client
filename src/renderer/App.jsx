@@ -26,7 +26,6 @@ import {
   History,
   Search,
   Compass,
-  Layers,
   Video,
   Film,
   Swords,
@@ -36,7 +35,6 @@ import useValorantData from './useValorantData.js';
 import { useCollapsedBlocks } from './CollapsedBlocksContext.jsx';
 import { useE2EE } from './E2EEContext.jsx';
 import StatsTab from './tabs/StatsTab.jsx';
-import SeasonalRanksTab from './tabs/SeasonalRanksTab.jsx';
 import WeaknessTab from './tabs/WeaknessTab.jsx';
 import FormTab from './tabs/FormTab.jsx';
 import NetworkTab from './tabs/NetworkTab.jsx';
@@ -63,7 +61,6 @@ import GoalsWidget from './GoalsWidget.jsx';
 import WeeklyRecapCard from './WeeklyRecapCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
 import SearchBar from './SearchBar.jsx';
-import AgentSelectLive from './AgentSelectLive.jsx';
 import WelcomeScreen from './WelcomeScreen.jsx';
 import LinkRiotAccount from './LinkRiotAccount.jsx';
 import AccountGreeting from './AccountGreeting.jsx';
@@ -89,7 +86,6 @@ const NAV_SECTIONS = [
     sectionKey: 'nav.sections.performance',
     tabs: [
       { id: 'stats', labelKey: 'nav.tabs.stats', icon: BarChart3 },
-      { id: 'seasonal-ranks', labelKey: 'nav.tabs.seasonalRanks', icon: Layers },
       { id: 'forme', labelKey: 'nav.tabs.form', icon: AlarmClock },
       { id: 'heatmap', labelKey: 'nav.tabs.heatmap', icon: Flame },
       { id: 'analyse', labelKey: 'nav.tabs.analyse', icon: Brain },
@@ -912,8 +908,6 @@ function App() {
             loading={data.loading}
           />
         );
-      case 'seasonal-ranks':
-        return <SeasonalRanksTab myId={session.user.id} />;
       case 'forme':
         return <FormTab settings={settings} matches={data.matches} loading={data.loading} />;
       case 'reseau':
@@ -1246,16 +1240,6 @@ function App() {
           ) : (
             <p className="warning">{t('nav.error', { message: data.error })}</p>
           ))}
-
-        {/* Bandeau de sélection d'agent : affiché quel que soit l'onglet
-            ouvert, puisqu'il ne dure que le temps de la sélection et qu'on
-            n'a pas le réflexe de changer d'onglet à ce moment-là. Se masque
-            tout seul en dehors de cette phase. Volontairement HORS de
-            <main key={activeTab}> : ce composant pilote aussi la fenêtre
-            overlay séparée (voir son effet sur setAgentSelectOverlayVisible)
-            — s'il était remonté à chaque changement d'onglet, l'overlay se
-            fermerait à chaque clic dans la sidebar pendant une sélection. */}
-        <AgentSelectLive matches={myMatches} settings={mySettings} />
 
         <main className="content" key={activeTab}>
           {renderValorantTab()}

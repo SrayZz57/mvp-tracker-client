@@ -42,8 +42,6 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [apiKeyDraft, setApiKeyDraft] = useState(apiKey ?? '');
   const [savingApiKey, setSavingApiKey] = useState(false);
-  const [overlayEnabled, setOverlayEnabled] = useState(true);
-  const [buyOverlayEnabled, setBuyOverlayEnabled] = useState(true);
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(true);
   // Agent choisi depuis la carte au survol de la répartition par rôle
   // (RoleStackedBar) — demandé sur Discord, ouvre les mêmes stats détaillées
@@ -59,22 +57,8 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   const [riotIdError, setRiotIdError] = useState(null);
 
   useEffect(() => {
-    window.electronAPI.getAgentSelectOverlayEnabled().then(setOverlayEnabled);
-    window.electronAPI.getBuyOverlayEnabled().then(setBuyOverlayEnabled);
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
   }, []);
-
-  const handleToggleOverlay = () => {
-    const next = !overlayEnabled;
-    setOverlayEnabled(next);
-    window.electronAPI.setAgentSelectOverlayEnabled(next);
-  };
-
-  const handleToggleBuyOverlay = () => {
-    const next = !buyOverlayEnabled;
-    setBuyOverlayEnabled(next);
-    window.electronAPI.setBuyOverlayEnabled(next);
-  };
 
   const handleToggleAutoLaunch = () => {
     const next = !autoLaunchEnabled;
@@ -435,26 +419,11 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
             </span>
           )}
         </div>
-        <label className="account-email-row account-toggle-row">
-          <span className="account-tile-label">{t('account.agentSelectOverlayLabel')}</span>
-          <span className={`switch ${overlayEnabled ? 'on' : ''}`}>
-            <input type="checkbox" checked={overlayEnabled} onChange={handleToggleOverlay} />
-            <span className="switch-track">
-              <span className="switch-thumb" />
-            </span>
-          </span>
-        </label>
-        <p className="label account-toggle-hint">{t('account.agentSelectOverlayHint')}</p>
-        <label className="account-email-row account-toggle-row">
-          <span className="account-tile-label">{t('account.buyOverlayLabel')}</span>
-          <span className={`switch ${buyOverlayEnabled ? 'on' : ''}`}>
-            <input type="checkbox" checked={buyOverlayEnabled} onChange={handleToggleBuyOverlay} />
-            <span className="switch-track">
-              <span className="switch-thumb" />
-            </span>
-          </span>
-        </label>
-        <p className="label account-toggle-hint">{t('account.buyOverlayHint')}</p>
+        {/* Overlay d'achat automatique (détection écran/OCR) mis de côté pour
+            la 1.10.6 — souci de fiabilité (souris qui saccade en jeu, agent
+            pas encore identifié de façon fiable) en cours de correction.
+            Code conservé tel quel (main.js, services/*), juste plus
+            démarré ni affiché ici en attendant. */}
         <label className="account-email-row account-toggle-row">
           <span className="account-tile-label">{t('account.autoLaunchLabel')}</span>
           <span className={`switch ${autoLaunchEnabled ? 'on' : ''}`}>

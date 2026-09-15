@@ -128,43 +128,19 @@ db.exec(`
   )
 `);
 
-// Rang atteint sur chaque acte, récupéré via l'API locale du client Riot
-// (voir valorantLocal.js/getSeasonalRanks — HenrikDev n'expose pas cet
-// historique). `data` garde la réponse brute de l'acte en JSON plutôt que
-// des colonnes dédiées : le champ exact utilisé à l'affichage (tier actuel)
-// peut évoluer, pas besoin de migration pour ça. INSERT OR REPLACE : un acte
-// déjà enregistré est écrasé par la valeur la plus récente à chaque appel
-// réussi (le rang dans un acte EN COURS peut encore progresser).
-db.exec(`
-  CREATE TABLE IF NOT EXISTS seasonal_ranks (
-    puuid TEXT NOT NULL,
-    season_id TEXT NOT NULL,
-    data TEXT NOT NULL,
-    updated_at INTEGER NOT NULL,
-    PRIMARY KEY (puuid, season_id)
-  )
-`);
-
-// Résumé léger (pas les détails round par round) de chaque match, remonté
-// directement depuis l'API locale du client Riot (voir
-// valorantLocal.js/backfillActHistory) — sert UNIQUEMENT à alimenter les
-// games/K/D/agent principal de "Rang par acte", jamais HenrikDev pour cette
-// fonctionnalité (celui-ci ne garde que les 40 derniers matchs, insuffisant
-// pour couvrir un historique complet par acte). INSERT OR IGNORE : le
-// contenu d'un match déjà en cache ne change jamais.
-db.exec(`
-  CREATE TABLE IF NOT EXISTS act_match_stats (
-    puuid TEXT NOT NULL,
-    match_id TEXT NOT NULL,
-    season_id TEXT,
-    queue_id TEXT,
-    game_start INTEGER,
-    agent TEXT,
-    kills INTEGER NOT NULL DEFAULT 0,
-    deaths INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (puuid, match_id)
-  )
-`);
+// Rang par acte / vrais prix de skins / backfill d'historique via l'API
+// locale du client Riot retirés (2026-09-15) : plus aucun code de l'app ne
+// doit parler à cette API non officielle, pour éliminer tout risque côté
+// utilisateurs en attendant un accès sanctionné (candidature Overwolf/Riot
+// API en cours). Mêmes tables nettoyées des installations existantes, sur
+// le même principe que le retrait du Puzzle du jour ci-dessous.
+try {
+  db.exec('DROP TABLE IF EXISTS seasonal_ranks');
+  db.exec('DROP TABLE IF EXISTS skin_prices');
+  db.exec('DROP TABLE IF EXISTS act_match_stats');
+} catch {
+  // rien à nettoyer
+}
 
 // UNIQUE(match_id, puuid) — pas match_id seul : un match partagé entre deux
 // comptes suivis (ou une simple re-tentative) faisait échouer silencieusement
@@ -415,37 +391,6 @@ export function getPlaySessionHistory(puuid, limit = 30) {
   return db
     .prepare('SELECT * FROM play_sessions WHERE puuid = ? AND ended_at IS NOT NULL ORDER BY started_at DESC LIMIT ?')
     .all(puuid, limit);
-}
-
-export function saveSeasonalRanks(puuid, seasons) {
-  const now = Date.now();
-  const stmt = db.prepare(
-    'INSERT OR REPLACE INTO seasonal_ranks (puuid, season_id, data, updated_at) VALUES (?, ?, ?, ?)',
-  );
-  seasons.forEach(({ seasonId, ...info }) => {
-    if (!seasonId) return;
-    stmt.run(puuid, seasonId, JSON.stringify(info), now);
-  });
-}
-
-export function getSeasonalRanks(puuid) {
-  return db
-    .prepare('SELECT season_id, data FROM seasonal_ranks WHERE puuid = ?')
-    .all(puuid)
-    .map((row) => ({ seasonId: row.season_id, ...JSON.parse(row.data) }));
-}
-
-export function saveActMatchStats(puuid, rows) {
-  const stmt = db.prepare(
-    'INSERT OR IGNORE INTO act_match_stats (puuid, match_id, season_id, queue_id, game_start, agent, kills, deaths) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-  );
-  rows.forEach((r) => {
-    stmt.run(puuid, r.matchId, r.seasonId, r.queueId, r.gameStart, r.agent, r.kills ?? 0, r.deaths ?? 0);
-  });
-}
-
-export function getActMatchStats(puuid) {
-  return db.prepare('SELECT match_id, season_id, queue_id, agent, kills, deaths FROM act_match_stats WHERE puuid = ?').all(puuid);
 }
 
 export function getAssessmentForMatch(puuid, matchId) {

@@ -5,10 +5,12 @@
       "createTitle": "Créer un tournoi",
       "name": "Nom du tournoi",
       "description": "Description",
+      "gameMode": "Mode de jeu",
       "maxTeams": "Nombre d'équipes",
       "maxTeamsHint": "N'importe quel nombre à partir de 2 — les byes sont gérés automatiquement pour les nombres qui ne sont pas des puissances de 2.",
       "registrationDeadline": "Date limite d'inscription",
       "startDate": "Date de début",
+      "rankRange": "Rang requis (optionnel)",
       "create": "Créer le tournoi",
       "creating": "Création…",
       "listTitle": "Tournois créés",
@@ -48,6 +50,21 @@
     "promoWatermark": "Tournoi",
     "promoTag": "Compétition",
     "showMore": "Voir {{count}} de plus",
+    "createOwn": "Créer un tournoi",
+    "gameMode": {
+      "classic": "Classique (5c5)",
+      "2v2": "2c2",
+      "1v1": "1c1"
+    },
+    "anyRank": "Tout rang",
+    "noMin": "Sans minimum",
+    "noMax": "Sans maximum",
+    "community": {
+      "title": "Tournois de la communauté",
+      "searchPlaceholder": "Rechercher un tournoi…",
+      "anyRankFilter": "Tout rang",
+      "empty": "Aucun tournoi communautaire pour l'instant — sois le premier à en créer un."
+    },
     "mine": {
       "title": "Tes tournois",
       "empty": "Tu n'as pas encore participé à un tournoi."
@@ -138,7 +155,6 @@
       "admin": "Administration",
       "tournaments": "Tournois",
       "stats": "Stats",
-      "seasonalRanks": "Rang par acte",
       "form": "Perf & Forme",
       "tilt": "Tilt",
       "heatmap": "Heatmap",
@@ -1503,17 +1519,6 @@
       }
     }
   },
-  "seasonalRanks": {
-    "title": "Rang par acte",
-    "empty": "Aucune statistique pour l'instant — lance Valorant une seule fois pendant que MVP Tracker tourne pour les récupérer.",
-    "unranked": "Non classé",
-    "pastActs": "Actes précédents",
-    "reload": "Recharger l'historique",
-    "reloading": "Récupération...",
-    "reloadPartial": "{{added}} nouveaux matchs récupérés — encore {{remaining}} à remonter, reclique pour continuer.",
-    "reloadDone": "{{added}} nouveaux matchs récupérés — c'est tout ce que Riot garde en détail pour ce compte.",
-    "reloadNothingMore": "Rien de plus à récupérer — Riot ne garde le détail par match (agent, K/D) que sur une fenêtre limitée. Les actes plus anciens garderont leur rang, mais jamais ces détails."
-  },
   "goals": {
     "widgetTitle": "Objectifs personnels",
     "panelTitle": "Objectifs",
@@ -1704,10 +1709,8 @@
     "riotIdMismatch": "Ce Riot ID appartient à un autre compte Valorant — pas au tien. Vérifie l'orthographe, ou contacte-nous si tu penses que c'est une erreur.",
     "apiKeyLabel": "Clé API HenrikDev",
     "apiKeyMissing": "Non renseignée",
-    "agentSelectOverlayLabel": "Fenêtre de sélection d'agent par-dessus le jeu",
-    "agentSelectOverlayHint": "Affiche une petite fenêtre par-dessus Valorant pendant la sélection d'agent et le début de partie (rangs, suggestions). Désactive-la si tu ne veux jamais de fenêtre supplémentaire par-dessus le jeu.",
-    "buyOverlayLabel": "Fenêtre d'achat au round pistolet",
-    "buyOverlayHint": "Affiche une petite fenêtre par-dessus Valorant au début de chaque partie, qui rappelle quoi acheter au round 1 selon ton agent.",
+    "pistolBuyOverlayLabel": "Aide d'achat automatique",
+    "pistolBuyOverlayHint": "Petite fenêtre par-dessus Valorant qui détecte ton économie et ton agent depuis l'écran pendant la boutique, et te suggère quoi acheter — sans rien lire dans le jeu. Désactive-la si tu ne veux jamais de fenêtre supplémentaire par-dessus le jeu.",
     "autoLaunchLabel": "Lancer MVP Tracker au démarrage de Windows",
     "autoLaunchHint": "L'app se lance en arrière-plan à l'allumage du PC, réduite dans la barre système (icône près de l'horloge) — le ping et la détection de tilt continuent sans garder la fenêtre ouverte.",
     "signOut": "Se déconnecter",
@@ -1800,30 +1803,18 @@
       "verylong": "Très longue (35m+)"
     }
   },
-  "agentSelect": {
-    "title": "Sélection d’agent en cours",
-    "titleGame": "Chargement de la partie",
-    "hint": "Rang de tes coéquipiers, en direct depuis ton client",
-    "hintGame": "Les deux équipes, en direct depuis ton client",
-    "choosing": "Choisit…",
-    "locked": "Verrouillé",
-    "unranked": "Non classé",
-    "you": "Toi",
-    "allies": "Alliés",
-    "enemies": "Adversaires",
-    "suggestTitle": "Suggestion pour cette map",
-    "suggestPersonal": "{{winrate}}% de victoires avec toi ({{games}} matchs)",
-    "suggestCommunity": "recommandé par la communauté",
-    "suggestFillsGap": "rôle manquant"
-  },
   "buyOverlay": {
-    "title": "Round pistolet",
+    "title": "Achat conseillé",
     "credits": "{{cost}} cr.",
     "weapon": "Arme",
     "shield": "Bouclier",
     "lightShield": "Bouclier léger",
     "keepClassic": "Garde le Classic",
+    "noWeapon": "Aucune arme finançable",
+    "heavyShield": "Bouclier lourd",
     "ability": "Capacité",
+    "agentUnknown": "Agent non identifié",
+    "creditsSuffix": "{{cost}} crédits",
     "notes": {
       "astraStars": "Place tes étoiles selon la map — tu choisis lesquelles.",
       "chamberBullets": "Pas de Ghost : mets le reste du budget en balles de Chasseur de têtes."

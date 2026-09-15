@@ -27,30 +27,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getRankFor: (puuid) => ipcRenderer.invoke('valorant:get-rank-for', puuid),
   getNetworkStatus: () => ipcRenderer.invoke('network:get-status'),
   getPingSamples: (puuid) => ipcRenderer.invoke('network:get-ping-samples', puuid),
-  // Sélection d'agent en direct (API locale du client Valorant).
-  getAgentSelect: () => ipcRenderer.invoke('valorant-local:agent-select'),
-  getSeasonalRanks: () => ipcRenderer.invoke('valorant:get-seasonal-ranks'),
-  getActHistory: () => ipcRenderer.invoke('valorant:get-act-history'),
-  backfillActHistoryNow: () => ipcRenderer.invoke('valorant:backfill-act-history-now'),
-  setAgentSelectOverlayVisible: (visible) => ipcRenderer.invoke('agent-select-overlay:set-visible', visible),
-  getAgentSelectOverlayEnabled: () => ipcRenderer.invoke('agent-select-overlay:get-enabled'),
-  setAgentSelectOverlayEnabled: (enabled) => ipcRenderer.invoke('agent-select-overlay:set-enabled', enabled),
   syncMatches: (payload) => ipcRenderer.invoke('sync:matches', payload),
-  setAgentSelectSuggestions: (suggestions) =>
-    ipcRenderer.invoke('agent-select-overlay:set-suggestions', suggestions),
-  onAgentSelectSuggestions: (callback) => {
-    const listener = (_event, suggestions) => callback(suggestions);
-    ipcRenderer.on('agent-select-overlay:suggestions', listener);
-    return () => ipcRenderer.removeListener('agent-select-overlay:suggestions', listener);
-  },
-  setBuyOverlayVisible: (visible) => ipcRenderer.invoke('buy-overlay:set-visible', visible),
+  // Overlay d'achat automatique (détection d'économie/agent par capture
+  // d'écran + OCR, voir main.js) — un seul toggle "Mon compte".
   getBuyOverlayEnabled: () => ipcRenderer.invoke('buy-overlay:get-enabled'),
   setBuyOverlayEnabled: (enabled) => ipcRenderer.invoke('buy-overlay:set-enabled', enabled),
-  setBuyOverlayLoadout: (loadout) => ipcRenderer.invoke('buy-overlay:set-loadout', loadout),
-  onBuyOverlayLoadout: (callback) => {
-    const listener = (_event, loadout) => callback(loadout);
-    ipcRenderer.on('buy-overlay:loadout', listener);
-    return () => ipcRenderer.removeListener('buy-overlay:loadout', listener);
+  onBuySuggestionInput: (callback) => {
+    const listener = (_event, input) => callback(input);
+    ipcRenderer.on('buy-overlay:suggestion-input', listener);
+    return () => ipcRenderer.removeListener('buy-overlay:suggestion-input', listener);
   },
   getDeviceId: () => ipcRenderer.invoke('network:get-device-id'),
   openAimTrainer: (config) => ipcRenderer.invoke('aim-trainer:open', config),

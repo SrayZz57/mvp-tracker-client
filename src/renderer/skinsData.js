@@ -20,14 +20,24 @@ export const TIER_PRICES = {
 const MELEE_CATEGORY = 'EEquippableCategory::Melee';
 const MELEE_PRICE_MULTIPLIER = 2;
 
-// Quelques couteaux "hors norme" (éditions spéciales/bundles/collab) ne
-// suivent pas le ×2 standard — recherché le 2026-08-17. Liste volontairement
-// courte : plusieurs autres couteaux repérés comme "hors norme" pendant la
-// recherche (ex. Magepunk Electroblade, VCT LOCK//IN Misericórdia) avaient des
-// sources contradictoires sur leur tier réel, donc pas assez fiables pour être
-// inclus ici plutôt que de risquer un chiffre faux.
-const MELEE_PRICE_OVERRIDES = {
-  'Power Fist': 5950, // RDS — le couteau le plus cher jamais sorti par Riot, confirmé par plusieurs sources
+// Skins "hors norme" (éditions spéciales/bundles/collab, arme à feu OU
+// couteau) dont le vrai prix ne suit pas l'échelle standard par rareté —
+// recherché/signalé au fil de l'eau. Clé = "Arme — Skin" : une même ligne de
+// skins (ex. "Radiant Entertainment System") a un nom identique sur chaque
+// arme qu'elle couvre, mais PAS le même prix (le couteau coûte bien plus
+// cher que le Phantom de la même ligne) — indispensable de désambiguïser par
+// arme plutôt que par seul nom de skin. Liste volontairement courte : mieux
+// vaut retomber sur l'estimation par rareté que risquer un chiffre non
+// vérifié.
+// Noms tels que renvoyés par l'API en langue FRANÇAISE (celle utilisée par
+// loadCatalog ci-dessous, ?language=fr-FR) — vérifiés directement sur
+// valorant-api.com plutôt que supposés depuis les noms anglais, après un
+// premier essai qui ne correspondait jamais pour cette raison (l'arme mêlée
+// s'appelle "Mêlée" en français, pas "Melee" ; le nom du skin est formaté
+// "Phantom (Radiant Entertainment System)", pas juste le nom de la ligne).
+const PRICE_OVERRIDES = {
+  'Mêlée — Power Fist': 5950, // RDS — le couteau le plus cher jamais sorti par Riot, confirmé par plusieurs sources
+  'Phantom — Phantom (Radiant Entertainment System)': 2975,
 };
 
 let cache = null;
@@ -66,7 +76,7 @@ async function loadCatalog() {
       const video = levelsWithVideo.length > 0 ? levelsWithVideo[levelsWithVideo.length - 1].streamedVideo : null;
       const basePrice = TIER_PRICES[tier.tierName] ?? 0;
       const isMelee = weapon.category === MELEE_CATEGORY;
-      const meleeOverride = isMelee ? MELEE_PRICE_OVERRIDES[skin.displayName] : undefined;
+      const override = PRICE_OVERRIDES[`${weapon.displayName} — ${skin.displayName}`];
       skins.push({
         uuid: skin.uuid,
         name: skin.displayName,
@@ -77,7 +87,7 @@ async function loadCatalog() {
         video,
         chromas: skin.chromas,
         ...tier,
-        estimatedPriceVp: meleeOverride ?? (isMelee ? basePrice * MELEE_PRICE_MULTIPLIER : basePrice),
+        estimatedPriceVp: override ?? (isMelee ? basePrice * MELEE_PRICE_MULTIPLIER : basePrice),
       });
     }
   }

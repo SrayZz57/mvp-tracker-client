@@ -5,10 +5,12 @@
       "createTitle": "Create a tournament",
       "name": "Tournament name",
       "description": "Description",
+      "gameMode": "Game mode",
       "maxTeams": "Number of teams",
       "maxTeamsHint": "Any number from 2 up — byes are handled automatically for numbers that aren't powers of 2.",
       "registrationDeadline": "Registration deadline",
       "startDate": "Start date",
+      "rankRange": "Required rank (optional)",
       "create": "Create tournament",
       "creating": "Creating…",
       "listTitle": "Created tournaments",
@@ -48,6 +50,21 @@
     "promoWatermark": "Tournament",
     "promoTag": "Competition",
     "showMore": "Show {{count}} more",
+    "createOwn": "Create a tournament",
+    "gameMode": {
+      "classic": "Classic (5v5)",
+      "2v2": "2v2",
+      "1v1": "1v1"
+    },
+    "anyRank": "Any rank",
+    "noMin": "No minimum",
+    "noMax": "No maximum",
+    "community": {
+      "title": "Community tournaments",
+      "searchPlaceholder": "Search a tournament…",
+      "anyRankFilter": "Any rank",
+      "empty": "No community tournament yet — be the first to create one."
+    },
     "mine": {
       "title": "Your tournaments",
       "empty": "You haven't joined a tournament yet."
@@ -138,7 +155,6 @@
       "admin": "Administration",
       "tournaments": "Tournaments",
       "stats": "Stats",
-      "seasonalRanks": "Rank per act",
       "form": "Perf & Form",
       "tilt": "Tilt",
       "heatmap": "Heatmap",
@@ -1503,17 +1519,6 @@
       }
     }
   },
-  "seasonalRanks": {
-    "title": "Rank per act",
-    "empty": "No stats yet — launch Valorant once while MVP Tracker is running to fetch them.",
-    "unranked": "Unranked",
-    "pastActs": "Past acts",
-    "reload": "Reload history",
-    "reloading": "Fetching...",
-    "reloadPartial": "{{added}} new matches fetched — {{remaining}} left to go, click again to continue.",
-    "reloadDone": "{{added}} new matches fetched — that's all Riot keeps in detail for this account.",
-    "reloadNothingMore": "Nothing more to fetch — Riot only keeps per-match detail (agent, K/D) for a limited window. Older acts will keep their rank badge, but never these details."
-  },
   "goals": {
     "widgetTitle": "Personal goals",
     "panelTitle": "Goals",
@@ -1704,10 +1709,8 @@
     "riotIdMismatch": "This Riot ID belongs to a different Valorant account — not yours. Check the spelling, or contact us if you think this is a mistake.",
     "apiKeyLabel": "HenrikDev API key",
     "apiKeyMissing": "Not set",
-    "agentSelectOverlayLabel": "Agent select window over the game",
-    "agentSelectOverlayHint": "Shows a small window over Valorant during agent select and the start of a match (ranks, suggestions). Turn it off if you never want an extra window on top of the game.",
-    "buyOverlayLabel": "Pistol round buy window",
-    "buyOverlayHint": "Shows a small window over Valorant at the start of each match, reminding you what to buy on round 1 based on your agent.",
+    "pistolBuyOverlayLabel": "Automatic buy helper",
+    "pistolBuyOverlayHint": "A small window over Valorant that detects your economy and agent from the screen while the shop is open, and suggests what to buy — without reading anything from the game. Turn it off if you never want an extra window on top of the game.",
     "autoLaunchLabel": "Launch MVP Tracker at Windows startup",
     "autoLaunchHint": "The app launches in the background when your PC starts, minimized to the system tray (icon near the clock) — ping and tilt detection keep running without a window open.",
     "signOut": "Sign out",
@@ -1800,30 +1803,18 @@
       "verylong": "Very long (35m+)"
     }
   },
-  "agentSelect": {
-    "title": "Agent select in progress",
-    "titleGame": "Match loading",
-    "hint": "Your teammates' ranks, live from your client",
-    "hintGame": "Both teams, live from your client",
-    "choosing": "Choosing…",
-    "locked": "Locked",
-    "unranked": "Unranked",
-    "you": "You",
-    "allies": "Allies",
-    "enemies": "Enemies",
-    "suggestTitle": "Suggestion for this map",
-    "suggestPersonal": "{{winrate}}% win rate for you ({{games}} games)",
-    "suggestCommunity": "community pick",
-    "suggestFillsGap": "missing role"
-  },
   "buyOverlay": {
-    "title": "Pistol round",
+    "title": "Suggested buy",
     "credits": "{{cost}} cr.",
     "weapon": "Weapon",
     "shield": "Shield",
     "lightShield": "Light shield",
     "keepClassic": "Keep the Classic",
+    "noWeapon": "No weapon affordable",
+    "heavyShield": "Heavy shield",
     "ability": "Ability",
+    "agentUnknown": "Agent not identified",
+    "creditsSuffix": "{{cost}} credits",
     "notes": {
       "astraStars": "Place your stars to suit the map — your call which ones.",
       "chamberBullets": "No Ghost: spend the rest of the budget on Headhunter bullets."

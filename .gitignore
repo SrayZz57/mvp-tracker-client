@@ -91,3 +91,7 @@ typings/
 # Electron-Forge
 out/
 dist/
+
+# Captures de diagnostic temporaires pour calibrer l'overlay d'achat auto
+# (voir debugCaptureDir dans main.js) — jamais à committer.
+debug-captures/

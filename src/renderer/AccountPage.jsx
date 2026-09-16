@@ -23,7 +23,7 @@ function formatMemberSince(isoDate, locale) {
   return new Date(isoDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, onUpdate, onUpdateApiKey, onUpdateRiotId, onSignOut, onReplayOnboarding }) {
+function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, onUpdate, onUpdateApiKey, onUpdateRiotId, onSignOut, onReplayOnboarding, onOpenDailyOverlaySettings }) {
   const { t, i18n } = useTranslation();
   const { unlockForUser } = useE2EE();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
@@ -43,6 +43,7 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   const [apiKeyDraft, setApiKeyDraft] = useState(apiKey ?? '');
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(true);
+  const [dailyOverlayEnabled, setDailyOverlayEnabled] = useState(true);
   // Agent choisi depuis la carte au survol de la répartition par rôle
   // (RoleStackedBar) — demandé sur Discord, ouvre les mêmes stats détaillées
   // que depuis l'onglet Stats plutôt que d'en dupliquer une variante ici.
@@ -58,12 +59,19 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
 
   useEffect(() => {
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
+    window.electronAPI.getDailyOverlayEnabled().then(setDailyOverlayEnabled);
   }, []);
 
   const handleToggleAutoLaunch = () => {
     const next = !autoLaunchEnabled;
     setAutoLaunchEnabled(next);
     window.electronAPI.setAutoLaunch(next);
+  };
+
+  const handleToggleDailyOverlay = () => {
+    const next = !dailyOverlayEnabled;
+    setDailyOverlayEnabled(next);
+    window.electronAPI.setDailyOverlayEnabled(next);
   };
 
   const avatarCardUuid = profile.avatar_card_uuid ?? myRank?.cardUuid;
@@ -419,11 +427,23 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
             </span>
           )}
         </div>
-        {/* Overlay d'achat automatique (détection écran/OCR) mis de côté pour
-            la 1.10.6 — souci de fiabilité (souris qui saccade en jeu, agent
-            pas encore identifié de façon fiable) en cours de correction.
-            Code conservé tel quel (main.js, services/*), juste plus
-            démarré ni affiché ici en attendant. */}
+        <label className="account-email-row account-toggle-row">
+          <span className="account-tile-label">{t('account.dailyOverlayLabel')}</span>
+          <span className={`switch ${dailyOverlayEnabled ? 'on' : ''}`}>
+            <input type="checkbox" checked={dailyOverlayEnabled} onChange={handleToggleDailyOverlay} />
+            <span className="switch-track">
+              <span className="switch-thumb" />
+            </span>
+          </span>
+        </label>
+        <p className="label account-toggle-hint">{t('account.dailyOverlayHint')}</p>
+        <button
+          type="button"
+          className="account-forgot-password"
+          onClick={onOpenDailyOverlaySettings}
+        >
+          {t('account.dailyOverlaySettingsButton')}
+        </button>
         <label className="account-email-row account-toggle-row">
           <span className="account-tile-label">{t('account.autoLaunchLabel')}</span>
           <span className={`switch ${autoLaunchEnabled ? 'on' : ''}`}>

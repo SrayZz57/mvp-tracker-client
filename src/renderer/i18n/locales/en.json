@@ -1709,8 +1709,9 @@
     "riotIdMismatch": "This Riot ID belongs to a different Valorant account — not yours. Check the spelling, or contact us if you think this is a mistake.",
     "apiKeyLabel": "HenrikDev API key",
     "apiKeyMissing": "Not set",
-    "pistolBuyOverlayLabel": "Automatic buy helper",
-    "pistolBuyOverlayHint": "A small window over Valorant that detects your economy and agent from the screen while the shop is open, and suggests what to buy — without reading anything from the game. Turn it off if you never want an extra window on top of the game.",
+    "dailyOverlayLabel": "Daily session overlay",
+    "dailyOverlayHint": "A small line in the top-right corner while Valorant runs: today's wins/losses, headshot % and K/D, via HenrikDev (never the client's local API). Resets each day.",
+    "dailyOverlaySettingsButton": "Choose modes excluded from the score",
     "autoLaunchLabel": "Launch MVP Tracker at Windows startup",
     "autoLaunchHint": "The app launches in the background when your PC starts, minimized to the system tray (icon near the clock) — ping and tilt detection keep running without a window open.",
     "signOut": "Sign out",
@@ -1803,22 +1804,20 @@
       "verylong": "Very long (35m+)"
     }
   },
-  "buyOverlay": {
-    "title": "Suggested buy",
-    "credits": "{{cost}} cr.",
-    "weapon": "Weapon",
-    "shield": "Shield",
-    "lightShield": "Light shield",
-    "keepClassic": "Keep the Classic",
-    "noWeapon": "No weapon affordable",
-    "heavyShield": "Heavy shield",
-    "ability": "Ability",
-    "agentUnknown": "Agent not identified",
-    "creditsSuffix": "{{cost}} credits",
-    "notes": {
-      "astraStars": "Place your stars to suit the map — your call which ones.",
-      "chamberBullets": "No Ghost: spend the rest of the budget on Headhunter bullets."
-    }
+  "dailyOverlay": {
+    "title": "Session",
+    "winShort": "W",
+    "lossShort": "L",
+    "hsShort": "HS",
+    "kdShort": "K/D"
+  },
+  "dailyOverlaySettings": {
+    "title": "Session overlay",
+    "close": "Close",
+    "intro": "This small window shows up in the top-right corner while Valorant runs: your wins/losses, headshot % and K/D for the day, recalculated every 5 minutes.",
+    "autoExcludeNote": "Modes without a real win/loss (Deathmatch, Escalation, custom games...) are always excluded automatically. Check other modes here to exclude them too, e.g. Spike Rush.",
+    "noModesYet": "Your game modes will show up here after your first match — you can come back and change this anytime from My Account.",
+    "save": "Save"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to MVP Tracker!",

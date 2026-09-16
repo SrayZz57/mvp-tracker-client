@@ -34,9 +34,7 @@ import { isValorantRunning, pingOnce, isValorantFocused } from './services/netwo
 import { syncMatches } from './services/matchSync.js';
 import { updateElectronApp } from 'update-electron-app';
 import { captureEvent, captureException, shutdown as shutdownTelemetry } from './services/telemetry.js';
-import { captureScreenCrops } from './services/screenCapture.js';
-import { readCredits, shutdownOcr, setOcrLangDir, setOcrWorkerProcessPath, setOcrWorkerScriptPath } from './services/creditsOcr.js';
-import { ensureAgentIconCache, matchAgent } from './services/agentIconMatch.js';
+import { resolveSessionDay, computeDailyStats } from './renderer/dailyStats.js';
 
 // Le service réseau de Chromium plantait en boucle sur ce poste ("Unable to
 // move the cache: Accès refusé" au démarrage, cache disque probablement
@@ -286,38 +284,6 @@ let isQuitting = false;
 const trayIconPath = app.isPackaged
   ? path.join(process.resourcesPath, 'icon.ico')
   : path.join(__dirname, '..', '..', 'src', 'assets', 'icon.ico');
-
-// Même pattern pour le modèle de langue OCR (overlay d'achat auto, voir
-// setOcrLangDir dans creditsOcr.js) : en dev, `extraResource` ne s'applique
-// pas, donc on pointe directement dans le dossier source.
-setOcrLangDir(
-  app.isPackaged
-    ? process.resourcesPath
-    : path.join(__dirname, '..', '..', 'src', 'assets', 'tessdata'),
-);
-
-// Chemin du VRAI moteur worker de tesseract.js (node_modules/tesseract.js/
-// src/worker-script/node/index.js), chargé par un `new Worker(...)` interne
-// à la librairie — PAS un import/require normal, donc invisible pour Vite,
-// qui ne peut ni l'inclure dans le bundle ni ajuster le chemin. Sans cette
-// valeur explicite, tesseract.js calcule ce chemin lui-même via son propre
-// `__dirname`, qui après compilation par Vite pointe vers NOTRE fichier de
-// sortie au lieu du sien — le worker cherchait le fichier à la racine du
-// projet et plantait silencieusement (bug identifié le 2026-09-16, corrigé
-// ici). `node_modules/` garde la même position relative à `.vite/build/`
-// dev comme packagé (le packager copie node_modules tel quel), donc pas
-// besoin de la distinction `app.isPackaged` utilisée pour les deux chemins
-// juste au-dessus (ceux-là visent des fichiers hors du graphe de modules,
-// que Vite/le packager ne copient pas automatiquement).
-setOcrWorkerScriptPath(
-  path.join(__dirname, '..', '..', 'node_modules', 'tesseract.js', 'src', 'worker-script', 'node', 'index.js'),
-);
-
-// Le script de l'OCR (process séparé, voir creditsOcr.js/ocrWorkerProcess.js)
-// est compilé par Vite comme main.js/preload.js — il finit donc dans le même
-// dossier de sortie que ce fichier, dev comme packagé. Même résolution que
-// `path.join(__dirname, 'preload.js')` utilisé plus bas pour les fenêtres.
-setOcrWorkerProcessPath(path.join(__dirname, 'ocrWorkerProcess.js'));
 
 function createTray() {
   if (tray) return;
@@ -900,6 +866,16 @@ setInterval(async () => {
 
 ipcMain.handle('network:get-status', () => networkStatus);
 
+// Accepte un puuid explicite plutôt que de compter uniquement sur
+// currentPuuid() (lu depuis le disque) : au tout premier appel d'une
+// session, cet appel et celui qui enregistre linkedAccountPuuid partent en
+// parallèle depuis le renderer — currentPuuid() peut donc encore être vide
+// au moment où celui-ci s'exécute, même si le puuid demandé est le bon.
+ipcMain.handle('network:get-ping-samples', (_event, puuid) => {
+  const target = puuid ?? currentPuuid();
+  return target ? getAllPingSamples(target) : [];
+});
+
 // Coupe aussi les animations décoratives dès qu'une partie est LANCÉE (pas
 // juste le client ouvert) — un joueur qui garde l'app visible sur un second
 // écran pendant qu'il joue n'aurait sinon jamais le bénéfice de la coupure
@@ -924,93 +900,6 @@ async function pollMatchActive() {
 }
 
 setInterval(pollMatchActive, 6000);
-
-// --- Détection auto de l'économie/agent (capture d'écran + OCR) -----------
-// Remplace l'ancien picker manuel (Alt+Q) : tourne en boucle pendant que
-// Valorant a le focus, sans jamais lire le processus du jeu (voir
-// services/screenCapture.js). isValorantRunning() d'abord (synchrone, pas
-// cher) avant le check de focus (appel PowerShell), même ordre que
-// pollMatchActive ci-dessus.
-let lastCreditsSeenAt = 0;
-const SUGGESTION_HIDE_AFTER_MS = 5000;
-
-// Mode debug (électron-store, `debugCaptureSave`, désactivé par défaut — pas
-// encore exposé dans les réglages, à activer manuellement si besoin de
-// calibrer à nouveau les zones de capture) : sauvegarde les crops et un
-// journal texte sur disque. Rien de tout ça ne tourne par défaut — l'ancien
-// bug (tesseract.js qui ne répondait jamais, voir ocrWorkerProcess.js) est
-// réglé, plus besoin de ce diagnostic en continu pour tout le monde.
-function debugCaptureDir() {
-  const dir = path.join(app.getPath('userData'), 'debug-captures');
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
-function saveDebugCaptures(crops) {
-  try {
-    const dir = debugCaptureDir();
-    fs.writeFileSync(path.join(dir, 'latest-credits.png'), crops.creditsPng);
-    fs.writeFileSync(path.join(dir, 'latest-portrait.png'), crops.portraitPng);
-    if (crops.fullPng) fs.writeFileSync(path.join(dir, 'latest-full.png'), crops.fullPng);
-  } catch (err) {
-    console.error('[buy-overlay] échec de sauvegarde debug', err);
-  }
-}
-
-// Timeout de sécurité : si l'OCR ou le matching restent bloqués pour une
-// raison quelconque, le tick abandonne proprement au lieu de laisser
-// l'overlay dans un état incertain indéfiniment.
-function withTimeout(promise, label, ms = 8000) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} dépasse ${ms}ms`)), ms)),
-  ]);
-}
-
-async function pollBuySuggestion() {
-  const enabled = store.get('autoBuyOverlayEnabled') ?? true;
-  if (!enabled) return;
-  if (!isValorantRunning()) return;
-  if (!(await isValorantFocused())) return;
-
-  const debug = store.get('debugCaptureSave') ?? false;
-  let crops;
-  try {
-    crops = await captureScreenCrops({ includeFull: debug });
-  } catch (err) {
-    console.error('[buy-overlay] échec de la capture', err);
-    return;
-  }
-  if (!crops) return;
-  if (debug) saveDebugCaptures(crops);
-
-  const [creditsResult, agentResult] = await Promise.allSettled([
-    withTimeout(readCredits(crops.creditsPng), 'readCredits'),
-    withTimeout(matchAgent(crops.portraitPng), 'matchAgent'),
-  ]);
-
-  const credits = creditsResult.status === 'fulfilled' ? creditsResult.value : null;
-  const agentName = agentResult.status === 'fulfilled' ? agentResult.value : null;
-
-  // Pas de crédits lisibles = pas en boutique (ou capture inexploitable, ex.
-  // plein écran exclusif) : on masque après un court délai plutôt
-  // qu'immédiatement, pour ne pas faire clignoter l'overlay entre deux
-  // frames de transition (ouverture/fermeture de la boutique).
-  if (credits == null) {
-    if (Date.now() - lastCreditsSeenAt > SUGGESTION_HIDE_AFTER_MS) closeBuyOverlay();
-    return;
-  }
-
-  lastCreditsSeenAt = Date.now();
-  showBuySuggestion({ credits, agentName });
-}
-
-// Mis de côté pour la 1.10.6 (pas démarré) : souci de fiabilité en cours de
-// correction (souris qui saccade en jeu, agent pas encore identifié de
-// façon fiable). Le reste de la fonctionnalité (services, overlay, toggle
-// dans AccountPage.jsx) est conservé tel quel, juste jamais déclenché tant
-// que cette ligne reste commentée — à réactiver une fois réglé.
-// setInterval(pollBuySuggestion, 3000);
 
 // Détection de tilt en direct : tant que Valorant tourne, on revérifie
 // régulièrement si un nouveau match vient de se terminer et, si oui, on
@@ -1075,38 +964,25 @@ setInterval(() => {
   if (isValorantRunning()) checkTiltAndNotify();
 }, 120000);
 
-// Accepte un puuid explicite plutôt que de compter uniquement sur
-// currentPuuid() (lu depuis le disque) : au tout premier appel d'une
-// session, cet appel et celui qui enregistre linkedAccountPuuid partent en
-// parallèle depuis le renderer — currentPuuid() peut donc encore être vide
-// au moment où celui-ci s'exécute, même si le puuid demandé est le bon.
-ipcMain.handle('network:get-ping-samples', (_event, puuid) => {
-  const target = puuid ?? currentPuuid();
-  return target ? getAllPingSamples(target) : [];
-});
+// --- Overlay de session quotidienne (victoires/défaites, HS%, K/D) --------
+// Alimenté uniquement par HenrikDev (jamais l'API locale du client, retirée
+// en 1.10.6) — aucune capture d'écran ni OCR nécessaire ici (contrairement à
+// l'ancien overlay d'achat auto, mis de côté et retiré du code pour être
+// repris plus tard proprement). Fenêtre transparente, sans bordure,
+// click-through, ne fonctionne qu'en Sans bordure/Fenêtré — mais affichée
+// bien plus longtemps que les overlays ponctuels (toute la session), d'où
+// `setAlwaysOnTop(true, 'floating')` dès le départ plutôt qu'un niveau plus
+// agressif comme 'screen-saver' (moins de charge de composition Windows).
+let dailyOverlayWindow = null;
+let dailyOverlayTopmostInterval = null;
+const dailyOverlayState = { dayKey: null };
 
-// --- Overlay d'achat automatique -------------------------------------------
-// Affiche la suggestion d'achat calculée à partir de l'économie et de
-// l'agent DÉTECTÉS par capture d'écran + OCR (voir plus bas, boucle de
-// capture) — PAS une injection dans le jeu, elle ne touche jamais au
-// processus de Valorant : juste une fenêtre de plus gérée par Windows,
-// comme n'importe quelle autre appli flottante. Ne fonctionne qu'en Sans
-// bordure / Fenêtré : le plein écran exclusif bloque toute fenêtre par
-// Windows lui-même, aucun outil ne peut passer devant.
-//
-// Anciennement deux fenêtres séparées : un picker manuel à cliquer (Alt+Q)
-// et cet overlay d'affichage. Fusionnées en une seule (2026-09-16) — plus
-// besoin de cliquer un agent, la détection tourne en continu pendant que
-// Valorant a le focus (voir la boucle de capture plus bas). RESTE
-// click-through, elle : purement informative, on ne doit jamais pouvoir lui
-// voler un clic destiné au jeu en dessous.
-let buyOverlayWindow = null;
-let buyOverlayTopmostInterval = null;
-
-function createBuyOverlay() {
-  buyOverlayWindow = new BrowserWindow({
-    width: 300,
-    height: 260,
+function createDailyOverlay() {
+  dailyOverlayWindow = new BrowserWindow({
+    // Agrandi (2026-09-16) pour la mise en forme plus lisible à deux lignes
+    // (en-tête + 3 statistiques en gros caractères).
+    width: 380,
+    height: 110,
     show: false,
     frame: false,
     transparent: true,
@@ -1120,88 +996,169 @@ function createBuyOverlay() {
     },
   });
 
-  // 'floating' plutôt que 'screen-saver' (le niveau le plus agressif,
-  // au-dessus même de l'économiseur d'écran) : ce niveau maximal forçait
-  // apparemment Windows à recomposer plus souvent l'affichage pendant que
-  // Valorant tourne, avec un vrai coût système (souris saccadée EN JEU,
-  // constaté en test le 2026-09-16 même après avoir réduit la fréquence et
-  // la résolution de capture — pointe donc vers la fenêtre elle-même plutôt
-  // que la capture d'écran). 'floating' reste au-dessus du jeu tout en étant
-  // moins disruptif pour le compositeur.
-  buyOverlayWindow.setAlwaysOnTop(true, 'floating');
-  buyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  // 'screen-saver' : seul niveau confirmé s'afficher réellement par-dessus
+  // Valorant en test (l'ancien overlay d'achat, avant qu'on passe à
+  // 'floating' pour la perf — jamais revérifié visuellement après ce
+  // changement). Priorité à la visibilité d'abord, on reviendra sur un
+  // niveau plus léger une fois confirmé que ça s'affiche.
+  dailyOverlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
 
-  // En bas à gauche : la boutique Valorant occupe le centre/la droite de
-  // l'écran pendant la phase d'achat, l'overlay ne doit pas se poser dessus.
+  // En haut à droite : loin du centre de l'écran où se concentre l'action,
+  // et de la minimap (généralement en bas) et de la boutique (haut-gauche).
   const display = screen.getPrimaryDisplay().workArea;
-  buyOverlayWindow.setPosition(display.x + 16, display.y + display.height - 276);
+  dailyOverlayWindow.setPosition(display.x + display.width - 396, display.y + 16);
 
-  const query = 'view=buy-overlay';
+  const query = 'view=daily-overlay';
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    buyOverlayWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
+    dailyOverlayWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
   } else {
-    buyOverlayWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {
+    dailyOverlayWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {
       search: query,
     });
   }
 
-  buyOverlayWindow.webContents.on('console-message', (_e, _level, message) => {
-    console.log('[buy-overlay]', message);
+  dailyOverlayWindow.webContents.on('console-message', (_e, _level, message) => {
+    console.log('[daily-overlay]', message);
   });
 
-  buyOverlayWindow.showInactive();
-  if (!buyOverlayTopmostInterval) {
-    // 3s plutôt que 1s : chaque réaffirmation force Windows à recalculer le
-    // z-order/la composition, un coût système réel répété inutilement
-    // souvent (voir le commentaire sur 'floating' juste au-dessus).
-    buyOverlayTopmostInterval = setInterval(() => {
+  dailyOverlayWindow.showInactive();
+  if (!dailyOverlayTopmostInterval) {
+    dailyOverlayTopmostInterval = setInterval(() => {
       try {
-        if (buyOverlayWindow && !buyOverlayWindow.isDestroyed()) {
-          buyOverlayWindow.moveTop();
+        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+          dailyOverlayWindow.moveTop();
         }
       } catch {
-        clearInterval(buyOverlayTopmostInterval);
-        buyOverlayTopmostInterval = null;
+        clearInterval(dailyOverlayTopmostInterval);
+        dailyOverlayTopmostInterval = null;
       }
     }, 3000);
   }
 }
 
-function closeBuyOverlay() {
-  clearInterval(buyOverlayTopmostInterval);
-  buyOverlayTopmostInterval = null;
-  if (buyOverlayWindow && !buyOverlayWindow.isDestroyed()) {
+function closeDailyOverlay() {
+  clearInterval(dailyOverlayTopmostInterval);
+  dailyOverlayTopmostInterval = null;
+  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
     try {
-      buyOverlayWindow.close();
+      dailyOverlayWindow.close();
     } catch {
       // déjà détruite entre le check et l'appel — rien à faire de plus.
     }
   }
-  buyOverlayWindow = null;
+  dailyOverlayWindow = null;
 }
 
-// Un seul toggle "Mon compte" pour l'overlay d'achat automatique — plus
-// simple à comprendre depuis que le picker manuel n'existe plus (une seule
-// fenêtre, une seule bascule). Clé renommée `autoBuyOverlayEnabled`
-// (2026-09-16, ancienne clé `pistolBuyOverlayEnabled` abandonnée avec le
-// picker manuel — remise à `true` par défaut pour tout le monde, sans
-// conséquence vu que c'est déjà la valeur par défaut).
-ipcMain.handle('buy-overlay:get-enabled', () => store.get('autoBuyOverlayEnabled') ?? true);
+ipcMain.handle('daily-overlay:get-enabled', () => store.get('dailyOverlayEnabled') ?? true);
 
-ipcMain.handle('buy-overlay:set-enabled', (_event, enabled) => {
-  store.set('autoBuyOverlayEnabled', enabled);
-  if (!enabled) closeBuyOverlay();
+ipcMain.handle('daily-overlay:set-enabled', (_event, enabled) => {
+  store.set('dailyOverlayEnabled', enabled);
+  if (!enabled) closeDailyOverlay();
 });
 
-// Affiche la suggestion détectée dans la fenêtre overlay, en la créant si
-// besoin — appelé par la boucle de capture plus bas, jamais directement par
-// le renderer (contrairement à l'ancien flux basé sur un clic).
-function showBuySuggestion(input) {
-  const enabled = store.get('autoBuyOverlayEnabled') ?? true;
-  if (!enabled) return;
-  if (!buyOverlayWindow || buyOverlayWindow.isDestroyed()) createBuyOverlay();
-  buyOverlayWindow.webContents.send('buy-overlay:suggestion-input', input);
+// Modes à exclure du score du jour, en plus des modes sans vraie
+// victoire/défaite déjà exclus automatiquement (voir dailyStats.js/
+// computeDailyStats). Réglable via une modale DANS l'app principale (voir
+// DailyOverlaySettings.jsx, App.jsx) — pas de fenêtre séparée côté main.js,
+// juste ces deux handlers pour lire/écrire le choix dans electron-store.
+ipcMain.handle('daily-overlay:get-excluded-modes', () => store.get('dailyOverlayExcludedModes') ?? []);
+
+ipcMain.handle('daily-overlay:set-excluded-modes', (_event, modeIds) => {
+  store.set('dailyOverlayExcludedModes', modeIds);
+});
+
+// Récupère les matchs, recalcule la journée en cours (voir resolveSessionDay
+// dans dailyStats.js pour la règle de bascule à minuit) et les stats, puis
+// envoie le résultat à la fenêtre — la crée si besoin, comme showBuySuggestion.
+async function refreshDailyOverlay() {
+  const enabled = store.get('dailyOverlayEnabled') ?? true;
+  if (!enabled) {
+    console.log('[daily-overlay] désactivé (toggle Mon compte)');
+    return;
+  }
+
+  const settings = store.get('valorantSettings');
+  if (!settings?.name || !settings?.tag || !settings?.apiKey) {
+    console.log('[daily-overlay] valorantSettings incomplet, abandon', {
+      hasName: !!settings?.name,
+      hasTag: !!settings?.tag,
+      hasApiKey: !!settings?.apiKey,
+    });
+    return;
+  }
+
+  try {
+    console.log('[daily-overlay] rafraîchissement pour', settings.name, settings.tag);
+    const t0 = Date.now();
+    const account = await getAccount(settings.name, settings.tag, settings.apiKey);
+    const t1 = Date.now();
+    const freshMatches = await getMatchesWithFallback(account, settings.name, settings.tag, settings.apiKey);
+    const t2 = Date.now();
+    saveMatches(account.puuid, freshMatches);
+    const t3 = Date.now();
+
+    const allMatches = getCachedMatches(account.puuid);
+    const t4 = Date.now();
+    dailyOverlayState.dayKey = resolveSessionDay(allMatches, dailyOverlayState.dayKey);
+    const excludedModes = store.get('dailyOverlayExcludedModes') ?? [];
+    const stats = computeDailyStats(allMatches, settings.name, settings.tag, dailyOverlayState.dayKey, excludedModes);
+    const t5 = Date.now();
+    console.log('[daily-overlay] stats calculées', stats);
+    console.log(
+      `[daily-overlay] timing: getAccount=${t1 - t0}ms getMatches=${t2 - t1}ms saveMatches=${t3 - t2}ms getCachedMatches=${t4 - t3}ms compute=${t5 - t4}ms TOTAL=${t5 - t0}ms`,
+    );
+
+    if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) {
+      console.log('[daily-overlay] création de la fenêtre');
+      createDailyOverlay();
+      // loadURL/loadFile est asynchrone : envoyer tout de suite risquait de
+      // perdre le message si la page (et son écouteur IPC) n'avait pas fini
+      // de charger — le tout premier envoi partait dans le vide (constaté
+      // en test le 2026-09-16 : "stats envoyées" loggé AVANT même la
+      // connexion vite de la fenêtre). On attend que la page soit prête.
+      dailyOverlayWindow.webContents.once('did-finish-load', () => {
+        if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) return;
+        dailyOverlayWindow.webContents.send('daily-overlay:stats', stats);
+        console.log('[daily-overlay] stats envoyées à la fenêtre (après chargement)');
+      });
+    } else {
+      dailyOverlayWindow.webContents.send('daily-overlay:stats', stats);
+      console.log('[daily-overlay] stats envoyées à la fenêtre');
+    }
+  } catch (err) {
+    // Erreur ponctuelle (rate limit, réseau) : on retentera au prochain tick,
+    // même logique que checkTiltAndNotify ci-dessus.
+    console.error('[daily-overlay] échec de rafraîchissement', err);
+  }
 }
+
+// Se déclenche DÈS le lancement de Valorant, pas seulement au premier tick
+// des 5 minutes — un check plus fréquent (même cadence que pollMatchActive)
+// détecte la transition et lance un premier rafraîchissement immédiat ;
+// refreshDailyOverlay() lui-même se recharge ensuite toutes les 5 minutes.
+let dailyOverlayLastRunning = false;
+let dailyOverlayRefreshTimer = null;
+
+function scheduleDailyOverlayRefresh() {
+  console.log('[daily-overlay] Valorant détecté, lancement du suivi');
+  clearInterval(dailyOverlayRefreshTimer);
+  refreshDailyOverlay();
+  dailyOverlayRefreshTimer = setInterval(refreshDailyOverlay, 300000);
+}
+
+setInterval(() => {
+  const running = isValorantRunning();
+  if (running && !dailyOverlayLastRunning) {
+    scheduleDailyOverlayRefresh();
+  } else if (!running && dailyOverlayLastRunning) {
+    console.log('[daily-overlay] Valorant fermé, arrêt du suivi');
+    clearInterval(dailyOverlayRefreshTimer);
+    dailyOverlayRefreshTimer = null;
+    closeDailyOverlay();
+  }
+  dailyOverlayLastRunning = running;
+}, 6000);
 
 ipcMain.handle('sync:matches', (_event, payload) => syncMatches(payload));
 
@@ -1443,11 +1400,6 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-
-  // Mis de côté pour la 1.10.6 avec le reste de l'overlay d'achat auto (voir
-  // pollBuySuggestion plus haut) — aucune raison de télécharger/mettre en
-  // cache les portraits de référence tant que rien ne les utilise.
-  // ensureAgentIconCache().catch((err) => console.error('[agentIconMatch] échec du cache initial', err));
 });
 
 // macOS lance ce lien via 'open-url' plutôt que les arguments de démarrage.
@@ -1467,12 +1419,9 @@ app.on('window-all-closed', () => {
 
 // Vide la file d'événements PostHog avant fermeture — sans ça, les derniers
 // events d'une session (ex. le crash qui vient de la faire quitter) peuvent
-// se perdre s'ils n'ont pas encore été envoyés. Termine aussi le worker OCR
-// (tesseract.js) : un process fils qui survivrait à la fermeture de l'app
-// resterait actif en arrière-plan.
+// se perdre s'ils n'ont pas encore été envoyés.
 app.on('will-quit', () => {
   shutdownTelemetry();
-  shutdownOcr().catch(() => {});
 });
 
 // In this file you can include the rest of your app's specific main process

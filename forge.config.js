@@ -5,15 +5,10 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: 'src/assets/icon',
-    // Icône de la tray système + modèle de langue OCR (crédits détectés dans
-    // l'overlay d'achat auto), lus au runtime par main.js — src/assets/
-    // n'est pas traité par le build Vite du process principal, donc ils ne
-    // finiraient pas dans le paquet sans être copiés explicitement ici.
-    // Le modèle OCR est bundlé en local pour ne JAMAIS dépendre du réseau au
-    // runtime : la lib (tesseract.js) le télécharge sinon depuis un CDN sans
-    // aucun timeout, un blocage réseau silencieux ferait planter toute la
-    // suggestion d'achat indéfiniment (bug constaté en test, 2026-09-15).
-    extraResource: ['src/assets/icon.ico', 'src/assets/tessdata/eng.traineddata.gz'],
+    // Icône de la tray système, lue au runtime par main.js — src/assets/
+    // n'est pas traité par le build Vite du process principal, donc elle ne
+    // finirait pas dans le paquet sans être copiée explicitement ici.
+    extraResource: ['src/assets/icon.ico'],
   },
   rebuildConfig: {},
   makers: [
@@ -46,17 +41,6 @@ module.exports = {
           {
             // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
             entry: 'src/main.js',
-            config: 'vite.main.config.mjs',
-            target: 'main',
-          },
-          {
-            // Process séparé (utilityProcess.fork(), voir main.js) pour l'OCR
-            // des crédits — tesseract.js (worker_threads en interne) ne
-            // répond jamais quand il tourne dans le process main d'Electron
-            // lui-même, voir le commentaire détaillé dans ocrWorkerProcess.js.
-            // Même dossier de sortie que main.js/preload.js (.vite/build/),
-            // donc même résolution de chemin par __dirname au runtime.
-            entry: 'src/services/ocrWorkerProcess.js',
             config: 'vite.main.config.mjs',
             target: 'main',
           },

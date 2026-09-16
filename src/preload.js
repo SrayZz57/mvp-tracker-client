@@ -28,15 +28,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getNetworkStatus: () => ipcRenderer.invoke('network:get-status'),
   getPingSamples: (puuid) => ipcRenderer.invoke('network:get-ping-samples', puuid),
   syncMatches: (payload) => ipcRenderer.invoke('sync:matches', payload),
-  // Overlay d'achat automatique (détection d'économie/agent par capture
-  // d'écran + OCR, voir main.js) — un seul toggle "Mon compte".
-  getBuyOverlayEnabled: () => ipcRenderer.invoke('buy-overlay:get-enabled'),
-  setBuyOverlayEnabled: (enabled) => ipcRenderer.invoke('buy-overlay:set-enabled', enabled),
-  onBuySuggestionInput: (callback) => {
-    const listener = (_event, input) => callback(input);
-    ipcRenderer.on('buy-overlay:suggestion-input', listener);
-    return () => ipcRenderer.removeListener('buy-overlay:suggestion-input', listener);
+  // Overlay de session quotidienne (victoires/défaites, HS%, K/D du jour,
+  // voir main.js) — HenrikDev uniquement, un toggle "Mon compte" séparé.
+  getDailyOverlayEnabled: () => ipcRenderer.invoke('daily-overlay:get-enabled'),
+  setDailyOverlayEnabled: (enabled) => ipcRenderer.invoke('daily-overlay:set-enabled', enabled),
+  onDailyOverlayStats: (callback) => {
+    const listener = (_event, stats) => callback(stats);
+    ipcRenderer.on('daily-overlay:stats', listener);
+    return () => ipcRenderer.removeListener('daily-overlay:stats', listener);
   },
+  getDailyOverlayExcludedModes: () => ipcRenderer.invoke('daily-overlay:get-excluded-modes'),
+  setDailyOverlayExcludedModes: (modeIds) => ipcRenderer.invoke('daily-overlay:set-excluded-modes', modeIds),
   getDeviceId: () => ipcRenderer.invoke('network:get-device-id'),
   openAimTrainer: (config) => ipcRenderer.invoke('aim-trainer:open', config),
   closeAimTrainer: () => ipcRenderer.invoke('aim-trainer:close'),

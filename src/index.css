@@ -11172,166 +11172,180 @@ input[type='color'] {
 }
 
 /* =========================================================================
-   OVERLAY D'ACHAT DU ROUND 1 (fenêtre séparée, en bas à gauche)
-   Volontairement compacte et posée en bas à gauche : la boutique de Valorant
-   occupe le centre et la droite de l'écran pendant la phase d'achat.
+   OVERLAY DE SESSION QUOTIDIENNE (fenêtre séparée, en haut à droite)
+   Deux lignes — un en-tête discret (pastille vivante + "SESSION"), puis 3
+   statistiques bien lisibles. Reste affichée toute la session, contrairement
+   aux autres overlays qui n'apparaissent que brièvement.
    ========================================================================= */
-.overlay-buy {
+.overlay-daily {
   margin: 10px;
-  padding: 0.65rem 0.75rem 0.7rem;
-  border-radius: var(--r-md);
+  padding: 0.6rem 0.9rem 0.7rem;
+  border-radius: var(--r-lg);
   border: 1px solid var(--accent);
-  background: color-mix(in srgb, var(--bg-deep) 88%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--bg-deep) 88%), color-mix(in srgb, var(--bg-deep) 90%, transparent));
   box-shadow: var(--elev-2);
-  backdrop-filter: blur(4px);
-  animation: overlayBuyIn 0.25s ease both;
+  backdrop-filter: blur(6px);
+  width: fit-content;
 }
 
-@keyframes overlayBuyIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .overlay-buy {
-    animation: none;
-  }
-}
-
-.overlay-buy-head {
+.overlay-daily-head {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
 }
 
-.overlay-buy-agent {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  border-radius: var(--r-sm);
-  background: var(--bg-deep);
-  object-fit: cover;
+/* Même pulsation que le reste de l'app (agent-select-pulse) — cohérent avec
+   les autres indicateurs "en direct". */
+.overlay-daily-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: agent-select-pulse 1.6s ease-in-out infinite;
+  animation-play-state: var(--decor-anim-state, running);
 }
 
-.overlay-buy-title {
+.overlay-daily-label {
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.overlay-daily-stats {
+  display: flex;
+  align-items: stretch;
+  gap: 0.9rem;
+}
+
+.overlay-daily-cell {
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
-  min-width: 0;
+  align-items: center;
+  gap: 0.15rem;
+  padding-right: 0.9rem;
+  border-right: 1px solid var(--border);
 }
 
-.overlay-buy-label {
+.overlay-daily-cell:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+.overlay-daily-value {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.overlay-daily-unit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-left: 0.05em;
+}
+
+.overlay-daily-wins {
+  color: #3ddc84;
+}
+
+.overlay-daily-losses {
+  color: #ff5c5c;
+}
+
+.overlay-daily-sep {
+  color: var(--text-dim);
+  font-weight: 500;
+  margin: 0 0.15em;
+}
+
+.overlay-daily-caption {
   font-family: var(--font-display);
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-dim);
 }
 
-.overlay-buy-agent-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* =========================================================================
+   RÉGLAGES DE L'OVERLAY DE SESSION (modale DANS l'app, voir
+   DailyOverlaySettings.jsx) — même base que .modal-card (SkinDetailModal),
+   juste plus étroite : pas besoin de la largeur pensée pour une bannière de
+   skin.
+   ========================================================================= */
+.daily-settings-card {
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
-/* Total collé à droite : c'est l'info qu'on relit en diagonale pour vérifier
-   qu'on ne dépasse pas les 800 crédits du round 1. */
-.overlay-buy-cost {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
+.daily-settings-preview {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 0.5rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--elev-2);
 }
 
-.overlay-buy-list {
-  list-style: none;
+.daily-settings-title {
   margin: 0;
-  padding: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
 }
 
-.overlay-buy-item {
+.daily-settings-text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.daily-settings-modes {
+  margin-top: 0.4rem;
+  padding: 0.75rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.daily-settings-mode-row {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0;
-  border-top: 1px solid var(--border);
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  cursor: pointer;
 }
 
-.overlay-buy-item:first-child {
-  border-top: none;
-  padding-top: 0.45rem;
-}
-
-.overlay-buy-item-kind {
-  flex-shrink: 0;
-  min-width: 52px;
-  font-size: 0.58rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-.overlay-buy-item-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
-  opacity: 0.85;
-}
-
-.overlay-buy-item-name {
-  font-size: 0.76rem;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.overlay-buy-count {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 0.7rem;
+.daily-settings-save {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--r-md);
+  border: none;
+  background: var(--accent);
+  color: var(--bg-deep);
+  font-family: var(--font-display);
   font-weight: 700;
-  color: var(--accent);
+  font-size: 0.85rem;
+  cursor: pointer;
 }
 
-/* Mode économie générique (pas le round pistolet) : coût + statut finançable
-   de chaque capacité plutôt qu'un nombre de charges fixe. */
-.overlay-buy-affordable {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 0.66rem;
-  font-weight: 700;
-}
-
-.overlay-buy-affordable.yes {
-  color: var(--accent);
-}
-
-.overlay-buy-affordable.no {
-  color: var(--text-dim);
-}
-
-.overlay-buy-note {
-  margin: 0.5rem 0 0;
-  font-size: 0.66rem;
-  line-height: 1.35;
-  color: var(--text-muted);
+.daily-settings-save:hover {
+  filter: brightness(1.08);
 }
 
 /* =========================================================================

@@ -1709,8 +1709,9 @@
     "riotIdMismatch": "Ce Riot ID appartient à un autre compte Valorant — pas au tien. Vérifie l'orthographe, ou contacte-nous si tu penses que c'est une erreur.",
     "apiKeyLabel": "Clé API HenrikDev",
     "apiKeyMissing": "Non renseignée",
-    "pistolBuyOverlayLabel": "Aide d'achat automatique",
-    "pistolBuyOverlayHint": "Petite fenêtre par-dessus Valorant qui détecte ton économie et ton agent depuis l'écran pendant la boutique, et te suggère quoi acheter — sans rien lire dans le jeu. Désactive-la si tu ne veux jamais de fenêtre supplémentaire par-dessus le jeu.",
+    "dailyOverlayLabel": "Overlay de session quotidienne",
+    "dailyOverlayHint": "Petite ligne en haut à droite pendant que Valorant tourne : victoires/défaites, % de headshots et K/D du jour, via HenrikDev (jamais l'API locale du client). Remise à zéro chaque jour.",
+    "dailyOverlaySettingsButton": "Choisir les modes exclus du score",
     "autoLaunchLabel": "Lancer MVP Tracker au démarrage de Windows",
     "autoLaunchHint": "L'app se lance en arrière-plan à l'allumage du PC, réduite dans la barre système (icône près de l'horloge) — le ping et la détection de tilt continuent sans garder la fenêtre ouverte.",
     "signOut": "Se déconnecter",
@@ -1803,22 +1804,20 @@
       "verylong": "Très longue (35m+)"
     }
   },
-  "buyOverlay": {
-    "title": "Achat conseillé",
-    "credits": "{{cost}} cr.",
-    "weapon": "Arme",
-    "shield": "Bouclier",
-    "lightShield": "Bouclier léger",
-    "keepClassic": "Garde le Classic",
-    "noWeapon": "Aucune arme finançable",
-    "heavyShield": "Bouclier lourd",
-    "ability": "Capacité",
-    "agentUnknown": "Agent non identifié",
-    "creditsSuffix": "{{cost}} crédits",
-    "notes": {
-      "astraStars": "Place tes étoiles selon la map — tu choisis lesquelles.",
-      "chamberBullets": "Pas de Ghost : mets le reste du budget en balles de Chasseur de têtes."
-    }
+  "dailyOverlay": {
+    "title": "Session",
+    "winShort": "V",
+    "lossShort": "D",
+    "hsShort": "HS",
+    "kdShort": "K/D"
+  },
+  "dailyOverlaySettings": {
+    "title": "Overlay de session",
+    "close": "Fermer",
+    "intro": "Cette petite fenêtre s'affiche en haut à droite pendant que Valorant tourne : tes victoires/défaites, ton % de headshots et ton K/D du jour, recalculés toutes les 5 minutes.",
+    "autoExcludeNote": "Les modes sans vraie victoire/défaite (Deathmatch, Escalade, parties perso...) sont toujours exclus automatiquement. Coche ici d'autres modes à exclure aussi, par exemple Spike Rush.",
+    "noModesYet": "Tes modes de jeu apparaîtront ici après ta première partie — tu pourras revenir modifier ce réglage depuis Mon compte à tout moment.",
+    "save": "Enregistrer"
   },
   "onboarding": {
     "welcomeTitle": "Bienvenue sur MVP Tracker !",

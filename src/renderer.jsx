@@ -16,7 +16,7 @@ import { createRoot } from 'react-dom/client';
 import App from './renderer/App.jsx';
 import TitleBar from './renderer/TitleBar.jsx';
 import AimTrainerHub from './renderer/AimTrainerHub.jsx';
-import BuyOverlay from './renderer/BuyOverlay.jsx';
+import DailyOverlay from './renderer/DailyOverlay.jsx';
 import { CollapsedBlocksProvider } from './renderer/CollapsedBlocksContext.jsx';
 import { E2EEProvider } from './renderer/E2EEContext.jsx';
 
@@ -75,7 +75,7 @@ function Root() {
   // recharger, pour permettre un vrai fondu entre les deux (voir
   // AimTrainerHub.jsx).
   if (view === 'aim-trainer') return <AimTrainerHub config={gameConfig} />;
-  if (view === 'buy-overlay') return <BuyOverlay />;
+  if (view === 'daily-overlay') return <DailyOverlay />;
   return (
     <div className="app-frame">
       <TitleBar />

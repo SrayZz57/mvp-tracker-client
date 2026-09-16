@@ -68,6 +68,7 @@ import AccountAuth from './AccountAuth.jsx';
 import SetNewPasswordScreen from './SetNewPasswordScreen.jsx';
 import AccountPage from './AccountPage.jsx';
 import OnboardingTour from './OnboardingTour.jsx';
+import DailyOverlaySettings from './DailyOverlaySettings.jsx';
 import AdminPage from './AdminPage.jsx';
 import TournamentsTab from './tabs/TournamentsTab.jsx';
 import MessagesTab from './tabs/MessagesTab.jsx';
@@ -494,6 +495,22 @@ function App() {
   const closeOnboarding = () => {
     localStorage.setItem('mvptracker-onboarding-done', '1');
     setShowOnboarding(false);
+  };
+
+  // Même principe que l'onboarding ci-dessus, pour présenter l'overlay de
+  // session une seule fois — modale DANS l'app (pas une fenêtre séparée,
+  // demandé explicitement) plutôt qu'un flag stocké côté main.js.
+  const [showDailyOverlaySettings, setShowDailyOverlaySettings] = useState(false);
+  useEffect(() => {
+    if (!enteredApp) return undefined;
+    if (localStorage.getItem('mvptracker-daily-overlay-settings-shown')) return undefined;
+    const id = setTimeout(() => setShowDailyOverlaySettings(true), 300);
+    return () => clearTimeout(id);
+  }, [enteredApp]);
+
+  const closeDailyOverlaySettings = () => {
+    localStorage.setItem('mvptracker-daily-overlay-settings-shown', '1');
+    setShowDailyOverlaySettings(false);
   };
 
   useEffect(() => {
@@ -1032,6 +1049,7 @@ function App() {
             onUpdateRiotId={updateRiotId}
             onSignOut={() => supabase.auth.signOut().then(lockMessagingKey)}
             onReplayOnboarding={() => setShowOnboarding(true)}
+            onOpenDailyOverlaySettings={() => setShowDailyOverlaySettings(true)}
           />
         );
       default:
@@ -1250,6 +1268,9 @@ function App() {
       <WeeklyRecapCard matches={myMatches} settings={mySettings} rank={myRank} />
       {isViewingSelf && <PostMortemModal matches={myMatches} settings={mySettings} />}
       {showOnboarding && <OnboardingTour onClose={closeOnboarding} />}
+      {showDailyOverlaySettings && (
+        <DailyOverlaySettings matches={myMatches} onClose={closeDailyOverlaySettings} />
+      )}
     </div>
   );
 }

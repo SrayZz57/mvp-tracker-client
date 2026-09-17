@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3,
@@ -34,29 +34,41 @@ import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
 import { useCollapsedBlocks } from './CollapsedBlocksContext.jsx';
 import { useE2EE } from './E2EEContext.jsx';
-import StatsTab from './tabs/StatsTab.jsx';
-import WeaknessTab from './tabs/WeaknessTab.jsx';
-import FormTab from './tabs/FormTab.jsx';
-import NetworkTab from './tabs/NetworkTab.jsx';
-import TiltTab from './tabs/TiltTab.jsx';
-import CrosshairsTab from './tabs/CrosshairsTab.jsx';
-import StrategyTab from './tabs/StrategyTab.jsx';
-import SkinsTab from './tabs/SkinsTab.jsx';
-import MySkinsCollectionTab from './tabs/MySkinsCollectionTab.jsx';
-import HeatmapTab from './tabs/HeatmapTab.jsx';
-import AnalyseTab from './tabs/AnalyseTab.jsx';
-import CompositionTab from './tabs/CompositionTab.jsx';
-import HallOfFameTab from './tabs/HallOfFameTab.jsx';
-import PerformanceChartsTab from './tabs/PerformanceChartsTab.jsx';
-import TeammatesRivalsTab from './tabs/TeammatesRivalsTab.jsx';
-import BuySimulatorTab from './tabs/BuySimulatorTab.jsx';
-import PlaySessionsTab from './tabs/PlaySessionsTab.jsx';
-import SessionGuideTab from './tabs/SessionGuideTab.jsx';
-import AimTrainerTab from './tabs/AimTrainerTab.jsx';
-import WikiTab from './tabs/WikiTab.jsx';
-import LineupsTab from './tabs/LineupsTab.jsx';
-import TeamListingsTab from './tabs/TeamListingsTab.jsx';
-import ClipsTab from './tabs/ClipsTab.jsx';
+// Onglets chargés à la demande (React.lazy) plutôt qu'au démarrage — tous
+// réunis derrière un seul Suspense autour de renderValorantTab() plus bas.
+// L'app entière tenait auparavant dans un seul bloc de ~2,1 Mo évalué au
+// lancement (Aim Trainer/three.js, éditeur de stratégie/fabric.js compris,
+// même si l'utilisateur ne les ouvre jamais dans la session) — signalé comme
+// lent au démarrage, y compris dans l'app packagée, pas juste en dev.
+const StatsTab = lazy(() => import('./tabs/StatsTab.jsx'));
+const WeaknessTab = lazy(() => import('./tabs/WeaknessTab.jsx'));
+const FormTab = lazy(() => import('./tabs/FormTab.jsx'));
+const NetworkTab = lazy(() => import('./tabs/NetworkTab.jsx'));
+const TiltTab = lazy(() => import('./tabs/TiltTab.jsx'));
+const CrosshairsTab = lazy(() => import('./tabs/CrosshairsTab.jsx'));
+const StrategyTab = lazy(() => import('./tabs/StrategyTab.jsx'));
+const SkinsTab = lazy(() => import('./tabs/SkinsTab.jsx'));
+const MySkinsCollectionTab = lazy(() => import('./tabs/MySkinsCollectionTab.jsx'));
+const HeatmapTab = lazy(() => import('./tabs/HeatmapTab.jsx'));
+const AnalyseTab = lazy(() => import('./tabs/AnalyseTab.jsx'));
+const CompositionTab = lazy(() => import('./tabs/CompositionTab.jsx'));
+const HallOfFameTab = lazy(() => import('./tabs/HallOfFameTab.jsx'));
+const PerformanceChartsTab = lazy(() => import('./tabs/PerformanceChartsTab.jsx'));
+const TeammatesRivalsTab = lazy(() => import('./tabs/TeammatesRivalsTab.jsx'));
+const BuySimulatorTab = lazy(() => import('./tabs/BuySimulatorTab.jsx'));
+const PlaySessionsTab = lazy(() => import('./tabs/PlaySessionsTab.jsx'));
+const SessionGuideTab = lazy(() => import('./tabs/SessionGuideTab.jsx'));
+const AimTrainerTab = lazy(() => import('./tabs/AimTrainerTab.jsx'));
+const WikiTab = lazy(() => import('./tabs/WikiTab.jsx'));
+const LineupsTab = lazy(() => import('./tabs/LineupsTab.jsx'));
+const TeamListingsTab = lazy(() => import('./tabs/TeamListingsTab.jsx'));
+const ClipsTab = lazy(() => import('./tabs/ClipsTab.jsx'));
+const AccountPage = lazy(() => import('./AccountPage.jsx'));
+const AdminPage = lazy(() => import('./AdminPage.jsx'));
+const TournamentsTab = lazy(() => import('./tabs/TournamentsTab.jsx'));
+const MessagesTab = lazy(() => import('./tabs/MessagesTab.jsx'));
+const FriendsTab = lazy(() => import('./tabs/FriendsTab.jsx'));
+
 import GoalsWidget from './GoalsWidget.jsx';
 import WeeklyRecapCard from './WeeklyRecapCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
@@ -66,13 +78,9 @@ import LinkRiotAccount from './LinkRiotAccount.jsx';
 import AccountGreeting from './AccountGreeting.jsx';
 import AccountAuth from './AccountAuth.jsx';
 import SetNewPasswordScreen from './SetNewPasswordScreen.jsx';
-import AccountPage from './AccountPage.jsx';
 import OnboardingTour from './OnboardingTour.jsx';
+import LoadingState from './LoadingState.jsx';
 import DailyOverlaySettings from './DailyOverlaySettings.jsx';
-import AdminPage from './AdminPage.jsx';
-import TournamentsTab from './tabs/TournamentsTab.jsx';
-import MessagesTab from './tabs/MessagesTab.jsx';
-import FriendsTab from './tabs/FriendsTab.jsx';
 import { supabase } from './supabaseClient.js';
 import { useOnlinePresence } from './presence.js';
 import { useRankTiers, usePlayerCardArt } from './rankData.js';
@@ -804,7 +812,16 @@ function App() {
   }
 
   if (session === undefined || settings === undefined) {
-    return null;
+    // Avant, rien ne s'affichait ici (juste le fond sombre de la fenêtre) le
+    // temps que supabase.auth.getSession() réponde — un aller-retour réseau
+    // qui peut prendre un moment, laissant l'app paraître figée au
+    // lancement. Un retour visuel immédiat ne raccourcit pas ce délai, mais
+    // évite l'impression de blocage (signalé par plusieurs utilisateurs).
+    return (
+      <div className="app-boot-loading">
+        <LoadingState label={t('nav.loading')} />
+      </div>
+    );
   }
 
   if (!session) {
@@ -833,7 +850,11 @@ function App() {
         </div>
       );
     }
-    return null;
+    return (
+      <div className="app-boot-loading">
+        <LoadingState label={t('nav.loading')} />
+      </div>
+    );
   }
 
   if (profile === null) {
@@ -1260,7 +1281,9 @@ function App() {
           ))}
 
         <main className="content" key={activeTab}>
-          {renderValorantTab()}
+          <Suspense fallback={<div className="app-boot-loading"><LoadingState label={t('nav.loading')} /></div>}>
+            {renderValorantTab()}
+          </Suspense>
         </main>
       </div>
 

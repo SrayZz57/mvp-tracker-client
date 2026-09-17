@@ -41,6 +41,35 @@ export function isValorantRunning() {
   }
 }
 
+// Nom du process du JEU lui-même (pas le Riot Client, ni son launcher) —
+// confirmé publiquement par de nombreux outils tiers et discussions
+// anti-triche. Sert à distinguer "le client Riot est ouvert" (isValorantRunning
+// ci-dessus, vrai dès l'écran d'accueil/le lanceur) de "on est vraiment DANS
+// le jeu" — signalé par l'utilisateur : l'overlay de session se déclenchait
+// trop tôt, dès le Riot Client ouvert, avant même d'avoir lancé Valorant.
+const VALORANT_GAME_PROCESS = 'VALORANT-Win64-Shipping.exe';
+
+// `tasklist` plutôt que PowerShell (comme isValorantFocused ci-dessous) :
+// un outil Windows natif dédié à lister les process par nom, pas besoin de
+// tout l'attirail PowerShell/Add-Type pour une simple recherche par nom —
+// l'équivalent exact de regarder dans le Gestionnaire des tâches, aucune
+// lecture de fichier ni du jeu lui-même. `/FO CSV` est indispensable : le
+// format par défaut tronque les noms de process longs à 25 caractères
+// ("VALORANT-Win64-Shipping.e" au lieu de "...exe"), ce qui faisait
+// systématiquement échouer la comparaison malgré Valorant bien lancé — bug
+// reproduit et confirmé en direct le 2026-09-17. Le CSV n'a pas cette limite.
+export function isValorantGameRunning() {
+  if (process.platform !== 'win32') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    execFile(
+      'tasklist',
+      ['/FI', `IMAGENAME eq ${VALORANT_GAME_PROCESS}`, '/FO', 'CSV', '/NH'],
+      { timeout: 3000 },
+      (err, stdout) => resolve(!err && stdout.toLowerCase().includes(VALORANT_GAME_PROCESS.toLowerCase())),
+    );
+  });
+}
+
 // Fenêtre au premier plan sous Windows (nom du process, via l'API Win32
 // GetForegroundWindow) — sert à couper les animations décoratives dès que
 // Valorant a le focus, MÊME hors match (menus, Terrain d'entraînement...),

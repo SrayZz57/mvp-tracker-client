@@ -990,6 +990,17 @@ h1 {
   box-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
 }
 
+/* Écran affiché le temps que supabase.auth.getSession() réponde au tout
+   lancement de l'app — remplace un écran vide (juste le fond sombre de la
+   fenêtre) par un retour visuel immédiat. */
+.app-boot-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+}
+
 .welcome-screen {
   position: relative;
   min-height: 100%;
@@ -9054,6 +9065,19 @@ input[type='color'] {
   margin: -0.4rem 0 0.75rem;
 }
 
+.account-overlay-size-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.account-overlay-size-row input[type='range'] {
+  flex: 1;
+  max-width: 180px;
+}
+
 .switch {
   position: relative;
   display: inline-flex;
@@ -11186,6 +11210,26 @@ input[type='color'] {
   box-shadow: var(--elev-2);
   backdrop-filter: blur(6px);
   width: fit-content;
+}
+
+/* Mode déplacement (activé depuis Mon compte, jamais pendant une vraie
+   partie — voir setDailyOverlayDragMode dans main.js) : toute la carte
+   devient une zone de glisser-déposer native de la fenêtre, avec un liseré
+   qui indique clairement qu'elle est manipulable. */
+.overlay-daily-draggable {
+  -webkit-app-region: drag;
+  cursor: move;
+  border-color: #ffd166;
+  box-shadow: var(--elev-2), 0 0 0 2px color-mix(in srgb, #ffd166 40%, transparent);
+}
+
+.overlay-daily-drag-hint {
+  margin-left: auto;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffd166;
+  text-transform: none;
 }
 
 .overlay-daily-head {

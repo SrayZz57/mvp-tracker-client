@@ -9,12 +9,31 @@ import { useTranslation } from 'react-i18next';
 function DailyOverlay() {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
+  const [dragMode, setDragMode] = useState(false);
 
   useEffect(() => {
     document.body.classList.add('overlay-window');
   }, []);
 
   useEffect(() => window.electronAPI.onDailyOverlayStats(setStats), []);
+
+  // La taille en % est appliquée via `zoom` (pas `transform: scale`) : ça
+  // affecte le calcul de mise en page, pas juste le rendu visuel — sinon le
+  // contenu déborderait de la fenêtre redimensionnée côté main.js au lieu de
+  // s'y adapter (même piège que la fenêtre trop petite du premier jet).
+  useEffect(() => {
+    window.electronAPI.getDailyOverlaySize().then((percent) => {
+      document.body.style.zoom = percent / 100;
+    });
+    return window.electronAPI.onDailyOverlaySize((percent) => {
+      document.body.style.zoom = percent / 100;
+    });
+  }, []);
+
+  useEffect(() => {
+    window.electronAPI.getDailyOverlayDragMode().then(setDragMode);
+    return window.electronAPI.onDailyOverlayDragMode(setDragMode);
+  }, []);
 
   // Affiché dès la première récupération réussie, même à 0V-0D avant toute
   // partie jouée — demandé explicitement plutôt que d'attendre un premier
@@ -25,10 +44,11 @@ function DailyOverlay() {
   const hsLabel = stats.hsPercent != null ? `${Math.round(stats.hsPercent)}` : '—';
 
   return (
-    <div className="overlay-daily">
+    <div className={`overlay-daily ${dragMode ? 'overlay-daily-draggable' : ''}`}>
       <div className="overlay-daily-head">
         <span className="overlay-daily-dot" />
         <span className="overlay-daily-label">{t('dailyOverlay.title')}</span>
+        {dragMode && <span className="overlay-daily-drag-hint">{t('dailyOverlay.dragHint')}</span>}
       </div>
       <div className="overlay-daily-stats">
         <div className="overlay-daily-cell">

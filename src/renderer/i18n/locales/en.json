@@ -1712,6 +1712,9 @@
     "dailyOverlayLabel": "Daily session overlay",
     "dailyOverlayHint": "A small line in the top-right corner while Valorant runs: today's wins/losses, headshot % and K/D, via HenrikDev (never the client's local API). Resets each day.",
     "dailyOverlaySettingsButton": "Choose modes excluded from the score",
+    "dailyOverlaySizeLabel": "Overlay size",
+    "dailyOverlayMovingLabel": "Move the overlay",
+    "dailyOverlayMovingHint": "Turn on to drag the overlay anywhere on screen (outside a match), then turn off to lock its position. Always turned off automatically as soon as a match starts.",
     "autoLaunchLabel": "Launch MVP Tracker at Windows startup",
     "autoLaunchHint": "The app launches in the background when your PC starts, minimized to the system tray (icon near the clock) — ping and tilt detection keep running without a window open.",
     "signOut": "Sign out",
@@ -1809,7 +1812,8 @@
     "winShort": "W",
     "lossShort": "L",
     "hsShort": "HS",
-    "kdShort": "K/D"
+    "kdShort": "K/D",
+    "dragHint": "Drag me"
   },
   "dailyOverlaySettings": {
     "title": "Session overlay",

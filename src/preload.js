@@ -39,6 +39,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   getDailyOverlayExcludedModes: () => ipcRenderer.invoke('daily-overlay:get-excluded-modes'),
   setDailyOverlayExcludedModes: (modeIds) => ipcRenderer.invoke('daily-overlay:set-excluded-modes', modeIds),
+  getDailyOverlaySize: () => ipcRenderer.invoke('daily-overlay:get-size'),
+  setDailyOverlaySize: (percent) => ipcRenderer.invoke('daily-overlay:set-size', percent),
+  onDailyOverlaySize: (callback) => {
+    const listener = (_event, percent) => callback(percent);
+    ipcRenderer.on('daily-overlay:size', listener);
+    return () => ipcRenderer.removeListener('daily-overlay:size', listener);
+  },
+  getDailyOverlayDragMode: () => ipcRenderer.invoke('daily-overlay:get-drag-mode'),
+  setDailyOverlayDragMode: (enabled) => ipcRenderer.invoke('daily-overlay:set-drag-mode', enabled),
+  onDailyOverlayDragMode: (callback) => {
+    const listener = (_event, enabled) => callback(enabled);
+    ipcRenderer.on('daily-overlay:drag-mode', listener);
+    return () => ipcRenderer.removeListener('daily-overlay:drag-mode', listener);
+  },
   getDeviceId: () => ipcRenderer.invoke('network:get-device-id'),
   openAimTrainer: (config) => ipcRenderer.invoke('aim-trainer:open', config),
   closeAimTrainer: () => ipcRenderer.invoke('aim-trainer:close'),

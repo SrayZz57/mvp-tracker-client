@@ -30,7 +30,7 @@ import {
   getPlaySessionHistory,
   backfillLegacyPuuid,
 } from './services/db.js';
-import { isValorantRunning, pingOnce, isValorantFocused } from './services/network.js';
+import { isValorantRunning, pingOnce, isValorantFocused, isValorantGameRunning } from './services/network.js';
 import { syncMatches } from './services/matchSync.js';
 import { updateElectronApp } from 'update-electron-app';
 import { captureEvent, captureException, shutdown as shutdownTelemetry } from './services/telemetry.js';
@@ -969,25 +969,55 @@ setInterval(() => {
 // en 1.10.6) — aucune capture d'écran ni OCR nécessaire ici (contrairement à
 // l'ancien overlay d'achat auto, mis de côté et retiré du code pour être
 // repris plus tard proprement). Fenêtre transparente, sans bordure,
-// click-through, ne fonctionne qu'en Sans bordure/Fenêtré — mais affichée
-// bien plus longtemps que les overlays ponctuels (toute la session), d'où
-// `setAlwaysOnTop(true, 'floating')` dès le départ plutôt qu'un niveau plus
-// agressif comme 'screen-saver' (moins de charge de composition Windows).
+// click-through par défaut, ne fonctionne qu'en Sans bordure/Fenêtré.
 let dailyOverlayWindow = null;
 let dailyOverlayTopmostInterval = null;
 const dailyOverlayState = { dayKey: null };
 
+// Taille de base (100%) — voir dailyOverlayDimensions(), réglable depuis Mon
+// compte (dailyOverlaySize, store, en %).
+const DAILY_OVERLAY_BASE_WIDTH = 380;
+const DAILY_OVERLAY_BASE_HEIGHT = 110;
+
+function dailyOverlayDimensions() {
+  const percent = store.get('dailyOverlaySize') ?? 100;
+  return {
+    width: Math.round((DAILY_OVERLAY_BASE_WIDTH * percent) / 100),
+    height: Math.round((DAILY_OVERLAY_BASE_HEIGHT * percent) / 100),
+  };
+}
+
+function dailyOverlayDefaultPosition(width, height) {
+  // En haut à droite par défaut : loin du centre de l'écran où se concentre
+  // l'action, et de la minimap (généralement en bas) et de la boutique
+  // (haut-gauche). Écrasé par une position sauvegardée si l'utilisateur a
+  // déjà déplacé la fenêtre (voir dailyOverlayPosition, store).
+  const display = screen.getPrimaryDisplay().workArea;
+  return { x: display.x + display.width - width - 16, y: display.y + 16 };
+}
+
+// Mode "déplacement" : la fenêtre devient temporairement interactive et
+// glissable (voir setDailyOverlayDragMode) pour permettre à l'utilisateur de
+// la repositionner depuis Mon compte — jamais pendant une vraie partie (voir
+// le garde-fou dans la boucle de détection plus bas). `focusable: false` par
+// défaut est le vrai correctif du souci de blocage caméra remonté par des
+// utilisateurs : une fenêtre non-focusable, même toujours au premier plan,
+// ne peut jamais voler le focus clavier/souris au jeu — seule
+// setIgnoreMouseEvents ne suffisait apparemment pas.
+let dailyOverlayDragMode = false;
+
 function createDailyOverlay() {
+  const { width, height } = dailyOverlayDimensions();
+
   dailyOverlayWindow = new BrowserWindow({
-    // Agrandi (2026-09-16) pour la mise en forme plus lisible à deux lignes
-    // (en-tête + 3 statistiques en gros caractères).
-    width: 380,
-    height: 110,
+    width,
+    height,
     show: false,
     frame: false,
     transparent: true,
     hasShadow: false,
     resizable: false,
+    focusable: dailyOverlayDragMode,
     skipTaskbar: true,
     alwaysOnTop: true,
     autoHideMenuBar: true,
@@ -1002,12 +1032,24 @@ function createDailyOverlay() {
   // changement). Priorité à la visibilité d'abord, on reviendra sur un
   // niveau plus léger une fois confirmé que ça s'affiche.
   dailyOverlayWindow.setAlwaysOnTop(true, 'screen-saver');
-  dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  if (dailyOverlayDragMode) {
+    dailyOverlayWindow.setIgnoreMouseEvents(false);
+  } else {
+    dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  }
 
-  // En haut à droite : loin du centre de l'écran où se concentre l'action,
-  // et de la minimap (généralement en bas) et de la boutique (haut-gauche).
-  const display = screen.getPrimaryDisplay().workArea;
-  dailyOverlayWindow.setPosition(display.x + display.width - 396, display.y + 16);
+  const saved = store.get('dailyOverlayPosition');
+  const pos = saved ?? dailyOverlayDefaultPosition(width, height);
+  dailyOverlayWindow.setPosition(pos.x, pos.y);
+
+  // Ne persiste la position que pendant un déplacement volontaire — un
+  // setPosition() programmatique (ci-dessus, ou un futur redimensionnement)
+  // ne doit jamais être interprété comme "l'utilisateur a bougé la fenêtre".
+  dailyOverlayWindow.on('moved', () => {
+    if (!dailyOverlayDragMode || !dailyOverlayWindow) return;
+    const [x, y] = dailyOverlayWindow.getPosition();
+    store.set('dailyOverlayPosition', { x, y });
+  });
 
   const query = 'view=daily-overlay';
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -1049,6 +1091,57 @@ function closeDailyOverlay() {
   }
   dailyOverlayWindow = null;
 }
+
+// Aperçu figé envoyé quand on active le mode déplacement hors partie (aucune
+// vraie stat disponible à ce moment-là) — juste de quoi voir la fenêtre pour
+// la faire glisser, jamais persisté nulle part.
+const DAILY_OVERLAY_PREVIEW_STATS = { dayKey: 'preview', matchesPlayed: 1, wins: 3, losses: 1, kd: 1.24, hsPercent: 53 };
+
+// Active/désactive le mode déplacement — voir le commentaire sur
+// dailyOverlayDragMode plus haut. Toujours forcé à `false` dès qu'une vraie
+// partie démarre (voir la boucle de détection plus bas) : ne doit jamais
+// rester interactif pendant que l'utilisateur joue.
+function setDailyOverlayDragMode(enabled) {
+  dailyOverlayDragMode = enabled;
+
+  if (enabled) {
+    const needsPreview = !dailyOverlayWindow || dailyOverlayWindow.isDestroyed();
+    if (needsPreview) createDailyOverlay();
+    dailyOverlayWindow.setFocusable(true);
+    dailyOverlayWindow.setIgnoreMouseEvents(false);
+    dailyOverlayWindow.webContents.send('daily-overlay:drag-mode', true);
+    if (needsPreview) {
+      dailyOverlayWindow.webContents.once('did-finish-load', () => {
+        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+          dailyOverlayWindow.webContents.send('daily-overlay:stats', DAILY_OVERLAY_PREVIEW_STATS);
+        }
+      });
+    }
+    return;
+  }
+
+  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+    dailyOverlayWindow.setFocusable(false);
+    dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+    dailyOverlayWindow.webContents.send('daily-overlay:drag-mode', false);
+    // Hors partie, pas de raison de laisser tourner une fenêtre juste
+    // affichée pour le repositionnement.
+    if (!dailyOverlayLastRunning) closeDailyOverlay();
+  }
+}
+
+ipcMain.handle('daily-overlay:get-drag-mode', () => dailyOverlayDragMode);
+ipcMain.handle('daily-overlay:set-drag-mode', (_event, enabled) => setDailyOverlayDragMode(enabled));
+
+ipcMain.handle('daily-overlay:get-size', () => store.get('dailyOverlaySize') ?? 100);
+ipcMain.handle('daily-overlay:set-size', (_event, percent) => {
+  store.set('dailyOverlaySize', percent);
+  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+    const { width, height } = dailyOverlayDimensions();
+    dailyOverlayWindow.setSize(width, height);
+    dailyOverlayWindow.webContents.send('daily-overlay:size', percent);
+  }
+});
 
 ipcMain.handle('daily-overlay:get-enabled', () => store.get('dailyOverlayEnabled') ?? true);
 
@@ -1133,10 +1226,15 @@ async function refreshDailyOverlay() {
   }
 }
 
-// Se déclenche DÈS le lancement de Valorant, pas seulement au premier tick
-// des 5 minutes — un check plus fréquent (même cadence que pollMatchActive)
+// Se déclenche DÈS le lancement du JEU, pas seulement au premier tick des 5
+// minutes — un check plus fréquent (même cadence que pollMatchActive)
 // détecte la transition et lance un premier rafraîchissement immédiat ;
 // refreshDailyOverlay() lui-même se recharge ensuite toutes les 5 minutes.
+//
+// isValorantGameRunning() (process VALORANT-Win64-Shipping.exe) plutôt que
+// isValorantRunning() (lockfile du Riot Client, vrai dès l'écran d'accueil) —
+// signalé par l'utilisateur : l'overlay apparaissait trop tôt, avant même
+// d'avoir lancé une partie.
 let dailyOverlayLastRunning = false;
 let dailyOverlayRefreshTimer = null;
 
@@ -1147,8 +1245,17 @@ function scheduleDailyOverlayRefresh() {
   dailyOverlayRefreshTimer = setInterval(refreshDailyOverlay, 300000);
 }
 
-setInterval(() => {
-  const running = isValorantRunning();
+setInterval(async () => {
+  const running = await isValorantGameRunning();
+
+  // Garde-fou : jamais interactif/déplaçable une fois en partie, même si le
+  // mode déplacement avait été laissé actif par erreur (fenêtre fermée sans
+  // repasser par le toggle, par exemple).
+  if (running && dailyOverlayDragMode) {
+    console.log('[daily-overlay] partie détectée, verrouillage forcé du mode déplacement');
+    setDailyOverlayDragMode(false);
+  }
+
   if (running && !dailyOverlayLastRunning) {
     scheduleDailyOverlayRefresh();
   } else if (!running && dailyOverlayLastRunning) {

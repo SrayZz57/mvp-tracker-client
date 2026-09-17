@@ -44,6 +44,8 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(true);
   const [dailyOverlayEnabled, setDailyOverlayEnabled] = useState(true);
+  const [dailyOverlaySize, setDailyOverlaySize] = useState(100);
+  const [dailyOverlayMoving, setDailyOverlayMoving] = useState(false);
   // Agent choisi depuis la carte au survol de la répartition par rôle
   // (RoleStackedBar) — demandé sur Discord, ouvre les mêmes stats détaillées
   // que depuis l'onglet Stats plutôt que d'en dupliquer une variante ici.
@@ -60,7 +62,17 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
   useEffect(() => {
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
     window.electronAPI.getDailyOverlayEnabled().then(setDailyOverlayEnabled);
+    window.electronAPI.getDailyOverlaySize().then(setDailyOverlaySize);
+    window.electronAPI.getDailyOverlayDragMode().then(setDailyOverlayMoving);
   }, []);
+
+  // Quitter Mon compte (donc démonter ce composant) pendant que le mode
+  // déplacement est actif ne doit pas le laisser allumé indéfiniment côté
+  // main.js — pas de bouton "valider" séparé, on verrouille simplement à la
+  // sortie de l'écran si l'utilisateur ne l'a pas fait lui-même.
+  useEffect(() => () => {
+    if (dailyOverlayMoving) window.electronAPI.setDailyOverlayDragMode(false);
+  }, [dailyOverlayMoving]);
 
   const handleToggleAutoLaunch = () => {
     const next = !autoLaunchEnabled;
@@ -72,6 +84,18 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
     const next = !dailyOverlayEnabled;
     setDailyOverlayEnabled(next);
     window.electronAPI.setDailyOverlayEnabled(next);
+  };
+
+  const handleDailyOverlaySizeChange = (e) => {
+    const next = Number(e.target.value);
+    setDailyOverlaySize(next);
+    window.electronAPI.setDailyOverlaySize(next);
+  };
+
+  const handleToggleDailyOverlayMoving = () => {
+    const next = !dailyOverlayMoving;
+    setDailyOverlayMoving(next);
+    window.electronAPI.setDailyOverlayDragMode(next);
   };
 
   const avatarCardUuid = profile.avatar_card_uuid ?? myRank?.cardUuid;
@@ -437,6 +461,31 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
           </span>
         </label>
         <p className="label account-toggle-hint">{t('account.dailyOverlayHint')}</p>
+
+        <div className="account-overlay-size-row">
+          <span className="account-tile-label">{t('account.dailyOverlaySizeLabel')}</span>
+          <input
+            type="range"
+            min="70"
+            max="150"
+            step="10"
+            value={dailyOverlaySize}
+            onChange={handleDailyOverlaySizeChange}
+          />
+          <span className="label">{dailyOverlaySize}%</span>
+        </div>
+
+        <label className="account-email-row account-toggle-row">
+          <span className="account-tile-label">{t('account.dailyOverlayMovingLabel')}</span>
+          <span className={`switch ${dailyOverlayMoving ? 'on' : ''}`}>
+            <input type="checkbox" checked={dailyOverlayMoving} onChange={handleToggleDailyOverlayMoving} />
+            <span className="switch-track">
+              <span className="switch-thumb" />
+            </span>
+          </span>
+        </label>
+        <p className="label account-toggle-hint">{t('account.dailyOverlayMovingHint')}</p>
+
         <button
           type="button"
           className="account-forgot-password"

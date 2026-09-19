@@ -14,6 +14,23 @@ function useValorantData(settings) {
   // avec les données de l'ancien.
   const requestIdRef = useRef(0);
 
+  // Chrono anti-spam sur le clic manuel du bouton "Rafraîchir" (voir
+  // manualRefresh plus bas) — n'affecte pas les rechargements automatiques
+  // (montage, changement de profil suivi), qui appellent refresh()
+  // directement. cooldownTick ne sert qu'à forcer un re-rendu chaque seconde
+  // pendant le décompte, la vraie valeur vient de refreshCooldownUntil.
+  const [refreshCooldownUntil, setRefreshCooldownUntil] = useState(0);
+  const [, setCooldownTick] = useState(0);
+  const REFRESH_COOLDOWN_MS = 60000;
+
+  useEffect(() => {
+    if (refreshCooldownUntil <= Date.now()) return undefined;
+    const id = setInterval(() => setCooldownTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [refreshCooldownUntil]);
+
+  const refreshCooldownSeconds = Math.max(0, Math.ceil((refreshCooldownUntil - Date.now()) / 1000));
+
   const refresh = async () => {
     if (!settings) return;
     const requestId = requestIdRef.current;
@@ -61,7 +78,16 @@ function useValorantData(settings) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.name, settings?.tag]);
 
-  return { matches, pingSamples, rank, loading, error, refresh };
+  // Version exposée au bouton "Rafraîchir" — refuse de relancer une requête
+  // tant que le chrono n'est pas écoulé, plutôt que de compter uniquement sur
+  // le disabled du bouton côté App.jsx (defense en profondeur).
+  const manualRefresh = () => {
+    if (refreshCooldownSeconds > 0) return;
+    setRefreshCooldownUntil(Date.now() + REFRESH_COOLDOWN_MS);
+    refresh();
+  };
+
+  return { matches, pingSamples, rank, loading, error, refresh: manualRefresh, refreshCooldownSeconds };
 }
 
 export default useValorantData;

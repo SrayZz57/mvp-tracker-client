@@ -56,7 +56,7 @@ function AnnouncementCard({ announcement, t }) {
 // entrées côte à côte : consulter ses stats, ou s'échauffer avant de jouer —
 // l'Aim Trainer étant surtout utile juste avant une session, c'est ici qu'il
 // a le plus de chances d'être lancé.
-function AccountGreeting({ settings, rank, matches = [], onEnter, onSearchOther, onOpenAimTrainer }) {
+function AccountGreeting({ settings, rank, matches = [], onEnter, onOpenAimTrainer }) {
   const { t } = useTranslation();
 
   const [announcements, setAnnouncements] = useState([]);
@@ -168,9 +168,6 @@ function AccountGreeting({ settings, rank, matches = [], onEnter, onSearchOther,
           <div className="riot-confirm-actions">
             <button className="riot-confirm-yes" onClick={onEnter}>
               {t('accountGreeting.enter')}
-            </button>
-            <button className="riot-confirm-no" onClick={onSearchOther}>
-              {t('accountGreeting.searchOther')}
             </button>
           </div>
         </section>

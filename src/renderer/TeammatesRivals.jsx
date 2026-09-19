@@ -118,7 +118,7 @@ function SynergyGraph({ teammates, myPuuid, centerLabel, onNodeClick, t }) {
 // avant K/D récent) : previewRiotAccount ne persiste rien sur disque
 // (contrairement à getMatches, qui écrase le "joueur suivi" de toute
 // l'app) — un simple coup d'œil ne doit avoir aucun effet de bord.
-function TeammateQuickViewModal({ name, tag, apiKey, onClose, onViewFullProfile, t }) {
+function TeammateQuickViewModal({ name, tag, apiKey, onClose, t }) {
   const rankTiers = useRankTiers();
   const [account, setAccount] = useState(undefined); // undefined = chargement, null = échec
   const [recentStats, setRecentStats] = useState(undefined);
@@ -177,9 +177,6 @@ function TeammateQuickViewModal({ name, tag, apiKey, onClose, onViewFullProfile,
           </div>
         )}
 
-        <button className="refresh" onClick={onViewFullProfile} style={{ marginTop: '1rem' }}>
-          {t('social.quickviewFullProfile')}
-        </button>
       </div>
     </div>
   );
@@ -201,7 +198,7 @@ function initials(name) {
   return base.slice(0, 2).toUpperCase();
 }
 
-function TeammatesRivals({ settings, matches, loading, myPuuid, onViewPlayer }) {
+function TeammatesRivals({ settings, matches, loading, myPuuid }) {
   const { t } = useTranslation();
   const agentIcons = useAgentIcons();
   const [quickView, setQuickView] = useState(null); // { name, tag } | null
@@ -296,10 +293,6 @@ function TeammatesRivals({ settings, matches, loading, myPuuid, onViewPlayer }) 
           tag={quickView.tag}
           apiKey={settings?.apiKey}
           onClose={() => setQuickView(null)}
-          onViewFullProfile={() => {
-            onViewPlayer(quickView.name, quickView.tag);
-            setQuickView(null);
-          }}
           t={t}
         />
       )}

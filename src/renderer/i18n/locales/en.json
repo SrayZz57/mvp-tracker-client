@@ -177,6 +177,7 @@
       "messages": "Messages",
       "friends": "Friends",
       "account": "My account",
+      "settings": "Settings",
       "lineups": "Lineups",
       "clips": "Clips",
       "teamListings": "Team Search"
@@ -187,6 +188,7 @@
     "signOut": "Sign out",
     "loading": "Loading...",
     "refresh": "Refresh",
+    "refreshCooldown": "Refresh ({{seconds}}s)",
     "error": "Error: {{message}}",
     "rateLimited": "Too many requests were sent to the API this minute. Try again in less than a minute.",
     "riotIdOutdated": "Your linked Riot ID isn't responding anymore — did you change your in-game username?",
@@ -198,6 +200,39 @@
     "updateReady": "Update ready — Restart",
     "profileLoadFailed": "Could not load your profile — check your internet connection.",
     "retry": "Retry"
+  },
+  "terms": {
+    "title": "Terms of use",
+    "intro": "Before continuing, please read and accept the MVP Tracker terms of use.",
+    "sections": {
+      "purpose": {
+        "title": "1. Purpose",
+        "text": "MVP Tracker is a personal Valorant stats-tracking app. It is intended for private, non-commercial use, only to view the statistics of your own account."
+      },
+      "account": {
+        "title": "2. Your account and API key",
+        "text": "You confirm that the linked Riot account is yours. You are responsible for your personal HenrikDev API key and how it is used. The app never accesses the Riot client or any game files or processes."
+      },
+      "data": {
+        "title": "3. Data",
+        "text": "Your matches and settings are stored locally on your computer. Your MVP Tracker account (email, profile, social features) is hosted by Supabase. Anonymous usage and error data may be collected to improve the app. You can request deletion of your account by contacting us from within the app."
+      },
+      "community": {
+        "title": "4. Community features",
+        "text": "Messages, leaderboards, announcements and tournaments must remain respectful. Any hateful, illegal or fraudulent content (cheating on leaderboards, impersonation...) may lead to account suspension."
+      },
+      "liability": {
+        "title": "5. Liability",
+        "text": "The app is provided \"as is\", with no guarantee of availability or accuracy of the data, which comes from third-party services. We cannot be held liable for an outage of those services or for any decision made from the statistics shown."
+      },
+      "changes": {
+        "title": "6. Changes",
+        "text": "These terms may change along with the app. If the change is significant, your agreement will be requested again."
+      }
+    },
+    "riotNotice": "MVP Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.",
+    "accept": "I accept the terms",
+    "decline": "Decline and sign out"
   },
   "common": {
     "language": "Language",
@@ -632,6 +667,19 @@
     "playlistAddStep": "Add an exercise:",
     "playlistUnknownPreset": "Deleted preset",
     "playlistSaveError": "Give the playlist a name and add at least one exercise.",
+    "finderTitle": "Sensitivity Finder",
+    "finderHint": "Test several sensitivities to find yours",
+    "finderIntro": "Runs {{count}} back-to-back {{duration}}s tests around your current sensitivity, then compares your accuracy on each.",
+    "finderCurrentSens": "Current sensitivity: {{sens}} ({{dpi}} DPI)",
+    "finderModeLabel": "Test mode",
+    "finderStepsPreview": "Sensitivities tested: {{steps}}",
+    "finderStart": "Start the test",
+    "finderResultsTitle": "Sensitivity Finder results",
+    "finderResultsIntro": "Accuracy at each tested sensitivity.",
+    "finderBestTested": "Best tested",
+    "finderSuggestedLabel": "Suggested sensitivity",
+    "finderSuggestedHint": "Computed from the curve of your results — not necessarily one of the tested values, if the real optimum falls between two of them.",
+    "finderApply": "Adopt {{sens}} as your sensitivity",
     "summaryDuration": "{{seconds}}s",
     "summaryCount": "{{count}} target(s)",
     "summarySize": "size {{size}}",
@@ -1701,8 +1749,12 @@
     "suggestionGamesCount_other": "({{count}} games)",
     "suggestionJoin": " on ",
     "realRoleDistribution": "Actual distribution of roles played",
-    "settingsTitle": "Account",
+    "settingsTitle": "General settings",
     "settingsHint": "Signed in with your MVP Tracker account — your linked Riot ID stays independent from this account.",
+    "settingsAccountTitle": "Linked account",
+    "settingsOverlayTitle": "Daily session overlay",
+    "settingsAppTitle": "Application",
+    "settingsSecurityTitle": "Security and account",
     "emailLabel": "Email address",
     "riotIdLabel": "Linked Riot ID",
     "riotIdHint": "If you changed your username IN-GAME, update it here so the tracker keeps finding your matches — this doesn't change the linked Valorant account, just the name it's looked up by.",
@@ -1717,6 +1769,8 @@
     "dailyOverlayMovingHint": "Turn on to drag the overlay anywhere on screen (outside a match), then turn off to lock its position. Always turned off automatically as soon as a match starts.",
     "autoLaunchLabel": "Launch MVP Tracker at Windows startup",
     "autoLaunchHint": "The app launches in the background when your PC starts, minimized to the system tray (icon near the clock) — ping and tilt detection keep running without a window open.",
+    "tiltNotificationsLabel": "Tilt notifications",
+    "tiltNotificationsHint": "A Windows notification pops up when a losing streak or a performance dip is detected while you play. Turn off if you'd rather just check the Tilt tab yourself.",
     "signOut": "Sign out",
     "replayOnboarding": "Replay the tutorial",
     "forgotPassword": "Forgot your password?",

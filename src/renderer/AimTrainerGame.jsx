@@ -1060,7 +1060,7 @@ function playPhoenixWhoosh(ctx) {
   noise.stop(now + 0.35);
 }
 
-function AimTrainerGame({ config: rawConfig, onExit }) {
+function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   // Routine d'échauffement : une liste de modes enchaînés dans la même
   // fenêtre. L'étape courante remplace le mode et ses réglages de cibles ;
   // le nombre de cibles reste celui du départ (elles sont créées une seule
@@ -1088,6 +1088,11 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
           targetSize: activeStepConfig.targetSize,
           targetCount: activeStepConfig.targetCount,
           spread: activeStepConfig.spread,
+          // Optionnel — seul le Sensitivity Finder (voir SensitivityFinder.jsx)
+          // s'en sert pour faire varier la sensibilité d'une étape à l'autre ;
+          // une routine d'échauffement classique (PlaylistManager) n'en fournit
+          // pas, donc retombe sur la sensibilité de base (rawConfig.sens).
+          sens: activeStepConfig.sens ?? rawConfig?.sens,
         }
       : {}),
   };
@@ -2521,6 +2526,28 @@ function AimTrainerGame({ config: rawConfig, onExit }) {
     }
     if (savedForSessionRef.current || score === null) return;
     savedForSessionRef.current = true;
+
+    // Sert au Sensitivity Finder (voir SensitivityFinder.jsx) pour récupérer
+    // le résultat de chaque étape sans devoir le relire depuis le classement
+    // — les runs de test n'y sont jamais enregistrées (practiceMode ci-dessous).
+    onSessionComplete?.({
+      score,
+      accuracy,
+      hits: stats.hits,
+      misses: stats.misses,
+      avgReaction: avgReaction === null ? null : Math.round(avgReaction),
+      dpi: config.dpi,
+      sens: config.sens,
+    });
+
+    // Sensitivity Finder : des runs volontairement désaccordées (sens trop
+    // basse/haute pour comparaison) n'ont rien à faire dans le classement —
+    // jamais enregistrées, contrairement à une session normale.
+    if (config.practiceMode) {
+      setSaveState(null);
+      return;
+    }
+
     setSaveState('saving');
     saveScore(config.userId, {
       mode: config.mode,

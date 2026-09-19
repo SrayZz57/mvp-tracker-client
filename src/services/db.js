@@ -5,6 +5,13 @@ import { ABILITY_WEAPON_NAMES } from './matchNormalizer.js';
 
 const db = new DatabaseSync(path.join(app.getPath('userData'), 'matches.db'));
 
+// WAL plutôt que le journal par défaut — nécessaire pour que la lecture en
+// lecture seule du worker dédié (voir matchesReader.js/matchesReaderWorker.cjs)
+// ne bloque jamais une écriture ici (nouveaux matchs synchronisés) en cours,
+// ni l'inverse. Persisté dans le fichier .db lui-même, donc sans effet les
+// lancements suivants une fois activé.
+db.exec('PRAGMA journal_mode = WAL');
+
 // PRIMARY KEY composite (match_id, puuid) — pas juste match_id : deux joueurs
 // suivis qui jouent ENSEMBLE partagent le même match_id (Riot en assigne un
 // seul par partie), donc une clé sur match_id seul ne permettait d'enregistrer
@@ -17,6 +24,34 @@ db.exec(`
     game_start INTEGER,
     data TEXT NOT NULL,
     PRIMARY KEY (match_id, puuid)
+  )
+`);
+
+// 0 = détail complet (round par round, kills avec position) encore présent
+// dans `data`. 1 = allégé (voir lightenMatch/pruneOldMatchDetail plus bas) —
+// ne garde que metadata/players/teams, largement suffisant pour les stats
+// par agent/map/mode et le winrate, mais plus pour Heatmap ou le détail
+// round par round d'un match précis. Réservé aux matchs qui sortent de la
+// fenêtre des KEEP_FULL_DETAIL_COUNT plus récents pour LEUR puuid — voir
+// pruneOldMatchDetail().
+try {
+  db.exec('ALTER TABLE matches ADD COLUMN pruned INTEGER NOT NULL DEFAULT 0');
+} catch {
+  // colonne déjà présente
+}
+
+// Records "carrière" (meilleur ace, plus long clutch, plus longue distance
+// de kill, compteurs cumulés...) — calculés une fois sur tout l'historique
+// encore en détail complet, PUIS conservés ici indéfiniment, pour ne pas
+// dépendre du détail des vieux matchs une fois qu'il est allégé (voir
+// pruned ci-dessus). Un seul propriétaire : le puuid réellement lié à ce
+// compte MVP Tracker (voir currentPuuid()/updateCareerRecordsAndPrune dans
+// main.js) — jamais calculé pour un profil simplement consulté.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS career_records (
+    puuid TEXT PRIMARY KEY,
+    records_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
   )
 `);
 
@@ -316,6 +351,67 @@ export function getCachedMatches(puuid) {
     .prepare('SELECT data FROM matches WHERE puuid = ? ORDER BY game_start DESC')
     .all(puuid);
   return rows.map((row) => JSON.parse(row.data));
+}
+
+export function getCareerRecords(puuid) {
+  const row = db.prepare('SELECT records_json FROM career_records WHERE puuid = ?').get(puuid);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.records_json);
+  } catch {
+    return null;
+  }
+}
+
+export function saveCareerRecords(puuid, records) {
+  db.prepare(
+    `INSERT INTO career_records (puuid, records_json, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(puuid) DO UPDATE SET records_json = excluded.records_json, updated_at = excluded.updated_at`,
+  ).run(puuid, JSON.stringify(records), Date.now());
+}
+
+const KEEP_FULL_DETAIL_COUNT = 100;
+// Un rattrapage après mise à jour peut faire sortir d'un coup des dizaines
+// de matchs de la fenêtre des 100 plus récents — plafonné pour ne jamais
+// bloquer une synchro trop longtemps d'un coup ; le reste sera allégé aux
+// synchros suivantes jusqu'à rattraper le retard.
+const MAX_PRUNE_PER_CALL = 20;
+
+// Réduit un match au strict nécessaire pour les stats hors "carrière" (K/D,
+// winrate, stats par agent/map/mode...) — metadata/players/teams suffisent,
+// rounds/kills (détail round par round avec positions, 80 %+ du poids d'un
+// match) sont supprimés pour de bon. Les records qui en dépendaient (meilleur
+// ace, plus long clutch...) doivent déjà être figés dans career_records
+// AVANT cet appel — voir updateCareerRecordsAndPrune() dans main.js.
+function lightenMatch(match) {
+  return {
+    metadata: match.metadata,
+    players: match.players,
+    teams: match.teams,
+  };
+}
+
+export function pruneOldMatchDetail(puuid, keepCount = KEEP_FULL_DETAIL_COUNT) {
+  const rows = db
+    .prepare('SELECT match_id FROM matches WHERE puuid = ? AND pruned = 0 ORDER BY game_start DESC')
+    .all(puuid);
+  const idsToPrune = rows.slice(keepCount, keepCount + MAX_PRUNE_PER_CALL).map((r) => r.match_id);
+  if (idsToPrune.length === 0) return 0;
+
+  const getData = db.prepare('SELECT data FROM matches WHERE match_id = ? AND puuid = ?');
+  const update = db.prepare('UPDATE matches SET data = ?, pruned = 1 WHERE match_id = ? AND puuid = ?');
+  for (const matchId of idsToPrune) {
+    const row = getData.get(matchId, puuid);
+    if (!row) continue;
+    let match;
+    try {
+      match = JSON.parse(row.data);
+    } catch {
+      continue;
+    }
+    update.run(JSON.stringify(lightenMatch(match)), matchId, puuid);
+  }
+  return idsToPrune.length;
 }
 
 export function savePingSample(puuid, latencyMs) {

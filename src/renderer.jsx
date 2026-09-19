@@ -11,14 +11,22 @@ import '@fontsource-variable/inter';
 import '@fontsource/bebas-neue/latin-400.css';
 import './index.css';
 import './renderer/i18n/index.js';
-import { StrictMode, useEffect } from 'react';
+import { StrictMode, Suspense, lazy, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './renderer/App.jsx';
 import TitleBar from './renderer/TitleBar.jsx';
-import AimTrainerHub from './renderer/AimTrainerHub.jsx';
-import DailyOverlay from './renderer/DailyOverlay.jsx';
+import LoadingState from './renderer/LoadingState.jsx';
 import { CollapsedBlocksProvider } from './renderer/CollapsedBlocksContext.jsx';
 import { E2EEProvider } from './renderer/E2EEContext.jsx';
+
+// Chargés à la demande selon `view` plutôt qu'au démarrage — ce fichier sert
+// de point d'entrée à TOUTES les fenêtres (principale, Aim Trainer plein
+// écran, overlay quotidien), donc un import statique ici embarquait
+// systématiquement le code (et les dépendances, dont three.js pour l'Aim
+// Trainer) des deux autres vues dans le bundle chargé par la fenêtre
+// principale, même quand l'utilisateur ne les ouvre jamais dans la session.
+const App = lazy(() => import('./renderer/App.jsx'));
+const AimTrainerHub = lazy(() => import('./renderer/AimTrainerHub.jsx'));
+const DailyOverlay = lazy(() => import('./renderer/DailyOverlay.jsx'));
 
 window.addEventListener('error', (e) => {
   console.error('window error', e.message, e.filename);
@@ -74,15 +82,29 @@ function Root() {
   // fenêtre reste la même du menu jusqu'à la fin de la session, sans se
   // recharger, pour permettre un vrai fondu entre les deux (voir
   // AimTrainerHub.jsx).
-  if (view === 'aim-trainer') return <AimTrainerHub config={gameConfig} />;
-  if (view === 'daily-overlay') return <DailyOverlay />;
+  if (view === 'aim-trainer') {
+    return (
+      <Suspense fallback={null}>
+        <AimTrainerHub config={gameConfig} />
+      </Suspense>
+    );
+  }
+  if (view === 'daily-overlay') {
+    return (
+      <Suspense fallback={null}>
+        <DailyOverlay />
+      </Suspense>
+    );
+  }
   return (
     <div className="app-frame">
       <TitleBar />
       <div className="app-frame-body">
         <E2EEProvider>
           <CollapsedBlocksProvider>
-            <App />
+            <Suspense fallback={<div className="app-boot-loading"><LoadingState /></div>}>
+              <App />
+            </Suspense>
           </CollapsedBlocksProvider>
         </E2EEProvider>
       </div>

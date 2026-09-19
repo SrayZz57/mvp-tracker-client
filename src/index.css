@@ -686,6 +686,19 @@ h1 {
   font-weight: 700;
 }
 
+/* L'onglet actif est déjà mis en avant par .sidebar-active-indicator, qui
+   glisse en arrière-plan mais ne suit PAS le décalage/la bordure/lueur du
+   survol ci-dessus (élément séparé, positionné par App.jsx) — le survoler
+   superposait donc deux contours rouges légèrement désalignés ("double
+   bordure"). On neutralise la décoration de survol sur l'onglet actif,
+   déjà bien assez visible sans ça. */
+.sidebar-link.active:hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
 /* Le fond/la bordure/la barre d'accent de l'onglet actif vivent maintenant
    sur .sidebar-active-indicator (voir App.jsx) plutôt que directement sur le
    lien, pour pouvoir glisser d'une position à l'autre au lieu de sauter. */
@@ -848,6 +861,26 @@ h1 {
 
 .topbar-title-icon {
   font-size: 1.2rem;
+}
+
+/* Riot ID du compte lié, affiché à la place de l'ancienne barre de recherche
+   (retirée : l'app ne montre plus que ses propres stats). */
+.topbar-account-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.topbar-account-tag {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85em;
 }
 
 .topbar-title h2 {
@@ -4639,7 +4672,11 @@ li {
 
 .aim-hub-nav-title h1 {
   font-family: var(--font-hero);
-  font-size: calc(var(--hub-fit) * clamp(4.4rem, 9vw, 8rem));
+  /* Réduit depuis clamp(4.4rem, 9vw, 8rem) — la liste de nav compte un
+     élément de plus depuis l'ajout du Sensitivity Finder, l'ancien titre
+     (dimensionné pour l'écran de référence 2560px) débordait par-dessus le
+     bandeau d'astuce en haut sur les résolutions plus courantes. */
+  font-size: calc(var(--hub-fit) * clamp(3.4rem, 7vw, 6rem));
   line-height: 0.9;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -4833,6 +4870,90 @@ li {
   font-family: var(--font-display);
   letter-spacing: 0.06em;
   margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aim-finder-suggestion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+  padding: 1.5rem;
+  margin: 1.2rem 0;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.aim-finder-suggestion-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.aim-finder-suggestion-value {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  color: var(--accent);
+}
+
+.aim-finder-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+.aim-finder-result-row {
+  display: grid;
+  grid-template-columns: 4rem 1fr 4.5rem auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.aim-finder-result-row.best {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.aim-finder-result-sens {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.aim-finder-result-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.aim-finder-result-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.4s var(--ease-out);
+}
+
+.aim-finder-result-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.aim-finder-result-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .aim-hub-launch-row {
@@ -5402,6 +5523,32 @@ li {
 @keyframes modal-overlay-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.terms-overlay {
+  align-items: center;
+  z-index: 300;
+}
+
+.terms-card {
+  max-width: 640px;
+}
+
+.terms-body {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 1rem 0;
+  padding-right: 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.terms-body p {
+  margin: 0 0 0.9rem;
+}
+
+.terms-riot-notice {
+  font-size: 0.78rem;
 }
 
 .modal-card {
@@ -9054,6 +9201,64 @@ input[type='color'] {
   gap: 0.5rem;
   margin: 0.75rem 0;
   font-size: 0.9rem;
+}
+
+/* Page Réglages — les cartes (.card) n'ont pas de largeur max par défaut,
+   donc s'étiraient sur toute la largeur de la fenêtre une fois sorties de
+   Mon compte (où elles étaient à côté d'autres colonnes) ; une simple ligne
+   étiquette+switch en display:flex sur ~1900px de large éloignait beaucoup
+   trop le switch de son étiquette et de son texte d'aide. Largeur de lecture
+   raisonnable + chaque réglage sur une seule ligne cohérente (texte à gauche,
+   contrôle à droite) plutôt que l'ancien empilement étiquette/switch/texte
+   d'aide sur 3 lignes distinctes. */
+.settings-page {
+  /* Largeur de lecture raisonnable (pas les ~1900px pleine page derrière) —
+     et centrée dans la zone de contenu plutôt que collée à gauche, pour ne
+     pas laisser tout le vide d'un seul côté. */
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.settings-row-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.settings-row-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.settings-row-value {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.settings-standalone-hint {
+  margin: -0.5rem 0 0.75rem;
 }
 
 .account-toggle-row {

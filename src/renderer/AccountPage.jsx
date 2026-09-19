@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, Check, X, Mail } from 'lucide-react';
 import Icon from './Icon.jsx';
@@ -11,7 +11,6 @@ import AgentDetailModal from './AgentDetailModal.jsx';
 import IconPickerModal from './IconPickerModal.jsx';
 import { supabase } from './supabaseClient.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
-import { useE2EE } from './E2EEContext.jsx';
 
 // Noms de rôles issus de valorant-api.com (appelée en fr-FR) — hors périmètre
 // de cette passe de traduction (voir CLAUDE.md / plan i18n), comparés tels
@@ -23,80 +22,19 @@ function formatMemberSince(isoDate, locale) {
   return new Date(isoDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, onUpdate, onUpdateApiKey, onUpdateRiotId, onSignOut, onReplayOnboarding, onOpenDailyOverlaySettings }) {
+function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }) {
   const { t, i18n } = useTranslation();
-  const { unlockForUser } = useE2EE();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState(profile.display_name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [resetStatus, setResetStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
-  const [resetCode, setResetCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [resetError, setResetError] = useState(null);
-  const [resettingPassword, setResettingPassword] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
-  const [editingApiKey, setEditingApiKey] = useState(false);
-  const [apiKeyDraft, setApiKeyDraft] = useState(apiKey ?? '');
-  const [savingApiKey, setSavingApiKey] = useState(false);
-  const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(true);
-  const [dailyOverlayEnabled, setDailyOverlayEnabled] = useState(true);
-  const [dailyOverlaySize, setDailyOverlaySize] = useState(100);
-  const [dailyOverlayMoving, setDailyOverlayMoving] = useState(false);
   // Agent choisi depuis la carte au survol de la répartition par rôle
   // (RoleStackedBar) — demandé sur Discord, ouvre les mêmes stats détaillées
   // que depuis l'onglet Stats plutôt que d'en dupliquer une variante ici.
   const [selectedAgent, setSelectedAgent] = useState(null);
-  // Resynchro du Riot ID lié — pour les joueurs qui ont changé de pseudo EN
-  // JEU après avoir lié leur compte (le tracker reste bloqué sur l'ancien nom
-  // tant qu'on ne le met pas à jour ici, voir onUpdateRiotId dans App.jsx).
-  const [editingRiotId, setEditingRiotId] = useState(false);
-  const [riotNameDraft, setRiotNameDraft] = useState(mySettings.name ?? '');
-  const [riotTagDraft, setRiotTagDraft] = useState(mySettings.tag ?? '');
-  const [savingRiotId, setSavingRiotId] = useState(false);
-  const [riotIdError, setRiotIdError] = useState(null);
-
-  useEffect(() => {
-    window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
-    window.electronAPI.getDailyOverlayEnabled().then(setDailyOverlayEnabled);
-    window.electronAPI.getDailyOverlaySize().then(setDailyOverlaySize);
-    window.electronAPI.getDailyOverlayDragMode().then(setDailyOverlayMoving);
-  }, []);
-
-  // Quitter Mon compte (donc démonter ce composant) pendant que le mode
-  // déplacement est actif ne doit pas le laisser allumé indéfiniment côté
-  // main.js — pas de bouton "valider" séparé, on verrouille simplement à la
-  // sortie de l'écran si l'utilisateur ne l'a pas fait lui-même.
-  useEffect(() => () => {
-    if (dailyOverlayMoving) window.electronAPI.setDailyOverlayDragMode(false);
-  }, [dailyOverlayMoving]);
-
-  const handleToggleAutoLaunch = () => {
-    const next = !autoLaunchEnabled;
-    setAutoLaunchEnabled(next);
-    window.electronAPI.setAutoLaunch(next);
-  };
-
-  const handleToggleDailyOverlay = () => {
-    const next = !dailyOverlayEnabled;
-    setDailyOverlayEnabled(next);
-    window.electronAPI.setDailyOverlayEnabled(next);
-  };
-
-  const handleDailyOverlaySizeChange = (e) => {
-    const next = Number(e.target.value);
-    setDailyOverlaySize(next);
-    window.electronAPI.setDailyOverlaySize(next);
-  };
-
-  const handleToggleDailyOverlayMoving = () => {
-    const next = !dailyOverlayMoving;
-    setDailyOverlayMoving(next);
-    window.electronAPI.setDailyOverlayDragMode(next);
-  };
 
   const avatarCardUuid = profile.avatar_card_uuid ?? myRank?.cardUuid;
   const avatarArt = usePlayerCardArt(avatarCardUuid);
@@ -153,50 +91,6 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
 
   const memberSince = formatMemberSince(profile.created_at, i18n.language === 'en' ? 'en-US' : 'fr-FR');
 
-  const handleForgotPassword = async () => {
-    if (!email) return;
-    setResetStatus('sending');
-    setResetError(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'mvptracker://reset-password',
-    });
-    setResetStatus(error ? 'error' : 'sent');
-  };
-
-  const handleResetPassword = async (event) => {
-    event.preventDefault();
-    setResetError(null);
-    if (newPassword !== confirmPassword) {
-      setResetError(t('auth.passwordMismatch'));
-      return;
-    }
-    setResettingPassword(true);
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      email,
-      token: resetCode.trim(),
-      type: 'recovery',
-    });
-    if (verifyError) {
-      setResettingPassword(false);
-      setResetError(verifyError.message);
-      return;
-    }
-    const { data: updateData, error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-    setResettingPassword(false);
-    if (updateError) {
-      setResetError(updateError.message);
-      return;
-    }
-    // Le nouveau mot de passe vient d'être posé côté Supabase à l'instant —
-    // sûr de régénérer la clé de messagerie (l'ancienne, enveloppée avec
-    // l'ancien mot de passe, est désormais irrécupérable).
-    if (updateData.user) unlockForUser(updateData.user.id, newPassword);
-    setResetStatus(null);
-    setResetCode('');
-    setNewPassword('');
-    setConfirmPassword('');
-  };
-
   const handleSendContact = async (event) => {
     event.preventDefault();
     const trimmed = contactMessage.trim();
@@ -221,26 +115,6 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
     await onUpdate({ display_name: trimmed || null });
     setSaving(false);
     setEditingName(false);
-  };
-
-  const handleSaveApiKey = async () => {
-    setSavingApiKey(true);
-    await onUpdateApiKey(apiKeyDraft);
-    setSavingApiKey(false);
-    setEditingApiKey(false);
-  };
-
-  const handleSaveRiotId = async () => {
-    setSavingRiotId(true);
-    setRiotIdError(null);
-    try {
-      await onUpdateRiotId(riotNameDraft, riotTagDraft);
-      setEditingRiotId(false);
-    } catch (err) {
-      setRiotIdError(err.message);
-    } finally {
-      setSavingRiotId(false);
-    }
   };
 
   return (
@@ -366,188 +240,6 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, apiKey, on
             <RoleStackedBar rows={roleDistribution} onSelectAgent={setSelectedAgent} />
           </>
         )}
-      </CollapsibleCard>
-
-      <CollapsibleCard id="account.settings" title={t('account.settingsTitle')}>
-        <p className="label">{t('account.settingsHint')}</p>
-        {email && (
-          <p className="account-email-row">
-            <span className="account-tile-label">{t('account.emailLabel')}</span>
-            <span>{email}</span>
-          </p>
-        )}
-        <div className="account-email-row">
-          <span className="account-tile-label">{t('account.riotIdLabel')}</span>
-          {editingRiotId ? (
-            <div className="account-name-edit-row">
-              <input
-                type="text"
-                value={riotNameDraft}
-                onChange={(e) => setRiotNameDraft(e.target.value)}
-                placeholder={t('linkRiot.usernamePlaceholder')}
-                autoFocus
-              />
-              <span className="search-bar-hash">#</span>
-              <input
-                type="text"
-                value={riotTagDraft}
-                onChange={(e) => setRiotTagDraft(e.target.value)}
-                placeholder={t('linkRiot.tagPlaceholder')}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveRiotId()}
-              />
-              <button onClick={handleSaveRiotId} disabled={savingRiotId}>
-                {savingRiotId ? "..." : <Icon icon={Check} size={16} />}
-              </button>
-              <button
-                className="account-name-cancel"
-                onClick={() => {
-                  setRiotNameDraft(mySettings.name ?? '');
-                  setRiotTagDraft(mySettings.tag ?? '');
-                  setRiotIdError(null);
-                  setEditingRiotId(false);
-                }}
-              >
-                <Icon icon={X} size={16} />
-              </button>
-            </div>
-          ) : (
-            <span className="account-name-display" onClick={() => setEditingRiotId(true)} title={t('account.clickToEdit')}>
-              {mySettings.name}#{mySettings.tag}
-              <span className="account-name-pencil"><Icon icon={Pencil} size={14} /></span>
-            </span>
-          )}
-        </div>
-        {riotIdError && <p className="warning">{riotIdError}</p>}
-        <p className="label account-toggle-hint">{t('account.riotIdHint')}</p>
-        <div className="account-email-row">
-          <span className="account-tile-label">{t('account.apiKeyLabel')}</span>
-          {editingApiKey ? (
-            <div className="account-name-edit-row">
-              <input
-                type="password"
-                value={apiKeyDraft}
-                onChange={(e) => setApiKeyDraft(e.target.value)}
-                placeholder={t('linkRiot.apiKeyPlaceholder')}
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveApiKey()}
-              />
-              <button onClick={handleSaveApiKey} disabled={savingApiKey}>
-                {savingApiKey ? "..." : <Icon icon={Check} size={16} />}
-              </button>
-              <button
-                className="account-name-cancel"
-                onClick={() => {
-                  setApiKeyDraft(apiKey ?? '');
-                  setEditingApiKey(false);
-                }}
-              >
-                <Icon icon={X} size={16} />
-              </button>
-            </div>
-          ) : (
-            <span className="account-name-display" onClick={() => setEditingApiKey(true)} title={t('account.clickToEdit')}>
-              {apiKey ? '••••••••••••' : t('account.apiKeyMissing')}
-              <span className="account-name-pencil"><Icon icon={Pencil} size={14} /></span>
-            </span>
-          )}
-        </div>
-        <label className="account-email-row account-toggle-row">
-          <span className="account-tile-label">{t('account.dailyOverlayLabel')}</span>
-          <span className={`switch ${dailyOverlayEnabled ? 'on' : ''}`}>
-            <input type="checkbox" checked={dailyOverlayEnabled} onChange={handleToggleDailyOverlay} />
-            <span className="switch-track">
-              <span className="switch-thumb" />
-            </span>
-          </span>
-        </label>
-        <p className="label account-toggle-hint">{t('account.dailyOverlayHint')}</p>
-
-        <div className="account-overlay-size-row">
-          <span className="account-tile-label">{t('account.dailyOverlaySizeLabel')}</span>
-          <input
-            type="range"
-            min="70"
-            max="150"
-            step="10"
-            value={dailyOverlaySize}
-            onChange={handleDailyOverlaySizeChange}
-          />
-          <span className="label">{dailyOverlaySize}%</span>
-        </div>
-
-        <label className="account-email-row account-toggle-row">
-          <span className="account-tile-label">{t('account.dailyOverlayMovingLabel')}</span>
-          <span className={`switch ${dailyOverlayMoving ? 'on' : ''}`}>
-            <input type="checkbox" checked={dailyOverlayMoving} onChange={handleToggleDailyOverlayMoving} />
-            <span className="switch-track">
-              <span className="switch-thumb" />
-            </span>
-          </span>
-        </label>
-        <p className="label account-toggle-hint">{t('account.dailyOverlayMovingHint')}</p>
-
-        <button
-          type="button"
-          className="account-forgot-password"
-          onClick={onOpenDailyOverlaySettings}
-        >
-          {t('account.dailyOverlaySettingsButton')}
-        </button>
-        <label className="account-email-row account-toggle-row">
-          <span className="account-tile-label">{t('account.autoLaunchLabel')}</span>
-          <span className={`switch ${autoLaunchEnabled ? 'on' : ''}`}>
-            <input type="checkbox" checked={autoLaunchEnabled} onChange={handleToggleAutoLaunch} />
-            <span className="switch-track">
-              <span className="switch-thumb" />
-            </span>
-          </span>
-        </label>
-        <p className="label account-toggle-hint">{t('account.autoLaunchHint')}</p>
-        <div className="account-settings-actions">
-          <button className="sidebar-signout account-signout" onClick={onSignOut}>
-            {t('account.signOut')}
-          </button>
-          <button className="account-forgot-password" onClick={handleForgotPassword} disabled={resetStatus === 'sending'}>
-            {resetStatus === 'sending' ? t('account.forgotPasswordSending') : t('account.forgotPassword')}
-          </button>
-          <button className="account-forgot-password" onClick={onReplayOnboarding}>
-            {t('account.replayOnboarding')}
-          </button>
-        </div>
-        {resetStatus === 'sent' && (
-          <form className="account-auth-form account-reset-form" onSubmit={handleResetPassword}>
-            <p className="label account-reset-status">{t('account.forgotPasswordSent')}</p>
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder={t('auth.codePlaceholder')}
-              value={resetCode}
-              onChange={(e) => setResetCode(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder={t('auth.newPasswordPlaceholder')}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              minLength={6}
-              required
-            />
-            <input
-              type="password"
-              placeholder={t('auth.confirmPasswordPlaceholder')}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              minLength={6}
-              required
-            />
-            <button type="submit" disabled={resettingPassword}>
-              {resettingPassword ? t('auth.validating') : t('auth.resetPassword')}
-            </button>
-            {resetError && <p className="warning">{resetError}</p>}
-          </form>
-        )}
-        {resetStatus === 'error' && <p className="warning account-reset-status">{t('account.forgotPasswordError')}</p>}
       </CollapsibleCard>
 
       <CollapsibleCard id="account.contact" title={t('account.contactTitle')}>

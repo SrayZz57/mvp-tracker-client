@@ -26,8 +26,11 @@ import {
   Palette,
   UserRound,
   Check,
+  Gauge,
 } from 'lucide-react';
 import AimTrainerGame, { DEFAULT_CONFIG, MODES, WEAPON_MODELS } from './AimTrainerGame.jsx';
+import SensitivityFinder from './SensitivityFinder.jsx';
+import { suggestSensitivity } from './sensitivityFit.js';
 import Icon from './Icon.jsx';
 import mvpTrackerLogo from '../assets/logo.png';
 import weaponDefaultPreview from '../assets/weapon-default-preview.png';
@@ -575,6 +578,10 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const [playing, setPlaying] = useState(false);
   const [launchConfig, setLaunchConfig] = useState(null);
   const [exiting, setExiting] = useState(false);
+  const [showSensitivityFinder, setShowSensitivityFinder] = useState(false);
+  // Résultats accumulés étape par étape (voir onSessionComplete côté
+  // AimTrainerGame) pendant une session Sensitivity Finder — vide sinon.
+  const [finderResults, setFinderResults] = useState([]);
 
   const [config, setConfig] = useState(loadConfig);
   const [personalBests, setPersonalBests] = useState({});
@@ -695,10 +702,26 @@ function AimTrainerHub({ config: initialRawConfig }) {
 
   const exitGame = useCallback(() => {
     setPlaying(false);
+    // Une session Sensitivity Finder dont au moins une étape a répondu montre
+    // son propre écran de comparaison plutôt que le menu normal — voir
+    // handleFinderSessionComplete et l'écran 'finder-results' plus bas.
+    const wasFinderRun = launchConfig?.isFinderRun && finderResults.length > 0;
     setLaunchConfig(null);
-    setScreen('menu');
+    setScreen(wasFinderRun ? 'finder-results' : 'menu');
     refresh();
-  }, [refresh]);
+  }, [refresh, launchConfig, finderResults]);
+
+  // Ne capture que les étapes d'une session Sensitivity Finder — un run
+  // classé normal (ou une routine PlaylistManager classique) n'a pas besoin
+  // que le hub retienne quoi que ce soit ici, il gère déjà son propre
+  // affichage/enregistrement de score.
+  const handleFinderSessionComplete = useCallback(
+    (result) => {
+      if (!launchConfig?.isFinderRun) return;
+      setFinderResults((prev) => [...prev, result]);
+    },
+    [launchConfig],
+  );
 
   const navigate = (next) => {
     playClickSfx();
@@ -771,7 +794,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
   );
 
   if (playing && launchConfig) {
-    return <AimTrainerGame config={launchConfig} onExit={exitGame} />;
+    return <AimTrainerGame config={launchConfig} onExit={exitGame} onSessionComplete={handleFinderSessionComplete} />;
   }
 
   return (
@@ -903,6 +926,14 @@ function AimTrainerHub({ config: initialRawConfig }) {
                   active={hoveredNav === 'playlists'}
                   onHover={() => setHoveredNav('playlists')}
                   onClick={() => setShowPlaylistManager(true)}
+                />
+                <NavListItem
+                  icon={Gauge}
+                  label={t('aimTrainer.finderTitle')}
+                  hint={t('aimTrainer.finderHint')}
+                  active={hoveredNav === 'finder'}
+                  onHover={() => setHoveredNav('finder')}
+                  onClick={() => setShowSensitivityFinder(true)}
                 />
                 <NavListItem
                   icon={Palette}
@@ -1277,6 +1308,78 @@ function AimTrainerHub({ config: initialRawConfig }) {
             <p className="label" style={{ marginTop: '0.75rem' }}>{t('aimTrainer.accuracyNote')}</p>
           </div>
         )}
+
+        {screen === 'finder-results' && (
+          <div className="aim-hub-panel">
+            <h2>
+              <Icon icon={Gauge} size={20} /> {t('aimTrainer.finderResultsTitle')}
+            </h2>
+            {(() => {
+              const withAccuracy = finderResults.filter((r) => r.accuracy !== null);
+              const best = withAccuracy.reduce(
+                (top, r) => (!top || r.accuracy > top.accuracy ? r : top),
+                null,
+              );
+              const maxAccuracy = best?.accuracy ?? 0;
+              // Régression sur la courbe complète plutôt que "la meilleure
+              // des valeurs testées" — le vrai optimum tombe rarement pile
+              // sur l'une des sensibilités essayées (voir sensitivityFit.js).
+              const suggested = suggestSensitivity(withAccuracy);
+              return (
+                <>
+                  <p className="label">{t('aimTrainer.finderResultsIntro')}</p>
+
+                  {suggested !== null && (
+                    <div className="card aim-finder-suggestion">
+                      <span className="aim-finder-suggestion-label">{t('aimTrainer.finderSuggestedLabel')}</span>
+                      <span className="aim-finder-suggestion-value">{suggested}</span>
+                      <p className="label">{t('aimTrainer.finderSuggestedHint')}</p>
+                    </div>
+                  )}
+
+                  <div className="aim-finder-results-list">
+                    {finderResults.map((r, i) => (
+                      <div
+                        key={i}
+                        className={best && r.sens === best.sens ? 'aim-finder-result-row best' : 'aim-finder-result-row'}
+                      >
+                        <span className="aim-finder-result-sens">{r.sens}</span>
+                        <div className="aim-finder-result-bar-track">
+                          <div
+                            className="aim-finder-result-bar-fill"
+                            style={{ width: r.accuracy === null ? '0%' : `${Math.max(4, (r.accuracy / Math.max(maxAccuracy, 1)) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="aim-finder-result-value">
+                          {r.accuracy === null ? '—' : `${r.accuracy.toFixed(1)}%`}
+                        </span>
+                        {best && r.sens === best.sens && (
+                          <span className="aim-finder-result-badge">{t('aimTrainer.finderBestTested')}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="account-settings-actions">
+                    <button className="sidebar-signout account-signout" onClick={goBack}>
+                      {t('aimTrainer.hubBack')}
+                    </button>
+                    {suggested !== null && (
+                      <button
+                        className="refresh aim-game-cta"
+                        onClick={() => {
+                          setConfig((prev) => ({ ...prev, sens: suggested }));
+                          setScreen('menu');
+                        }}
+                      >
+                        {t('aimTrainer.finderApply', { sens: suggested })}
+                      </button>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {showTrackingPicker && (
@@ -1344,6 +1447,19 @@ function AimTrainerHub({ config: initialRawConfig }) {
           onLaunch={(playlistSteps) => {
             setShowPlaylistManager(false);
             launch({ playlistSteps });
+          }}
+        />
+      )}
+
+      {showSensitivityFinder && (
+        <SensitivityFinder
+          dpi={config.dpi}
+          sens={config.sens}
+          onClose={() => setShowSensitivityFinder(false)}
+          onLaunch={(playlistSteps) => {
+            setShowSensitivityFinder(false);
+            setFinderResults([]);
+            launch({ playlistSteps, practiceMode: true, isFinderRun: true });
           }}
         />
       )}

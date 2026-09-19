@@ -24,12 +24,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   previewRecentStats: (payload) => ipcRenderer.invoke('valorant:preview-recent-stats', payload),
   getCachedMatches: () => ipcRenderer.invoke('valorant:get-cached-matches'),
   getCachedMatchesFor: (puuid) => ipcRenderer.invoke('valorant:get-cached-matches-for', puuid),
+  getHallOfFameRecords: (puuid) => ipcRenderer.invoke('hall-of-fame:get-records', puuid),
   getRankFor: (puuid) => ipcRenderer.invoke('valorant:get-rank-for', puuid),
   getNetworkStatus: () => ipcRenderer.invoke('network:get-status'),
   getPingSamples: (puuid) => ipcRenderer.invoke('network:get-ping-samples', puuid),
   syncMatches: (payload) => ipcRenderer.invoke('sync:matches', payload),
   // Overlay de session quotidienne (victoires/défaites, HS%, K/D du jour,
   // voir main.js) — HenrikDev uniquement, un toggle "Mon compte" séparé.
+  getTiltNotificationsEnabled: () => ipcRenderer.invoke('tilt-notifications:get-enabled'),
+  setTiltNotificationsEnabled: (enabled) => ipcRenderer.invoke('tilt-notifications:set-enabled', enabled),
   getDailyOverlayEnabled: () => ipcRenderer.invoke('daily-overlay:get-enabled'),
   setDailyOverlayEnabled: (enabled) => ipcRenderer.invoke('daily-overlay:set-enabled', enabled),
   onDailyOverlayStats: (callback) => {

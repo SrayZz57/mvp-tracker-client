@@ -29,6 +29,7 @@ import {
   Video,
   Film,
   Swords,
+  Settings,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
@@ -64,6 +65,7 @@ const LineupsTab = lazy(() => import('./tabs/LineupsTab.jsx'));
 const TeamListingsTab = lazy(() => import('./tabs/TeamListingsTab.jsx'));
 const ClipsTab = lazy(() => import('./tabs/ClipsTab.jsx'));
 const AccountPage = lazy(() => import('./AccountPage.jsx'));
+const SettingsPage = lazy(() => import('./SettingsPage.jsx'));
 const AdminPage = lazy(() => import('./AdminPage.jsx'));
 const TournamentsTab = lazy(() => import('./tabs/TournamentsTab.jsx'));
 const MessagesTab = lazy(() => import('./tabs/MessagesTab.jsx'));
@@ -72,13 +74,13 @@ const FriendsTab = lazy(() => import('./tabs/FriendsTab.jsx'));
 import GoalsWidget from './GoalsWidget.jsx';
 import WeeklyRecapCard from './WeeklyRecapCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
-import SearchBar from './SearchBar.jsx';
 import WelcomeScreen from './WelcomeScreen.jsx';
 import LinkRiotAccount from './LinkRiotAccount.jsx';
 import AccountGreeting from './AccountGreeting.jsx';
 import AccountAuth from './AccountAuth.jsx';
 import SetNewPasswordScreen from './SetNewPasswordScreen.jsx';
 import OnboardingTour from './OnboardingTour.jsx';
+import TermsModal from './TermsModal.jsx';
 import LoadingState from './LoadingState.jsx';
 import DailyOverlaySettings from './DailyOverlaySettings.jsx';
 import { supabase } from './supabaseClient.js';
@@ -475,7 +477,6 @@ function App() {
   // Écran d'accueil léger (aperçu + choix) affiché à chaque lancement une
   // fois le compte lié, avant d'entrer dans l'app proprement dite.
   const [enteredApp, setEnteredApp] = useState(false);
-  const [showGeneralSearch, setShowGeneralSearch] = useState(false);
 
   // Le halo d'ambiance (aurora-drift, voir index.css) ne tourne que sur les
   // écrans d'avant-app (bienvenue, connexion, liaison de compte) — une fois
@@ -487,6 +488,29 @@ function App() {
     return () => document.body.classList.remove('in-app');
   }, [enteredApp]);
 
+  // Conditions générales d'utilisation : acceptées une seule fois par
+  // installation (suffixe -v1 : à incrémenter si le texte change au point de
+  // devoir être re-validé). Bloque l'onboarding et la modale d'overlay
+  // ci-dessous tant qu'elles ne sont pas acceptées, pour ne jamais empiler
+  // plusieurs fenêtres au premier passage dans l'app.
+  const TERMS_STORAGE_KEY = 'mvptracker-terms-accepted-v1';
+  const [termsAccepted, setTermsAccepted] = useState(() => {
+    try {
+      return !!localStorage.getItem(TERMS_STORAGE_KEY);
+    } catch {
+      return false;
+    }
+  });
+
+  const acceptTerms = () => {
+    try {
+      localStorage.setItem(TERMS_STORAGE_KEY, new Date().toISOString());
+    } catch {
+      // stockage indisponible : la modale reviendra au prochain lancement, sans bloquer la session en cours
+    }
+    setTermsAccepted(true);
+  };
+
   // Tour guidé (demandé sur Discord) : affiché une seule fois, au premier
   // vrai passage dans l'app — jamais revu ensuite sauf via le bouton dédié
   // dans Mon compte. Petit délai avant de le montrer pour laisser la sidebar
@@ -494,11 +518,11 @@ function App() {
   // prises avant que leur layout final ne soit stable).
   const [showOnboarding, setShowOnboarding] = useState(false);
   useEffect(() => {
-    if (!enteredApp) return undefined;
+    if (!enteredApp || !termsAccepted) return undefined;
     if (localStorage.getItem('mvptracker-onboarding-done')) return undefined;
     const id = setTimeout(() => setShowOnboarding(true), 300);
     return () => clearTimeout(id);
-  }, [enteredApp]);
+  }, [enteredApp, termsAccepted]);
 
   const closeOnboarding = () => {
     localStorage.setItem('mvptracker-onboarding-done', '1');
@@ -510,11 +534,11 @@ function App() {
   // demandé explicitement) plutôt qu'un flag stocké côté main.js.
   const [showDailyOverlaySettings, setShowDailyOverlaySettings] = useState(false);
   useEffect(() => {
-    if (!enteredApp) return undefined;
+    if (!enteredApp || !termsAccepted) return undefined;
     if (localStorage.getItem('mvptracker-daily-overlay-settings-shown')) return undefined;
     const id = setTimeout(() => setShowDailyOverlaySettings(true), 300);
     return () => clearTimeout(id);
-  }, [enteredApp]);
+  }, [enteredApp, termsAccepted]);
 
   const closeDailyOverlaySettings = () => {
     localStorage.setItem('mvptracker-daily-overlay-settings-shown', '1');
@@ -740,19 +764,6 @@ function App() {
     window.electronAPI.saveSettings(updatedSettings);
   };
 
-  // Bascule la vue de l'app sur un autre joueur, à partir de juste son
-  // nom#tag (ex. un coéquipier cliqué dans le graphe de synergie) — même
-  // logique que la soumission de SearchBar, mais déclenchée depuis ailleurs
-  // dans l'app plutôt que depuis le champ de recherche. Sans spread de
-  // `settings` : le puuid de l'ancien profil consulté ne doit surtout pas
-  // être recopié dessus.
-  const viewOtherPlayer = (name, tag) => {
-    const nextSettings = { name, tag, apiKey: settings?.apiKey ?? '' };
-    window.electronAPI.saveSettings(nextSettings);
-    setSettings(nextSettings);
-    setActiveTab('stats');
-  };
-
   // Resynchronise le pseudo/tag Riot lié — nécessaire quand un joueur change
   // de pseudo EN JEU après avoir lié son compte : le puuid ne change jamais,
   // mais les requêtes HenrikDev (par nom#tag, pas par puuid) échouent tant
@@ -893,17 +904,6 @@ function App() {
   }
 
   if (!enteredApp) {
-    if (showGeneralSearch) {
-      return (
-        <WelcomeScreen
-          apiKey={settings?.apiKey}
-          onSaved={(newSettings) => {
-            setSettings(newSettings);
-            setEnteredApp(true);
-          }}
-        />
-      );
-    }
     return (
       <AccountGreeting
         settings={mySettings}
@@ -914,10 +914,11 @@ function App() {
           setEnteredApp(true);
         }}
         onEnter={() => {
-          // Si les réglages locaux affichaient un autre profil (ex. après
-          // avoir cherché quelqu'un d'autre), on repasse sur le compte lié
-          // avant d'entrer — la clé API reste celle déjà en cache (elle n'est
-          // pas propre à un Riot ID précis).
+          // L'app est personnelle (plus de recherche d'autres joueurs), mais
+          // des réglages locaux hérités d'une ancienne version peuvent encore
+          // pointer sur un autre profil : on repasse sur le compte lié avant
+          // d'entrer — la clé API reste celle déjà en cache (elle n'est pas
+          // propre à un Riot ID précis).
           if (settings?.puuid !== profile.riot_puuid) {
             const ownSettings = {
               name: profile.riot_name,
@@ -930,7 +931,6 @@ function App() {
           }
           setEnteredApp(true);
         }}
-        onSearchOther={() => setShowGeneralSearch(true)}
       />
     );
   }
@@ -984,11 +984,17 @@ function App() {
             matches={data.matches}
             loading={data.loading}
             myPuuid={profile?.riot_puuid}
-            onViewPlayer={viewOtherPlayer}
           />
         );
       case 'my-hall-of-fame':
-        return <HallOfFameTab settings={mySettings} matches={myMatches} loading={isViewingSelf && data.loading} />;
+        return (
+          <HallOfFameTab
+            settings={mySettings}
+            matches={myMatches}
+            loading={isViewingSelf && data.loading}
+            puuid={profile?.riot_puuid}
+          />
+        );
       case 'my-weakness':
         return <WeaknessTab settings={mySettings} matches={myMatches} onNavigate={handleWeaknessNavigate} />;
       case 'my-skins-collection':
@@ -1064,8 +1070,15 @@ function App() {
             myMatches={myMatches}
             myRank={myRank}
             email={session.user.email}
-            apiKey={settings?.apiKey}
             onUpdate={updateProfile}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsPage
+            mySettings={mySettings}
+            email={session.user.email}
+            apiKey={settings?.apiKey}
             onUpdateApiKey={updateApiKey}
             onUpdateRiotId={updateRiotId}
             onSignOut={() => supabase.auth.signOut().then(lockMessagingKey)}
@@ -1081,11 +1094,13 @@ function App() {
   const currentTabMeta =
     activeTab === 'account'
       ? { icon: User, labelKey: 'nav.tabs.account' }
-      : activeTab === 'messages'
-        ? { icon: MessageCircle, labelKey: 'nav.tabs.messages' }
-        : activeTab === 'friends'
-          ? { icon: Users, labelKey: 'nav.tabs.friends' }
-          : ALL_TABS.find((tab) => tab.id === activeTab);
+      : activeTab === 'settings'
+        ? { icon: Settings, labelKey: 'nav.tabs.settings' }
+        : activeTab === 'messages'
+          ? { icon: MessageCircle, labelKey: 'nav.tabs.messages' }
+          : activeTab === 'friends'
+            ? { icon: Users, labelKey: 'nav.tabs.friends' }
+            : ALL_TABS.find((tab) => tab.id === activeTab);
 
   return (
     <div className="app app-with-sidebar">
@@ -1193,7 +1208,12 @@ function App() {
             <span className="topbar-title-icon"><Icon icon={currentTabMeta?.icon} /></span>
             <h2>{currentTabMeta?.labelKey ? t(currentTabMeta.labelKey) : ''}</h2>
           </div>
-          <SearchBar initialSettings={settings} onSearch={setSettings} />
+          {mySettings?.name && (
+            <span className="topbar-account-name" title={t('nav.myAccountTitle')}>
+              {mySettings.name}
+              <span className="topbar-account-tag">#{mySettings.tag}</span>
+            </span>
+          )}
           {/* Raccourci toujours visible : l'Aim Trainer était perdu au fond du
               menu de gauche alors que c'est une fonctionnalité à lancer
               souvent, idéalement avant chaque session de jeu. */}
@@ -1205,8 +1225,16 @@ function App() {
             <span className="aim-topbar-icon"><Icon icon={Target} size={16} /></span>
             <span>{t('nav.tabs.aimTrainer')}</span>
           </button>
-          <button onClick={data.refresh} disabled={data.loading} className="refresh">
-            {data.loading ? t('nav.loading') : t('nav.refresh')}
+          <button
+            onClick={data.refresh}
+            disabled={data.loading || data.refreshCooldownSeconds > 0}
+            className="refresh"
+          >
+            {data.loading
+              ? t('nav.loading')
+              : data.refreshCooldownSeconds > 0
+                ? t('nav.refreshCooldown', { seconds: data.refreshCooldownSeconds })
+                : t('nav.refresh')}
           </button>
           {pendingUpdate && (
             <button
@@ -1253,6 +1281,12 @@ function App() {
             active={activeTab === 'team-listings'}
             onClick={() => setActiveTab('team-listings')}
           />
+          <TopbarIconButton
+            icon={Settings}
+            title={t('nav.tabs.settings')}
+            active={activeTab === 'settings'}
+            onClick={() => setActiveTab('settings')}
+          />
           <TopbarAccountButton
             profile={profile}
             myRank={myRank}
@@ -1272,7 +1306,7 @@ function App() {
             // plutôt que de laisser un message d'erreur brut sans solution.
             <p className="error-banner">
               {t('nav.riotIdOutdated')}{' '}
-              <button className="error-banner-link" onClick={() => setActiveTab('account')}>
+              <button className="error-banner-link" onClick={() => setActiveTab('settings')}>
                 {t('nav.riotIdOutdatedLink')}
               </button>
             </p>
@@ -1290,6 +1324,15 @@ function App() {
       <GoalsWidget matches={myMatches} settings={mySettings} myId={session.user.id} />
       <WeeklyRecapCard matches={myMatches} settings={mySettings} rank={myRank} />
       {isViewingSelf && <PostMortemModal matches={myMatches} settings={mySettings} />}
+      {!termsAccepted && (
+        <TermsModal
+          onAccept={acceptTerms}
+          onDecline={() => {
+            setEnteredApp(false);
+            supabase.auth.signOut().then(lockMessagingKey);
+          }}
+        />
+      )}
       {showOnboarding && <OnboardingTour onClose={closeOnboarding} />}
       {showDailyOverlaySettings && (
         <DailyOverlaySettings matches={myMatches} onClose={closeDailyOverlaySettings} />

@@ -6,9 +6,9 @@ import started from 'electron-squirrel-startup';
 import Store from 'electron-store';
 import { getAccount, getMatches, getMmr } from './services/henrikdev.js';
 import { excludeDeathmatch, formStats, tiltStatus, patchSelfIdentity } from './renderer/valorantStats.js';
+import { computeHallOfFame } from './renderer/hallOfFame.js';
 import {
   saveMatches,
-  getCachedMatches,
   savePingSample,
   getAllPingSamples,
   saveCrosshair,
@@ -29,9 +29,13 @@ import {
   endPlaySession,
   getPlaySessionHistory,
   backfillLegacyPuuid,
+  getCareerRecords,
+  saveCareerRecords,
+  pruneOldMatchDetail,
 } from './services/db.js';
 import { isValorantRunning, pingOnce, isValorantFocused, isValorantGameRunning } from './services/network.js';
 import { syncMatches } from './services/matchSync.js';
+import { getCachedMatchesAsync } from './services/matchesReader.js';
 import { updateElectronApp } from 'update-electron-app';
 import { captureEvent, captureException, shutdown as shutdownTelemetry } from './services/telemetry.js';
 import { resolveSessionDay, computeDailyStats } from './renderer/dailyStats.js';
@@ -125,6 +129,36 @@ async function getMatchesWithFallback(account, name, tag, apiKey, options) {
 
 function currentPuuid() {
   return store.get('linkedAccountPuuid') ?? null;
+}
+
+// À appeler juste après chaque saveMatches() : fige les records "carrière"
+// (meilleur ace, plus long clutch, plus longue distance de kill, compteurs
+// cumulés...) dans career_records AVANT d'alléger le détail des matchs qui
+// sortent des KEEP_FULL_DETAIL_COUNT plus récents (voir pruneOldMatchDetail
+// dans db.js) — sans quoi ces records ne pourraient plus jamais être
+// recalculés correctement une fois le détail supprimé. Uniquement pour le
+// compte réellement lié (currentPuuid()) : Hall of Fame ne s'affiche jamais
+// pour un profil simplement consulté, inutile d'y calculer quoi que ce soit
+// — mais on allège quand même SON historique aussi, pour la taille du cache.
+async function updateCareerRecordsAndPrune(puuid, name, tag) {
+  if (puuid && puuid === currentPuuid()) {
+    try {
+      const allMatches = await getCachedMatchesAsync(puuid);
+      const records = computeHallOfFame(allMatches, name, tag);
+      saveCareerRecords(puuid, records);
+    } catch (err) {
+      // Un souci ici ne doit pas empêcher l'allègement en dessous, ni faire
+      // échouer la synchro qui a déclenché cet appel — au pire, les records
+      // resteront basés sur l'ancien détail pour ce match-là, rattrapé à la
+      // prochaine synchro.
+      console.error('[career-records] échec de mise à jour', err.message);
+    }
+  }
+  try {
+    pruneOldMatchDetail(puuid);
+  } catch (err) {
+    console.error('[career-records] échec de l\'allègement du cache', err.message);
+  }
 }
 
 // Migration ponctuelle (une seule fois, à l'introduction de ce scoping) :
@@ -691,11 +725,11 @@ ipcMain.handle('valorant:preview-account', async (_event, { name, tag, apiKey })
   return result;
 });
 
-// Aperçu rapide K/D + winrate sur les 10 derniers matchs d'un AUTRE joueur
-// (ex. coéquipier cliqué dans le graphe de synergie) — volontairement séparé
-// de valorant:get-matches, qui écrit `valorantSettings` sur disque (bascule
-// le "joueur suivi" de toute l'app) : un simple coup d'œil ne doit jamais
-// avoir cet effet de bord.
+// Aperçu rapide K/D + winrate sur les 10 derniers matchs d'un coéquipier
+// cliqué dans le graphe de synergie — volontairement séparé de
+// valorant:get-matches, qui écrit `valorantSettings` sur disque (bascule le
+// "joueur suivi" de toute l'app) : un simple coup d'œil ne doit jamais avoir
+// cet effet de bord.
 const NON_STANDARD_MODE_IDS_MAIN = new Set(['deathmatch', 'custom', '', 'ggteam', 'hurm', 'console_hurm']);
 
 ipcMain.handle('valorant:preview-recent-stats', async (_event, { name, tag, apiKey }) => {
@@ -792,7 +826,7 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
   // (pas de trou possible dans l'historique). Une resynchro "à vide" (rien
   // de nouveau) coûte donc 1 requête par plateforme au lieu des 4 qu'il
   // fallait avant pour vérifier les 40 derniers matchs à chaque fois.
-  const cachedIds = new Set(getCachedMatches(account.puuid).map((m) => m.metadata.matchid));
+  const cachedIds = new Set((await getCachedMatchesAsync(account.puuid)).map((m) => m.metadata.matchid));
 
   let rateLimited = false;
   for (const candidate of platformCandidates(account)) {
@@ -821,8 +855,10 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
     }
   }
 
+  await updateCareerRecordsAndPrune(account.puuid, name, tag);
+
   return {
-    matches: patchSelfIdentity(getCachedMatches(account.puuid), account.puuid, name, tag),
+    matches: patchSelfIdentity(await getCachedMatchesAsync(account.puuid), account.puuid, name, tag),
     rank: store.get(`valorantRank:${account.puuid}`) || null,
   };
 });
@@ -832,10 +868,10 @@ ipcMain.handle('valorant:get-rank-for', (_event, puuid) => {
   return store.get(`valorantRank:${puuid}`) || null;
 });
 
-ipcMain.handle('valorant:get-cached-matches', () => {
+ipcMain.handle('valorant:get-cached-matches', async () => {
   const settings = store.get('valorantSettings');
   if (!settings?.puuid) return [];
-  return patchSelfIdentity(getCachedMatches(settings.puuid), settings.puuid, settings.name, settings.tag);
+  return patchSelfIdentity(await getCachedMatchesAsync(settings.puuid), settings.puuid, settings.name, settings.tag);
 });
 
 // Variante par puuid explicite — sert aux widgets "personnels" (wrapped
@@ -844,13 +880,22 @@ ipcMain.handle('valorant:get-cached-matches', () => {
 // `valorantSettings` n'est pas forcément CE compte (l'utilisateur peut être
 // en train de consulter quelqu'un d'autre) — on ne corrige donc le nom que
 // si le puuid correspond bien à ce qui est actuellement chargé.
-ipcMain.handle('valorant:get-cached-matches-for', (_event, puuid) => {
+ipcMain.handle('valorant:get-cached-matches-for', async (_event, puuid) => {
   if (!puuid) return [];
   const settings = store.get('valorantSettings');
   if (settings?.puuid === puuid) {
-    return patchSelfIdentity(getCachedMatches(puuid), puuid, settings.name, settings.tag);
+    return patchSelfIdentity(await getCachedMatchesAsync(puuid), puuid, settings.name, settings.tag);
   }
-  return getCachedMatches(puuid);
+  return getCachedMatchesAsync(puuid);
+});
+
+// Records "carrière" persistés (voir updateCareerRecordsAndPrune) — null tant
+// qu'aucune synchro n'a encore tourné pour ce puuid (compte tout juste lié) ;
+// le renderer retombe alors sur un calcul local à partir de ce qu'il a déjà
+// en mémoire (voir HallOfFame.jsx).
+ipcMain.handle('hall-of-fame:get-records', (_event, puuid) => {
+  if (!puuid) return null;
+  return getCareerRecords(puuid);
 });
 
 let networkStatus = { valorantRunning: false, latestPing: null };
@@ -909,6 +954,7 @@ const tiltPollState = { lastMatchId: null, notified: false };
 
 function notifyTilt(tilt, form) {
   if (!Notification.isSupported()) return;
+  if ((store.get('tiltNotificationsEnabled') ?? true) === false) return;
   const body = tilt.lossStreakTilt
     ? `Série de ${form.streakCount} défaites d'affilée. Une pause pourrait aider.`
     : `Ta perf a baissé sur tes 3 derniers matchs. Une pause pourrait aider.`;
@@ -933,6 +979,7 @@ async function checkTiltAndNotify() {
     const account = await getAccount(settings.name, settings.tag, settings.apiKey);
     const freshMatches = await getMatchesWithFallback(account, settings.name, settings.tag, settings.apiKey);
     saveMatches(account.puuid, freshMatches);
+    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag);
 
     const latestId = freshMatches[0]?.metadata?.matchid ?? null;
     if (!latestId || latestId === tiltPollState.lastMatchId) return;
@@ -942,7 +989,7 @@ async function checkTiltAndNotify() {
     // départ, pour ne pas notifier immédiatement sur un tilt déjà ancien.
     if (isFirstCheck) return;
 
-    const played = excludeDeathmatch(getCachedMatches(account.puuid));
+    const played = excludeDeathmatch(await getCachedMatchesAsync(account.puuid));
     const form = formStats(played, settings.name, settings.tag);
     const tilt = tiltStatus(played, settings.name, settings.tag, form);
 
@@ -1143,6 +1190,9 @@ ipcMain.handle('daily-overlay:set-size', (_event, percent) => {
   }
 });
 
+ipcMain.handle('tilt-notifications:get-enabled', () => store.get('tiltNotificationsEnabled') ?? true);
+ipcMain.handle('tilt-notifications:set-enabled', (_event, enabled) => store.set('tiltNotificationsEnabled', enabled));
+
 ipcMain.handle('daily-overlay:get-enabled', () => store.get('dailyOverlayEnabled') ?? true);
 
 ipcMain.handle('daily-overlay:set-enabled', (_event, enabled) => {
@@ -1191,7 +1241,9 @@ async function refreshDailyOverlay() {
     saveMatches(account.puuid, freshMatches);
     const t3 = Date.now();
 
-    const allMatches = getCachedMatches(account.puuid);
+    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag);
+
+    const allMatches = await getCachedMatchesAsync(account.puuid);
     const t4 = Date.now();
     dailyOverlayState.dayKey = resolveSessionDay(allMatches, dailyOverlayState.dayKey);
     const excludedModes = store.get('dailyOverlayExcludedModes') ?? [];
@@ -1250,8 +1302,13 @@ setInterval(async () => {
 
   // Garde-fou : jamais interactif/déplaçable une fois en partie, même si le
   // mode déplacement avait été laissé actif par erreur (fenêtre fermée sans
-  // repasser par le toggle, par exemple).
-  if (running && dailyOverlayDragMode) {
+  // repasser par le toggle, par exemple). Uniquement sur la transition
+  // fermé→lancé (pas à chaque tick tant que `running` reste vrai) : sinon un
+  // glissement volontaire en cours pendant que le jeu est déjà ouvert se
+  // faisait couper dès que ce setInterval retombait sur `running`, ramenant
+  // l'overlay à sa dernière position persistée si le clic n'était pas
+  // relâché à temps.
+  if (running && !dailyOverlayLastRunning && dailyOverlayDragMode) {
     console.log('[daily-overlay] partie détectée, verrouillage forcé du mode déplacement');
     setDailyOverlayDragMode(false);
   }

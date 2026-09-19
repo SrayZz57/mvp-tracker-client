@@ -177,6 +177,7 @@
       "messages": "Messages",
       "friends": "Amis",
       "account": "Mon compte",
+      "settings": "Réglages",
       "lineups": "Lineups",
       "clips": "Clips",
       "teamListings": "Recherche de Team"
@@ -187,6 +188,7 @@
     "signOut": "Se déconnecter du compte",
     "loading": "Chargement...",
     "refresh": "Rafraîchir",
+    "refreshCooldown": "Rafraîchir ({{seconds}}s)",
     "error": "Erreur : {{message}}",
     "rateLimited": "Trop de requêtes ont été effectuées à l'API cette minute. Réessaie dans moins d'une minute.",
     "riotIdOutdated": "Ton Riot ID lié ne répond plus — tu as peut-être changé de pseudo en jeu ?",
@@ -198,6 +200,39 @@
     "updateReady": "Mise à jour prête — Redémarrer",
     "profileLoadFailed": "Impossible de charger ton profil — vérifie ta connexion internet.",
     "retry": "Réessayer"
+  },
+  "terms": {
+    "title": "Conditions générales d'utilisation",
+    "intro": "Avant de continuer, merci de lire et d'accepter les conditions d'utilisation de MVP Tracker.",
+    "sections": {
+      "purpose": {
+        "title": "1. Objet",
+        "text": "MVP Tracker est une application personnelle de suivi de statistiques Valorant. Elle est destinée à un usage privé et non commercial, uniquement pour consulter les statistiques de ton propre compte."
+      },
+      "account": {
+        "title": "2. Ton compte et ta clé API",
+        "text": "Tu certifies que le compte Riot lié est le tien. Tu es responsable de ta clé API HenrikDev personnelle et de son usage. L'application n'accède jamais au client Riot ni à des fichiers ou processus du jeu."
+      },
+      "data": {
+        "title": "3. Données",
+        "text": "Tes matchs et réglages sont stockés localement sur ton ordinateur. Ton compte MVP Tracker (adresse mail, profil, fonctions sociales) est hébergé chez Supabase. Des données d'usage et d'erreurs anonymes peuvent être collectées pour améliorer l'application. Tu peux demander la suppression de ton compte en nous contactant depuis l'application."
+      },
+      "community": {
+        "title": "4. Fonctions communautaires",
+        "text": "Les messages, classements, annonces et tournois doivent rester respectueux. Tout contenu haineux, illégal ou frauduleux (triche sur les classements, usurpation d'identité...) peut entraîner la suspension du compte."
+      },
+      "liability": {
+        "title": "5. Responsabilité",
+        "text": "L'application est fournie « telle quelle », sans garantie de disponibilité ni d'exactitude des données, qui proviennent de services tiers. Nous ne pouvons être tenus responsables d'une interruption de ces services ou d'une décision prise à partir des statistiques affichées."
+      },
+      "changes": {
+        "title": "6. Évolutions",
+        "text": "Ces conditions peuvent évoluer avec l'application. En cas de changement important, ton accord te sera redemandé."
+      }
+    },
+    "riotNotice": "MVP Tracker n'est pas approuvé par Riot Games et ne reflète pas les opinions de Riot Games ni de personne impliquée officiellement dans la production ou la gestion des propriétés de Riot Games. Riot Games et toutes les propriétés associées sont des marques ou des marques déposées de Riot Games, Inc.",
+    "accept": "J'accepte les conditions",
+    "decline": "Refuser et me déconnecter"
   },
   "common": {
     "language": "Langue",
@@ -632,6 +667,19 @@
     "playlistAddStep": "Ajouter un exercice :",
     "playlistUnknownPreset": "Preset supprimé",
     "playlistSaveError": "Donne un nom à la playlist et ajoute au moins un exercice.",
+    "finderTitle": "Sensitivity Finder",
+    "finderHint": "Teste plusieurs sensibilités pour trouver la tienne",
+    "finderIntro": "Enchaîne {{count}} tests de {{duration}}s autour de ta sensibilité actuelle, puis compare ta précision sur chacun.",
+    "finderCurrentSens": "Sensibilité actuelle : {{sens}} ({{dpi}} DPI)",
+    "finderModeLabel": "Mode de test",
+    "finderStepsPreview": "Sensibilités testées : {{steps}}",
+    "finderStart": "Lancer le test",
+    "finderResultsTitle": "Résultats du Sensitivity Finder",
+    "finderResultsIntro": "Précision obtenue à chaque sensibilité testée.",
+    "finderBestTested": "Meilleure testée",
+    "finderSuggestedLabel": "Sensibilité suggérée",
+    "finderSuggestedHint": "Calculée à partir de la courbe de tes résultats — pas forcément l'une des valeurs testées, si le vrai optimum se situe entre deux.",
+    "finderApply": "Adopter {{sens}} comme sensibilité",
     "summaryDuration": "{{seconds}}s",
     "summaryCount": "{{count}} cible(s)",
     "summarySize": "taille {{size}}",
@@ -1701,8 +1749,12 @@
     "suggestionGamesCount_other": "({{count}} parties)",
     "suggestionJoin": " sur ",
     "realRoleDistribution": "Répartition réelle de tes rôles joués",
-    "settingsTitle": "Compte",
+    "settingsTitle": "Réglages généraux",
     "settingsHint": "Connecté avec ton compte MVP Tracker — ton Riot ID lié reste indépendant de ce compte.",
+    "settingsAccountTitle": "Compte lié",
+    "settingsOverlayTitle": "Overlay de session quotidienne",
+    "settingsAppTitle": "Application",
+    "settingsSecurityTitle": "Sécurité et compte",
     "emailLabel": "Adresse mail",
     "riotIdLabel": "Riot ID lié",
     "riotIdHint": "Si tu as changé de pseudo EN JEU, mets-le à jour ici pour que le tracker continue à trouver tes parties — ça ne change pas le compte Valorant lié, juste le nom sous lequel on le cherche.",
@@ -1717,6 +1769,8 @@
     "dailyOverlayMovingHint": "Active pour faire glisser l'overlay où tu veux à l'écran (hors partie), puis désactive pour verrouiller sa position. Toujours désactivé automatiquement dès qu'une partie démarre.",
     "autoLaunchLabel": "Lancer MVP Tracker au démarrage de Windows",
     "autoLaunchHint": "L'app se lance en arrière-plan à l'allumage du PC, réduite dans la barre système (icône près de l'horloge) — le ping et la détection de tilt continuent sans garder la fenêtre ouverte.",
+    "tiltNotificationsLabel": "Notifications de tilt",
+    "tiltNotificationsHint": "Une notification Windows s'affiche quand une série de défaites ou une baisse de perf est détectée pendant que tu joues. Désactive si tu préfères le voir seulement dans l'onglet Tilt.",
     "signOut": "Se déconnecter",
     "replayOnboarding": "Revoir le tutoriel",
     "forgotPassword": "Mot de passe oublié ?",

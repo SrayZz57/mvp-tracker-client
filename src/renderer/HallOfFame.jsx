@@ -114,11 +114,30 @@ function SuggestAchievementModal({ onClose, t }) {
   );
 }
 
-function HallOfFame({ settings, matches, loading }) {
+function HallOfFame({ settings, matches, loading, puuid }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'en' ? 'en-US' : 'fr-FR';
   const agentPortraits = useAgentPortraits();
-  const hof = useMemo(() => computeHallOfFame(matches, settings.name, settings.tag), [matches, settings.name, settings.tag]);
+  // Records persistés côté process principal (voir updateCareerRecordsAndPrune
+  // dans main.js) — calculés sur TOUT l'historique avant que les vieux matchs
+  // ne soient allégés (voir PROGRESS.md, cache local plafonné aux 100 plus
+  // récents en détail complet). Tant qu'aucune synchro n'a encore tourné pour
+  // ce compte (persistedRecords === null), on retombe sur un calcul local à
+  // partir de ce qui est déjà en mémoire — mêmes valeurs qu'avant cette
+  // persistance, juste jamais garanties complètes une fois le cache allégé.
+  const [persistedRecords, setPersistedRecords] = useState(null);
+  useEffect(() => {
+    if (!puuid) return undefined;
+    let cancelled = false;
+    window.electronAPI.getHallOfFameRecords(puuid).then((records) => {
+      if (!cancelled) setPersistedRecords(records);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [puuid]);
+  const liveHof = useMemo(() => computeHallOfFame(matches, settings.name, settings.tag), [matches, settings.name, settings.tag]);
+  const hof = persistedRecords ?? liveHof;
   const achievementGroups = useMemo(() => deriveAchievements(t, i18n.language, hof), [t, i18n.language, hof]);
   const totalCount = achievementGroups.reduce((sum, g) => sum + g.items.length, 0);
   const unlockedCount = achievementGroups.reduce((sum, g) => sum + g.items.filter((i) => i.unlocked).length, 0);

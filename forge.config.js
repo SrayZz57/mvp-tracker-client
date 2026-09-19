@@ -5,10 +5,11 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: 'src/assets/icon',
-    // Icône de la tray système, lue au runtime par main.js — src/assets/
-    // n'est pas traité par le build Vite du process principal, donc elle ne
-    // finirait pas dans le paquet sans être copiée explicitement ici.
-    extraResource: ['src/assets/icon.ico'],
+    // Icône de la tray système + worker de lecture des matchs en cache, lus
+    // au runtime par main.js — src/ n'est pas traité par le build Vite du
+    // process principal, donc ils ne finiraient pas dans le paquet sans être
+    // copiés explicitement ici (voir trayIconPath / matchesReader.js).
+    extraResource: ['src/assets/icon.ico', 'src/services/matchesReaderWorker.cjs'],
   },
   rebuildConfig: {},
   makers: [

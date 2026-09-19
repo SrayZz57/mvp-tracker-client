@@ -1,6 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
-const SECTION_KEYS = ['purpose', 'account', 'data', 'community', 'liability', 'changes'];
+// À incrémenter (ex. 'v2') quand le texte change au point de devoir être
+// re-validé : chaque compte sera alors redemandé, et l'ancienne acceptation
+// reste conservée en base sous son ancienne version.
+export const TERMS_VERSION = 'v1';
+
+const SECTION_KEYS =['purpose', 'account', 'data', 'community', 'liability', 'changes'];
 
 // Modale bloquante (pas de fermeture au clic dehors) : montrée une seule fois,
 // à la première entrée dans l'app — voir le flag localStorage dans App.jsx.

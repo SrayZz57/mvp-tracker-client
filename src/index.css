@@ -5525,6 +5525,16 @@ li {
   to { opacity: 1; }
 }
 
+.terms-admin {
+  padding: 2rem;
+  max-width: 760px;
+}
+
+.terms-admin-filter {
+  width: 100%;
+  margin: 1rem 0 1.5rem;
+}
+
 .terms-overlay {
   align-items: center;
   z-index: 300;

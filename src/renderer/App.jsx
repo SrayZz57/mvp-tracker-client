@@ -30,6 +30,7 @@ import {
   Film,
   Swords,
   Settings,
+  FileCheck,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
@@ -67,6 +68,7 @@ const ClipsTab = lazy(() => import('./tabs/ClipsTab.jsx'));
 const AccountPage = lazy(() => import('./AccountPage.jsx'));
 const SettingsPage = lazy(() => import('./SettingsPage.jsx'));
 const AdminPage = lazy(() => import('./AdminPage.jsx'));
+const TermsAcceptancesPanel = lazy(() => import('./TermsAcceptancesPanel.jsx'));
 const TournamentsTab = lazy(() => import('./tabs/TournamentsTab.jsx'));
 const MessagesTab = lazy(() => import('./tabs/MessagesTab.jsx'));
 const FriendsTab = lazy(() => import('./tabs/FriendsTab.jsx'));
@@ -80,7 +82,7 @@ import AccountGreeting from './AccountGreeting.jsx';
 import AccountAuth from './AccountAuth.jsx';
 import SetNewPasswordScreen from './SetNewPasswordScreen.jsx';
 import OnboardingTour from './OnboardingTour.jsx';
-import TermsModal from './TermsModal.jsx';
+import TermsModal, { TERMS_VERSION } from './TermsModal.jsx';
 import LoadingState from './LoadingState.jsx';
 import DailyOverlaySettings from './DailyOverlaySettings.jsx';
 import { supabase } from './supabaseClient.js';
@@ -148,7 +150,10 @@ const NAV_SECTIONS = [
 // ceci n'est qu'un confort d'affichage, pas une barrière de sécurité.
 const ADMIN_SECTION = {
   sectionKey: 'nav.sections.admin',
-  tabs: [{ id: 'admin', labelKey: 'nav.tabs.admin', icon: Shield }],
+  tabs: [
+    { id: 'admin', labelKey: 'nav.tabs.admin', icon: Shield },
+    { id: 'admin-terms', labelKey: 'nav.tabs.adminTerms', icon: FileCheck },
+  ],
 };
 
 const ALL_TABS = NAV_SECTIONS.flatMap((s) => s.tabs);
@@ -488,28 +493,76 @@ function App() {
     return () => document.body.classList.remove('in-app');
   }, [enteredApp]);
 
-  // Conditions générales d'utilisation : acceptées une seule fois par
-  // installation (suffixe -v1 : à incrémenter si le texte change au point de
-  // devoir être re-validé). Bloque l'onboarding et la modale d'overlay
-  // ci-dessous tant qu'elles ne sont pas acceptées, pour ne jamais empiler
-  // plusieurs fenêtres au premier passage dans l'app.
-  const TERMS_STORAGE_KEY = 'mvptracker-terms-accepted-v1';
-  const [termsAccepted, setTermsAccepted] = useState(() => {
-    try {
-      return !!localStorage.getItem(TERMS_STORAGE_KEY);
-    } catch {
-      return false;
+  // Conditions générales d'utilisation : acceptées une seule fois PAR COMPTE
+  // (pas par installation — deux comptes sur le même PC doivent chacun
+  // accepter), pour la version TERMS_VERSION du texte. Bloque l'onboarding et
+  // la modale d'overlay ci-dessous tant qu'elles ne sont pas acceptées, pour
+  // ne jamais empiler plusieurs fenêtres au premier passage dans l'app.
+  // L'acceptation est aussi enregistrée dans Supabase (table
+  // terms_acceptances, voir sql/terms_acceptances.sql) pour que l'admin voie
+  // qui a accepté ; le localStorage sert de cache pour ne pas redemander.
+  const termsUserId = session?.user?.id ?? null;
+  const termsKey = termsUserId ? `mvptracker-terms-accepted-${TERMS_VERSION}:${termsUserId}` : null;
+  const termsSyncedKey = termsUserId ? `mvptracker-terms-synced-${TERMS_VERSION}:${termsUserId}` : null;
+  const [acceptedTermsFor, setAcceptedTermsFor] = useState(null);
+  const termsAccepted = !!termsUserId && acceptedTermsFor === termsUserId;
+
+  useEffect(() => {
+    if (!termsKey) {
+      setAcceptedTermsFor(null);
+      return;
     }
-  });
+    try {
+      setAcceptedTermsFor(localStorage.getItem(termsKey) ? termsUserId : null);
+    } catch {
+      setAcceptedTermsFor(null);
+    }
+  }, [termsKey, termsUserId]);
 
   const acceptTerms = () => {
+    if (!termsKey) return;
     try {
-      localStorage.setItem(TERMS_STORAGE_KEY, new Date().toISOString());
+      localStorage.setItem(termsKey, new Date().toISOString());
     } catch {
       // stockage indisponible : la modale reviendra au prochain lancement, sans bloquer la session en cours
     }
-    setTermsAccepted(true);
+    setAcceptedTermsFor(termsUserId);
   };
+
+  // Enregistre l'acceptation côté Supabase, avec la date réelle du clic. Si ça
+  // échoue (hors ligne, table pas encore créée...), rien n'est marqué comme
+  // synchronisé : on réessaie simplement au prochain lancement.
+  useEffect(() => {
+    if (!termsAccepted || !termsKey) return;
+    try {
+      if (localStorage.getItem(termsSyncedKey)) return;
+    } catch {
+      // stockage illisible : on tente quand même l'envoi (idempotent côté base)
+    }
+    let acceptedAt = null;
+    try {
+      acceptedAt = localStorage.getItem(termsKey);
+    } catch {
+      // date locale illisible : la valeur par défaut de la base (now()) fera l'affaire
+    }
+    supabase
+      .from('terms_acceptances')
+      .upsert(
+        { user_id: termsUserId, version: TERMS_VERSION, ...(acceptedAt ? { accepted_at: acceptedAt } : {}) },
+        { onConflict: 'user_id,version', ignoreDuplicates: true },
+      )
+      .then(({ error }) => {
+        if (error) {
+          console.error("[terms] échec de l'enregistrement de l'acceptation :", error.message);
+          return;
+        }
+        try {
+          localStorage.setItem(termsSyncedKey, '1');
+        } catch {
+          // pas grave : ré-envoi idempotent au prochain lancement
+        }
+      });
+  }, [termsAccepted, termsKey, termsSyncedKey, termsUserId]);
 
   // Tour guidé (demandé sur Discord) : affiché une seule fois, au premier
   // vrai passage dans l'app — jamais revu ensuite sauf via le bouton dédié
@@ -1040,6 +1093,8 @@ function App() {
         // affiché pour un non-admin), rien de sensible ne s'affiche —
         // et de toute façon, la vraie porte fermée est côté serveur (RLS).
         return isAdmin ? <AdminPage myId={session.user.id} /> : null;
+      case 'admin-terms':
+        return isAdmin ? <TermsAcceptancesPanel /> : null;
       case 'messages':
         return (
           <MessagesTab
@@ -1100,7 +1155,7 @@ function App() {
           ? { icon: MessageCircle, labelKey: 'nav.tabs.messages' }
           : activeTab === 'friends'
             ? { icon: Users, labelKey: 'nav.tabs.friends' }
-            : ALL_TABS.find((tab) => tab.id === activeTab);
+            : [...ALL_TABS, ...(isAdmin ? ADMIN_SECTION.tabs : [])].find((tab) => tab.id === activeTab);
 
   return (
     <div className="app app-with-sidebar">

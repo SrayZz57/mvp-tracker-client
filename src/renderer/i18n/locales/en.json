@@ -178,6 +178,7 @@
       "friends": "Friends",
       "account": "My account",
       "settings": "Settings",
+      "adminTerms": "Terms accepted",
       "lineups": "Lineups",
       "clips": "Clips",
       "teamListings": "Team Search"
@@ -232,7 +233,18 @@
     },
     "riotNotice": "MVP Tracker isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.",
     "accept": "I accept the terms",
-    "decline": "Decline and sign out"
+    "decline": "Decline and sign out",
+    "admin": {
+      "title": "Terms acceptance ({{version}})",
+      "summary": "{{accepted}} of {{total}} account(s) accepted the current version.",
+      "filterPlaceholder": "Filter by name or Riot ID...",
+      "acceptedTitle": "Accepted ({{count}})",
+      "pendingTitle": "Not accepted yet ({{count}})",
+      "noneAccepted": "Nobody has accepted yet.",
+      "nonePending": "Every account has accepted.",
+      "truncated": "Only the first {{count}} are shown — narrow down with the filter.",
+      "error": "Could not load acceptances: {{message}}"
+    }
   },
   "common": {
     "language": "Language",

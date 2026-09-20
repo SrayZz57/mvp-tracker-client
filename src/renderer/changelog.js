@@ -5,6 +5,18 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.10.11',
+    date: '2026-09-20',
+    items: {
+      fr: [
+        'Clips et Lineups : les vidéos YouTube s’affichaient en noir dans l’app installée, elles se lisent de nouveau.',
+      ],
+      en: [
+        'Clips and Lineups: YouTube videos showed a black screen in the installed app, they play again.',
+      ],
+    },
+  },
+  {
     version: '1.10.10',
     date: '2026-09-20',
     items: {

@@ -1580,6 +1580,19 @@ app.whenReady().then(() => {
     });
   }
 
+  // YouTube refuse ses lecteurs intégrés (erreur 153, "configuration du
+  // lecteur vidéo") quand la requête n'a pas de Referer. L'app packagée est
+  // chargée depuis file://, dont Chromium n'envoie aucun Referer — l'écran des
+  // clips/lineups YouTube restait noir. En dev (http://localhost) le Referer
+  // existe, d'où un bug qu'on ne voyait pas en `npm start`. Vérifié dans un
+  // vrai Electron : sans en-tête → erreur 153, avec → lecture normale.
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['https://www.youtube-nocookie.com/*', 'https://www.youtube.com/*'] },
+    (details, callback) => {
+      callback({ requestHeaders: { ...details.requestHeaders, Referer: 'https://mvptracker.fr/' } });
+    },
+  );
+
   // Empêche toute fenêtre de l'app de naviguer ailleurs que vers son propre
   // contenu — les liens externes (Discord, mailto...) passent déjà par
   // shell.openExternal, jamais par une navigation dans la fenêtre. Défense

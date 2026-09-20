@@ -199,6 +199,8 @@ function StatsTab({ settings, matches, rank, loading }) {
   const [selectedWeapon, setSelectedWeapon] = useState(null);
   const [showAllMatches, setShowAllMatches] = useState(false);
   const [modeFilter, setModeFilter] = useState('');
+  const [mapFilter, setMapFilter] = useState('');
+  const [agentFilter, setAgentFilter] = useState('');
   const [scope, setScope] = useState('');
   const [actFilter, setActFilter] = useState('');
 
@@ -352,10 +354,37 @@ function StatsTab({ settings, matches, rank, loading }) {
     return [...modes.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [scopedMatches]);
 
-  const filteredMatches = useMemo(
+  const modeFilteredMatches = useMemo(
     () => (modeFilter ? scopedMatches.filter((match) => match.metadata?.mode_id === modeFilter) : scopedMatches),
     [scopedMatches, modeFilter],
   );
+
+  // Maps/agents proposés d'après les matchs déjà restreints par le scope et le
+  // mode — même principe que availableModes : jamais d'option qui donnerait 0 résultat.
+  const { availableMaps, availableAgents } = useMemo(() => {
+    const maps = new Set();
+    const agents = new Set();
+    modeFilteredMatches.forEach((match) => {
+      if (match.metadata?.map) maps.add(match.metadata.map);
+      const character = findMe(match, settings.name, settings.tag)?.character;
+      if (character) agents.add(character);
+    });
+    return { availableMaps: [...maps].sort((a, b) => a.localeCompare(b)), availableAgents: [...agents].sort((a, b) => a.localeCompare(b)) };
+  }, [modeFilteredMatches, settings.name, settings.tag]);
+
+  // Une valeur choisie qui n'existe plus après un changement de scope/mode/acte
+  // est ignorée plutôt que de vider la liste.
+  const activeMapFilter = availableMaps.includes(mapFilter) ? mapFilter : '';
+  const activeAgentFilter = availableAgents.includes(agentFilter) ? agentFilter : '';
+
+  const filteredMatches = useMemo(() => {
+    if (!activeMapFilter && !activeAgentFilter) return modeFilteredMatches;
+    return modeFilteredMatches.filter((match) => {
+      if (activeMapFilter && match.metadata?.map !== activeMapFilter) return false;
+      if (activeAgentFilter && findMe(match, settings.name, settings.tag)?.character !== activeAgentFilter) return false;
+      return true;
+    });
+  }, [modeFilteredMatches, activeMapFilter, activeAgentFilter, settings.name, settings.tag]);
 
   if (matches.length === 0) {
     if (loading) return <LoadingState />;
@@ -588,6 +617,30 @@ function StatsTab({ settings, matches, rank, loading }) {
             <option value="">{t('stats.allModes')}</option>
             {availableModes.map(([id, label]) => (
               <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={activeMapFilter}
+            onChange={(e) => {
+              setMapFilter(e.target.value);
+              setShowAllMatches(false);
+            }}
+          >
+            <option value="">{t('stats.allMaps')}</option>
+            {availableMaps.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={activeAgentFilter}
+            onChange={(e) => {
+              setAgentFilter(e.target.value);
+              setShowAllMatches(false);
+            }}
+          >
+            <option value="">{t('stats.allAgents')}</option>
+            {availableAgents.map((name) => (
+              <option key={name} value={name}>{name}</option>
             ))}
           </select>
         </div>

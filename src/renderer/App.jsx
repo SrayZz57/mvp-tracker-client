@@ -31,6 +31,9 @@ import {
   Swords,
   Settings,
   FileCheck,
+  Sparkles,
+  Bell,
+  Send,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import useValorantData from './useValorantData.js';
@@ -69,6 +72,7 @@ const AccountPage = lazy(() => import('./AccountPage.jsx'));
 const SettingsPage = lazy(() => import('./SettingsPage.jsx'));
 const AdminPage = lazy(() => import('./AdminPage.jsx'));
 const TermsAcceptancesPanel = lazy(() => import('./TermsAcceptancesPanel.jsx'));
+const AdminNotificationComposer = lazy(() => import('./AdminNotificationComposer.jsx'));
 const TournamentsTab = lazy(() => import('./tabs/TournamentsTab.jsx'));
 const MessagesTab = lazy(() => import('./tabs/MessagesTab.jsx'));
 const FriendsTab = lazy(() => import('./tabs/FriendsTab.jsx'));
@@ -83,13 +87,16 @@ import AccountAuth from './AccountAuth.jsx';
 import SetNewPasswordScreen from './SetNewPasswordScreen.jsx';
 import OnboardingTour from './OnboardingTour.jsx';
 import TermsModal, { TERMS_VERSION } from './TermsModal.jsx';
+import ChangelogModal from './ChangelogModal.jsx';
+import AnnouncementsModal from './AnnouncementsModal.jsx';
+import { LATEST_CHANGELOG_VERSION } from './changelog.js';
 import LoadingState from './LoadingState.jsx';
 import DailyOverlaySettings from './DailyOverlaySettings.jsx';
 import { supabase } from './supabaseClient.js';
 import { useOnlinePresence } from './presence.js';
 import { useRankTiers, usePlayerCardArt } from './rankData.js';
 import { normalizeRiotIdPart } from './valorantStats.js';
-import logo from '../assets/logo.png';
+import logoText from '../assets/logo-text.png';
 
 // `labelKey` plutôt que du texte en dur — cette structure est au niveau
 // module (hors composant), donc pas d'accès à `t()` ici ; la traduction se
@@ -153,6 +160,7 @@ const ADMIN_SECTION = {
   tabs: [
     { id: 'admin', labelKey: 'nav.tabs.admin', icon: Shield },
     { id: 'admin-terms', labelKey: 'nav.tabs.adminTerms', icon: FileCheck },
+    { id: 'admin-notify', labelKey: 'nav.tabs.adminNotify', icon: Send },
   ],
 };
 
@@ -224,6 +232,32 @@ function TopbarAccountButton({ profile, myRank, active, onClick }) {
       ) : (
         <span>{(profile?.display_name || profile?.riot_name || '?').charAt(0)}</span>
       )}
+    </button>
+  );
+}
+
+// Bouton "Rafraîchir" avec son chrono : le décompte à la seconde est un état
+// LOCAL à ce bouton, pour ne pas refaire le rendu de toute l'app chaque seconde.
+function RefreshButton({ loading, cooldownUntil, onClick }) {
+  const { t } = useTranslation();
+  // Le tick ne sert qu'à relancer un rendu chaque seconde ; la valeur affichée
+  // est toujours calculée avec l'heure courante (pas de valeur périmée juste
+  // après le clic).
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return undefined;
+    const id = setInterval(() => {
+      setTick((n) => n + 1);
+      if (Date.now() >= cooldownUntil) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
+
+  const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+  return (
+    <button onClick={onClick} disabled={loading || seconds > 0} className="refresh">
+      {loading ? t('nav.loading') : seconds > 0 ? t('nav.refreshCooldown', { seconds }) : t('nav.refresh')}
     </button>
   );
 }
@@ -564,6 +598,115 @@ function App() {
       });
   }, [termsAccepted, termsKey, termsSyncedKey, termsUserId]);
 
+  // Fenêtre "Nouveautés" (bouton à droite de Discord) : le point "nouveau"
+  // reste affiché tant que la dernière version du changelog n'a pas été ouverte.
+  const CHANGELOG_SEEN_KEY = 'mvptracker-changelog-seen';
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [changelogSeenVersion, setChangelogSeenVersion] = useState(() => {
+    try {
+      return localStorage.getItem(CHANGELOG_SEEN_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  const openChangelog = () => {
+    setShowChangelog(true);
+    setChangelogSeenVersion(LATEST_CHANGELOG_VERSION);
+    try {
+      localStorage.setItem(CHANGELOG_SEEN_KEY, LATEST_CHANGELOG_VERSION);
+    } catch {
+      // stockage indisponible : le point reviendra au prochain lancement, sans conséquence
+    }
+  };
+
+  // Annonces admin (table announcements) : chargées dès qu'on est connecté
+  // (l'écran d'accueil les affiche aussi), puis revérifiées toutes les 10 min
+  // une fois dans l'app pour alimenter la cloche de la barre du haut.
+  const announcementsUserId = session?.user?.id ?? null;
+  const [announcements, setAnnouncements] = useState([]);
+  useEffect(() => {
+    if (!announcementsUserId) {
+      setAnnouncements([]);
+      return undefined;
+    }
+    let cancelled = false;
+    // recipient_id : messages ciblés (voir sql/announcements_recipient.sql). Si la
+    // migration n'a pas encore été passée, la colonne n'existe pas et la requête
+    // échoue — on retente sans elle pour ne jamais perdre les annonces générales.
+    const AUTHOR = 'author:profiles(display_name, riot_name, riot_tag, avatar_card_uuid)';
+    const query = (columns) =>
+      supabase.from('announcements').select(columns).eq('is_active', true).order('created_at', { ascending: false });
+    const load = async () => {
+      let { data, error } = await query(`id, title, body, image_url, created_at, recipient_id, ${AUTHOR}`);
+      if (error) ({ data } = await query(`id, title, body, image_url, created_at, ${AUTHOR}`));
+      if (!cancelled) setAnnouncements(data ?? []);
+    };
+    load();
+    if (!enteredApp) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const id = setInterval(load, 10 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [announcementsUserId, enteredApp]);
+
+  // Annonces déjà vues, par compte (localStorage) : la cloche n'affiche un
+  // compteur que pour les nouvelles. Celles montrées sur l'écran d'accueil
+  // juste avant d'entrer dans l'app comptent comme vues.
+  const announcementsSeenKey = announcementsUserId ? `mvptracker-announcements-seen:${announcementsUserId}` : null;
+  const [seenAnnouncementIds, setSeenAnnouncementIds] = useState(() => new Set());
+  const greetingAnnouncementIdsRef = useRef([]);
+
+  const markAnnouncementsSeen = (ids) => {
+    if (!announcementsSeenKey || ids.length === 0) return;
+    let stored = [];
+    try {
+      stored = JSON.parse(localStorage.getItem(announcementsSeenKey) || '[]');
+    } catch {
+      // valeur illisible : on repart d'une liste vide
+    }
+    const merged = new Set([...stored, ...ids]);
+    try {
+      localStorage.setItem(announcementsSeenKey, JSON.stringify([...merged]));
+    } catch {
+      // stockage indisponible : les annonces seront de nouveau comptées comme nouvelles au prochain lancement
+    }
+    setSeenAnnouncementIds(merged);
+  };
+
+  useEffect(() => {
+    if (!announcementsSeenKey) {
+      setSeenAnnouncementIds(new Set());
+      return;
+    }
+    try {
+      setSeenAnnouncementIds(new Set(JSON.parse(localStorage.getItem(announcementsSeenKey) || '[]')));
+    } catch {
+      setSeenAnnouncementIds(new Set());
+    }
+  }, [announcementsSeenKey]);
+
+  useEffect(() => {
+    if (!enteredApp) greetingAnnouncementIdsRef.current = announcements.map((a) => a.id);
+  }, [announcements, enteredApp]);
+
+  useEffect(() => {
+    if (enteredApp) markAnnouncementsSeen(greetingAnnouncementIdsRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enteredApp, announcementsSeenKey]);
+
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
+  const unreadAnnouncementCount = announcements.filter((a) => !seenAnnouncementIds.has(a.id)).length;
+  const openAnnouncements = () => {
+    setShowAnnouncements(true);
+    markAnnouncementsSeen(announcements.map((a) => a.id));
+  };
+
   // Tour guidé (demandé sur Discord) : affiché une seule fois, au premier
   // vrai passage dans l'app — jamais revu ensuite sauf via le bouton dédié
   // dans Mon compte. Petit délai avant de le montrer pour laisser la sidebar
@@ -860,7 +1003,8 @@ function App() {
     const container = sidebarNavRef.current;
     const activeEl = container?.querySelector('.sidebar-link.active');
     if (!container || !activeEl) {
-      // L'onglet actif est dans une section repliée — pas de repère orphelin.
+      // L'onglet actif est dans une section repliée, ou masqué par la recherche
+      // d'onglet — pas de repère orphelin.
       setIndicator((prev) => ({ ...prev, ready: false }));
       return;
     }
@@ -869,7 +1013,10 @@ function App() {
       height: activeEl.offsetHeight,
       ready: true,
     });
-  }, [activeTab, settings, collapsedSections]);
+    // navQuery : la recherche d'onglet filtre la liste (l'onglet actif peut
+    // disparaître ou changer de position) — sans elle dans les dépendances, le
+    // repère restait figé à son ancienne position, dans le vide.
+  }, [activeTab, settings, collapsedSections, navQuery]);
 
   if (recoveryPending) {
     return <SetNewPasswordScreen onDone={() => setRecoveryPending(false)} />;
@@ -962,6 +1109,7 @@ function App() {
         settings={mySettings}
         rank={myRank}
         matches={myMatches}
+        announcements={announcements}
         onOpenAimTrainer={() => {
           setActiveTab('aim-trainer');
           setEnteredApp(true);
@@ -1095,6 +1243,8 @@ function App() {
         return isAdmin ? <AdminPage myId={session.user.id} /> : null;
       case 'admin-terms':
         return isAdmin ? <TermsAcceptancesPanel /> : null;
+      case 'admin-notify':
+        return isAdmin ? <AdminNotificationComposer myId={session.user.id} /> : null;
       case 'messages':
         return (
           <MessagesTab
@@ -1161,8 +1311,7 @@ function App() {
     <div className="app app-with-sidebar">
       <nav className="sidebar">
         <div className="sidebar-brand">
-          <img src={logo} alt="MVP Tracker" className="logo" />
-          <span>MVP Tracker</span>
+          <img src={logoText} alt="MVP Tracker" className="logo" />
         </div>
 
         <div className="sidebar-search" data-tour="sidebar-search">
@@ -1280,17 +1429,7 @@ function App() {
             <span className="aim-topbar-icon"><Icon icon={Target} size={16} /></span>
             <span>{t('nav.tabs.aimTrainer')}</span>
           </button>
-          <button
-            onClick={data.refresh}
-            disabled={data.loading || data.refreshCooldownSeconds > 0}
-            className="refresh"
-          >
-            {data.loading
-              ? t('nav.loading')
-              : data.refreshCooldownSeconds > 0
-                ? t('nav.refreshCooldown', { seconds: data.refreshCooldownSeconds })
-                : t('nav.refresh')}
-          </button>
+          <RefreshButton loading={data.loading} cooldownUntil={data.refreshCooldownUntil} onClick={data.refresh} />
           {pendingUpdate && (
             <button
               className="update-ready-button"
@@ -1313,7 +1452,22 @@ function App() {
             </svg>
             <span>Discord</span>
           </button>
+          <TopbarIconButton
+            icon={Sparkles}
+            label={t('nav.changelog')}
+            title={t('nav.changelogTitle')}
+            dot={changelogSeenVersion !== LATEST_CHANGELOG_VERSION}
+            active={showChangelog}
+            onClick={openChangelog}
+          />
           <LanguageToggle />
+          <TopbarIconButton
+            icon={Bell}
+            title={t('nav.announcementsTitle')}
+            badge={unreadAnnouncementCount}
+            active={showAnnouncements}
+            onClick={openAnnouncements}
+          />
           <TopbarIconButton
             icon={MessageCircle}
             title={t('nav.unreadMessages')}
@@ -1379,6 +1533,8 @@ function App() {
       <GoalsWidget matches={myMatches} settings={mySettings} myId={session.user.id} />
       <WeeklyRecapCard matches={myMatches} settings={mySettings} rank={myRank} />
       {isViewingSelf && <PostMortemModal matches={myMatches} settings={mySettings} />}
+      {showAnnouncements && <AnnouncementsModal announcements={announcements} onClose={() => setShowAnnouncements(false)} />}
+      {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}
       {!termsAccepted && (
         <TermsModal
           onAccept={acceptTerms}

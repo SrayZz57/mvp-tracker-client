@@ -43,6 +43,7 @@ import wallColorUrl from '../assets/textures/wall-color.jpg';
 import wallNormalUrl from '../assets/textures/wall-normal.jpg';
 import wallRoughnessUrl from '../assets/textures/wall-roughness.jpg';
 import { saveScore } from './aimScores.js';
+import { isPerfLiteEnabled } from './perfMode.js';
 import CrosshairPreview from './CrosshairPreview.jsx';
 
 // Yaw de Valorant : degrés de rotation par "compte" de mouvement souris, à
@@ -681,6 +682,9 @@ export const DEFAULT_CONFIG = {
   // Code de la bibliothèque de crosshairs à afficher pendant la session ;
   // null = croix blanche par défaut (voir .aim-trainer-crosshair).
   crosshairCode: null,
+  // Petit "pop" joué quand une cible est touchée (demandé sur Discord :
+  // pouvoir le couper). Le bruit du tir lui-même reste actif.
+  hitSound: true,
 };
 
 // Les FPS (Valorant inclus) expriment le champ de vision à l'HORIZONTALE,
@@ -1151,8 +1155,12 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     const euler = new THREE.Euler(0, 0, 0, 'YXZ');
     scene.add(camera); // nécessaire pour que les enfants de la caméra (l'arme) soient rendus
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Mode économique (voir perfMode.js) : pas d'anticrénelage et densité de
+    // pixels ramenée à 1 — sur un écran 4K ou à mise à l'échelle Windows, ça
+    // divise par 2 à 4 le nombre de pixels à dessiner à chaque image.
+    const perfLite = isPerfLiteEnabled();
+    const renderer = new THREE.WebGLRenderer({ antialias: !perfLite });
+    renderer.setPixelRatio(perfLite ? 1 : Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -2125,7 +2133,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       state.sparks.push({ mesh: spark, createdAt: performance.now() });
 
       if (hitMesh) {
-        playTargetPop(state.audioCtx);
+        if (configRef.current.hitSound !== false) playTargetPop(state.audioCtx);
         const entry = targets.find((tgt) => tgt.mesh === hitMesh);
         const mode = MODES[configRef.current.mode] ?? MODES.flick;
         if (entry && mode.maxHp) {
@@ -2233,7 +2241,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       state.sparks.push({ mesh: spark, createdAt: performance.now() });
 
       if (hitMesh) {
-        playTargetPop(state.audioCtx);
+        if (configRef.current.hitSound !== false) playTargetPop(state.audioCtx);
         const entry = targets.find((tgt) => tgt.mesh === hitMesh);
         const mode = MODES[configRef.current.mode] ?? MODES.flick;
         if (mode.movement === 'peek') {

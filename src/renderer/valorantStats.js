@@ -908,15 +908,39 @@ export function pingCorrelation(matches, pingSamples, name, tag) {
   let deathsAnalyzed = 0;
   let deathsNearSpike = 0;
 
+  // Trié une seule fois (déjà le cas depuis la base : on évite alors toute
+  // copie), puis chaque match ne regarde que SA fenêtre par recherche
+  // dichotomique. Avant : un filter() sur toutes les mesures pour chaque match,
+  // soit des millions de comparaisons dès que l'historique dépassait 100 000
+  // mesures.
+  let sorted = pingSamples;
+  for (let i = 1; i < sorted.length; i += 1) {
+    if (sorted[i].timestamp < sorted[i - 1].timestamp) {
+      sorted = [...pingSamples].sort((a, b) => a.timestamp - b.timestamp);
+      break;
+    }
+  }
+  const firstIndexAtOrAfter = (timestamp) => {
+    let low = 0;
+    let high = sorted.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (sorted[mid].timestamp < timestamp) low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  };
+
   matches.forEach((match) => {
     const me = findMe(match, name, tag);
     if (!me) return;
 
     const gameStartMs = (match.metadata?.game_start ?? 0) * 1000;
     const gameLengthMs = (match.metadata?.game_length ?? 0) * 1000;
-    const windowSamples = pingSamples.filter(
-      (s) => s.timestamp >= gameStartMs && s.timestamp <= gameStartMs + gameLengthMs,
-    );
+    const windowStart = firstIndexAtOrAfter(gameStartMs);
+    let windowEnd = windowStart;
+    while (windowEnd < sorted.length && sorted[windowEnd].timestamp <= gameStartMs + gameLengthMs) windowEnd += 1;
+    const windowSamples = sorted.slice(windowStart, windowEnd);
     if (windowSamples.length === 0) return;
 
     const baseline = windowSamples.reduce((sum, s) => sum + s.latency_ms, 0) / windowSamples.length;

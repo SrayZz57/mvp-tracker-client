@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const LOCKFILE_PATH = path.join(
@@ -58,9 +57,20 @@ const VALORANT_GAME_PROCESS = 'VALORANT-Win64-Shipping.exe';
 // ("VALORANT-Win64-Shipping.e" au lieu de "...exe"), ce qui faisait
 // systématiquement échouer la comparaison malgré Valorant bien lancé — bug
 // reproduit et confirmé en direct le 2026-09-17. Le CSV n'a pas cette limite.
+//
+// Résultat partagé pendant GAME_CHECK_TTL_MS : plusieurs boucles de main.js
+// (overlay, coupure des animations) posent la même question à ~6 s d'écart —
+// sans ce partage, chacune lançait son propre `tasklist` pendant que le joueur
+// est en partie, ce qui ajoute des pics CPU inutiles dans le jeu.
+const GAME_CHECK_TTL_MS = 4000;
+let gameCheck = { at: 0, promise: null };
+
 export function isValorantGameRunning() {
   if (process.platform !== 'win32') return Promise.resolve(false);
-  return new Promise((resolve) => {
+  const now = Date.now();
+  if (gameCheck.promise && now - gameCheck.at < GAME_CHECK_TTL_MS) return gameCheck.promise;
+
+  const promise = new Promise((resolve) => {
     execFile(
       'tasklist',
       ['/FI', `IMAGENAME eq ${VALORANT_GAME_PROCESS}`, '/FO', 'CSV', '/NH'],
@@ -68,47 +78,8 @@ export function isValorantGameRunning() {
       (err, stdout) => resolve(!err && stdout.toLowerCase().includes(VALORANT_GAME_PROCESS.toLowerCase())),
     );
   });
-}
-
-// Fenêtre au premier plan sous Windows (nom du process, via l'API Win32
-// GetForegroundWindow) — sert à couper les animations décoratives dès que
-// Valorant a le focus, MÊME hors match (menus, Terrain d'entraînement...),
-// contrairement à la détection de partie active (pregame/core-game de
-// l'API locale) qui ne couvre pas ces cas. Le script est écrit une seule
-// fois dans un fichier temporaire plutôt qu'inliné dans la commande : passer
-// un bloc PowerShell multi-lignes (Add-Type) via un argument de ligne de
-// commande pose des problèmes d'échappement en cascade (cmd → PowerShell) ;
-// un `-File` évite ça complètement.
-const FOREGROUND_SCRIPT_PATH = path.join(tmpdir(), 'mvptracker-foreground-process.ps1');
-const FOREGROUND_SCRIPT = `Add-Type @'
-using System;
-using System.Runtime.InteropServices;
-public class MvpTrackerForegroundWindow {
-  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-}
-'@
-$hwnd = [MvpTrackerForegroundWindow]::GetForegroundWindow()
-$procId = 0
-[MvpTrackerForegroundWindow]::GetWindowThreadProcessId($hwnd, [ref]$procId) | Out-Null
-(Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName
-`;
-
-function ensureForegroundScript() {
-  if (!existsSync(FOREGROUND_SCRIPT_PATH)) writeFileSync(FOREGROUND_SCRIPT_PATH, FOREGROUND_SCRIPT, 'utf-8');
-  return FOREGROUND_SCRIPT_PATH;
-}
-
-export function isValorantFocused() {
-  if (process.platform !== 'win32') return Promise.resolve(false);
-  return new Promise((resolve) => {
-    execFile(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ensureForegroundScript()],
-      { timeout: 3000 },
-      (err, stdout) => resolve(!err && /valorant/i.test(stdout)),
-    );
-  });
+  gameCheck = { at: now, promise };
+  return promise;
 }
 
 // `execFile` plutôt que `exec` : `exec` passe systématiquement par un shell

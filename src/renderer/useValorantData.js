@@ -17,19 +17,12 @@ function useValorantData(settings) {
   // Chrono anti-spam sur le clic manuel du bouton "Rafraîchir" (voir
   // manualRefresh plus bas) — n'affecte pas les rechargements automatiques
   // (montage, changement de profil suivi), qui appellent refresh()
-  // directement. cooldownTick ne sert qu'à forcer un re-rendu chaque seconde
-  // pendant le décompte, la vraie valeur vient de refreshCooldownUntil.
+  // directement. Seule l'heure de fin est gardée ici : le décompte affiché
+  // chaque seconde vit dans le bouton lui-même (RefreshButton, App.jsx) —
+  // avant, ce tick faisait refaire le rendu de TOUTE l'app chaque seconde
+  // pendant la minute de chrono.
   const [refreshCooldownUntil, setRefreshCooldownUntil] = useState(0);
-  const [, setCooldownTick] = useState(0);
   const REFRESH_COOLDOWN_MS = 60000;
-
-  useEffect(() => {
-    if (refreshCooldownUntil <= Date.now()) return undefined;
-    const id = setInterval(() => setCooldownTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [refreshCooldownUntil]);
-
-  const refreshCooldownSeconds = Math.max(0, Math.ceil((refreshCooldownUntil - Date.now()) / 1000));
 
   const refresh = async () => {
     if (!settings) return;
@@ -82,12 +75,12 @@ function useValorantData(settings) {
   // tant que le chrono n'est pas écoulé, plutôt que de compter uniquement sur
   // le disabled du bouton côté App.jsx (defense en profondeur).
   const manualRefresh = () => {
-    if (refreshCooldownSeconds > 0) return;
+    if (Date.now() < refreshCooldownUntil) return;
     setRefreshCooldownUntil(Date.now() + REFRESH_COOLDOWN_MS);
     refresh();
   };
 
-  return { matches, pingSamples, rank, loading, error, refresh: manualRefresh, refreshCooldownSeconds };
+  return { matches, pingSamples, rank, loading, error, refresh: manualRefresh, refreshCooldownUntil };
 }
 
 export default useValorantData;

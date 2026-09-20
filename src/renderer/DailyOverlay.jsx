@@ -15,7 +15,27 @@ function DailyOverlay() {
     document.body.classList.add('overlay-window');
   }, []);
 
-  useEffect(() => window.electronAPI.onDailyOverlayStats(setStats), []);
+  // On redemande aussi les stats à l'ouverture : celles poussées par le process
+  // principal au 'did-finish-load' arrivent avant que ce composant (chargé en
+  // lazy) n'écoute — voir daily-overlay:get-stats dans main.js. `prev ??` pour
+  // ne jamais écraser des stats plus récentes déjà reçues.
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI
+      .getDailyOverlayStats()
+      .then((initial) => {
+        if (!cancelled && initial) setStats((prev) => prev ?? initial);
+      })
+      .catch(() => {
+        // Process principal plus ancien que cette fenêtre (ex. dev sans
+        // redémarrage complet) : on attend simplement les stats poussées.
+      });
+    const unsubscribe = window.electronAPI.onDailyOverlayStats(setStats);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   // La taille en % est appliquée via `zoom` (pas `transform: scale`) : ça
   // affecte le calcul de mise en page, pas juste le rendu visuel — sinon le

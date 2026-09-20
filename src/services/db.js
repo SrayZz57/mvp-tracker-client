@@ -11,6 +11,11 @@ const db = new DatabaseSync(path.join(app.getPath('userData'), 'matches.db'));
 // ni l'inverse. Persisté dans le fichier .db lui-même, donc sans effet les
 // lancements suivants une fois activé.
 db.exec('PRAGMA journal_mode = WAL');
+// NORMAL plutôt que FULL (le défaut) : en mode WAL, ça évite un fsync disque à
+// chaque écriture — et il y en a une toutes les 5 s pour le ping. Sans risque
+// de corruption (au pire la toute dernière écriture se perd sur une coupure de
+// courant) et nettement plus léger sur un disque dur ou un PC modeste.
+db.exec('PRAGMA synchronous = NORMAL');
 
 // PRIMARY KEY composite (match_id, puuid) — pas juste match_id : deux joueurs
 // suivis qui jouent ENSEMBLE partagent le même match_id (Riot en assigne un
@@ -334,16 +339,20 @@ export function saveMatches(puuid, matches) {
   // dont AUCUN match n'arrive jamais en cache malgré une requête HenrikDev
   // réussie — sinon ce cas précis est indiscernable d'un simple 0 match.
   let skipped = 0;
+  let inserted = 0;
   for (const match of matches) {
     if (!match?.metadata?.matchid) {
       skipped += 1;
       continue;
     }
-    insert.run(match.metadata.matchid, puuid, match.metadata.game_start, JSON.stringify(match));
+    // INSERT OR IGNORE : `changes` vaut 0 pour un match déjà en cache — sert à
+    // savoir si cette synchro a vraiment ramené quelque chose de nouveau.
+    inserted += Number(insert.run(match.metadata.matchid, puuid, match.metadata.game_start, JSON.stringify(match)).changes);
   }
   if (skipped > 0) {
     console.error(`[db] saveMatches (puuid=${puuid}) : ${skipped}/${matches.length} match(s) ignoré(s) — metadata.matchid manquant`);
   }
+  return inserted;
 }
 
 export function getCachedMatches(puuid) {
@@ -422,10 +431,22 @@ export function savePingSample(puuid, latencyMs) {
   );
 }
 
-export function getAllPingSamples(puuid) {
+// `sinceMs` : borne basse (timestamp ms). Sans elle, TOUT l'historique partait à
+// l'interface à chaque lancement — plus de 100 000 mesures après un mois
+// d'usage (~3 000 par jour), transférées puis comparées à chaque match. Or la
+// corrélation ping/morts ne porte que sur les matchs dont le détail est encore
+// conservé (les 100 plus récents, voir pruneOldMatchDetail).
+export function getAllPingSamples(puuid, sinceMs = 0) {
   return db
-    .prepare('SELECT timestamp, latency_ms FROM ping_samples WHERE puuid = ? ORDER BY timestamp ASC')
-    .all(puuid);
+    .prepare('SELECT timestamp, latency_ms FROM ping_samples WHERE puuid = ? AND timestamp >= ? ORDER BY timestamp ASC')
+    .all(puuid, sinceMs);
+}
+
+// Supprime les mesures trop anciennes pour servir à quoi que ce soit — sans
+// ça la table grossit indéfiniment (une mesure toutes les 5 s tant que
+// Valorant tourne).
+export function prunePingSamples(olderThanMs) {
+  return Number(db.prepare('DELETE FROM ping_samples WHERE timestamp < ?').run(olderThanMs).changes);
 }
 
 export function saveCrosshair(puuid, name, code, color, image) {

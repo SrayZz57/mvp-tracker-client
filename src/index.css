@@ -88,6 +88,27 @@ body.app-in-match {
   --decor-anim-state: paused;
 }
 
+/* Mode économique (voir perfMode.js, réglage dans Réglages) : mêmes
+   animations en boucle figées que ci-dessus, mais en permanence, plus les
+   flous d'arrière-plan (backdrop-filter, coûteux à recalculer à chaque image
+   sur une carte graphique modeste) et les halos ambiants du fond. Purement
+   visuel : aucune fonction de l'app n'en dépend. */
+body.perf-lite {
+  --decor-anim-state: paused;
+}
+
+body.perf-lite *,
+body.perf-lite *::before,
+body.perf-lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.perf-lite::before,
+body.perf-lite::after {
+  display: none;
+}
+
 body {
   font-family: var(--font-body);
   margin: 0;
@@ -447,24 +468,11 @@ h1 {
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.2rem;
-  letter-spacing: -0.01em;
+  justify-content: center;
   padding: 0.2rem 0.5rem 1.4rem;
   margin-bottom: 1.1rem;
   position: relative;
   flex-shrink: 0;
-}
-
-/* Le nom de l'app en dégradé clair→accent : signature de marque discrète,
-   reprise du même traitement que les chiffres héros. */
-.sidebar-brand span {
-  background: linear-gradient(96deg, #fff 18%, #ffb3ba 78%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .sidebar-brand::after {
@@ -474,14 +482,16 @@ h1 {
   right: 0.5rem;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, var(--border), transparent);
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
 }
 
 .sidebar-brand img {
-  height: 52px;
-  width: 52px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(255, 70, 85, 0.7));
+  display: block;
+  width: 100%;
+  max-width: 125px;
+  height: auto;
+  filter: none;
+  margin-left: -10px;
 }
 
 .sidebar-search {
@@ -686,17 +696,50 @@ h1 {
   font-weight: 700;
 }
 
+/* L'anneau de focus global des boutons (button:focus-visible) s'ajoutait au
+   contour de .sidebar-active-indicator : un 2e cadre rouge autour de l'onglet
+   actif dès qu'il gardait le focus (recherche d'onglet, navigation clavier).
+   L'onglet actif est déjà signalé par l'indicateur ; les autres gardent un
+   repère clavier discret, sans outline. */
+.sidebar-link:focus-visible {
+  outline: none;
+}
+
+.sidebar-link:not(.active):focus-visible {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.045);
+  border-color: color-mix(in srgb, var(--tab-color, var(--border-strong)) 45%, var(--border-strong));
+}
+
 /* L'onglet actif est déjà mis en avant par .sidebar-active-indicator, qui
    glisse en arrière-plan mais ne suit PAS le décalage/la bordure/lueur du
    survol ci-dessus (élément séparé, positionné par App.jsx) — le survoler
    superposait donc deux contours rouges légèrement désalignés ("double
    bordure"). On neutralise la décoration de survol sur l'onglet actif,
    déjà bien assez visible sans ça. */
-.sidebar-link.active:hover {
+/* button:hover:not(:disabled):not(.weekly-notch) (règle globale plus haut,
+   spécificité 0,3,1) l'emportait sur ".sidebar-link.active:hover" (0,3,0) :
+   c'est elle qui redessinait fond, bordure rouge et ombre sur l'onglet actif.
+   D'où le préfixe "button" et :not(:disabled) pour la dépasser. */
+button.sidebar-link.active:hover:not(:disabled) {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   transform: none;
+}
+
+/* Le voile dégradé du survol (::before) et la lueur de l'icône sont eux aussi
+   des décorations de survol : sans ça, survoler l'onglet actif dessinait un 2e
+   cadre (le voile, aux coins arrondis différents) sous le contour de
+   l'indicateur. */
+.sidebar-link.active:hover::before {
+  opacity: 0;
+}
+
+.sidebar-link.active:hover .sidebar-link-icon {
+  background: color-mix(in srgb, var(--tab-color, var(--accent)) 20%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transform: scale(1.1);
 }
 
 /* Le fond/la bordure/la barre d'accent de l'onglet actif vivent maintenant
@@ -5525,6 +5568,78 @@ li {
   to { opacity: 1; }
 }
 
+.announcement-card-personal {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.notify-admin {
+  padding: 2rem;
+  max-width: 680px;
+}
+
+.notify-admin-search {
+  display: flex;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.notify-admin-search input {
+  flex: 1;
+}
+
+.notify-admin-recipient {
+  margin: 0.5rem 0 1rem;
+}
+
+.announcements-modal-card {
+  max-width: 640px;
+}
+
+.announcements-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.changelog-card {
+  max-width: 620px;
+}
+
+.changelog-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-top: 1rem;
+  padding-right: 0.6rem;
+}
+
+.changelog-entry {
+  margin-bottom: 1.5rem;
+}
+
+.changelog-entry ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.changelog-entry li {
+  margin-bottom: 0.35rem;
+}
+
 .terms-admin {
   padding: 2rem;
   max-width: 760px;
@@ -10093,6 +10208,16 @@ input[type='color'] {
   max-width: 1100px;
 }
 
+/* Écran 2560×1440 : le bloc de liste est plus large que les 1100px du plafond
+   ci-dessus, la carte laissait un trou à droite. En 1920×1080 le bloc fait
+   déjà ≤ 1100px, le plafond n'a aucun effet — d'où le seuil à 2200px, qui
+   ne change rien en dessous. */
+@media (min-width: 2200px) {
+  .tournaments-list {
+    max-width: none;
+  }
+}
+
 .tournaments-community-header {
   display: flex;
   align-items: center;
@@ -10357,6 +10482,12 @@ input[type='color'] {
    texte à plat sur le fond de page. */
 .tournaments-community-card {
   width: 100%;
+}
+
+/* Même espace que le gap entre deux cartes de la liste (.tournaments-list) :
+   sans ça, la dernière carte officielle touchait le bloc "communauté". */
+.tournaments-list + .tournaments-community-card {
+  margin-top: 1.75rem;
 }
 
 .tournaments-community-empty {

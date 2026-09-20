@@ -5,6 +5,7 @@ import Icon from './Icon.jsx';
 import { supabase } from './supabaseClient.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
 import { useE2EE } from './E2EEContext.jsx';
+import { isPerfLiteEnabled, setPerfLite } from './perfMode.js';
 
 // Une ligne de réglage à bascule : étiquette + description à gauche (sur une
 // largeur raisonnable, pas étirées sur toute la carte), switch aligné à
@@ -19,7 +20,7 @@ function SettingsToggleRow({ label, hint, checked, onChange, extra }) {
         {hint && <p className="settings-row-hint">{hint}</p>}
         {extra}
       </div>
-      <label className="switch">
+      <label className={`switch ${checked ? 'on' : ''}`}>
         <input type="checkbox" checked={checked} onChange={onChange} />
         <span className="switch-track">
           <span className="switch-thumb" />
@@ -47,6 +48,7 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(true);
   const [tiltNotificationsEnabled, setTiltNotificationsEnabled] = useState(true);
+  const [perfLiteEnabled, setPerfLiteEnabled] = useState(isPerfLiteEnabled);
   const [dailyOverlayEnabled, setDailyOverlayEnabled] = useState(true);
   const [dailyOverlaySize, setDailyOverlaySize] = useState(100);
   const [dailyOverlayMoving, setDailyOverlayMoving] = useState(false);
@@ -79,6 +81,12 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
     const next = !autoLaunchEnabled;
     setAutoLaunchEnabled(next);
     window.electronAPI.setAutoLaunch(next);
+  };
+
+  const handleTogglePerfLite = () => {
+    const next = !perfLiteEnabled;
+    setPerfLiteEnabled(next);
+    setPerfLite(next);
   };
 
   const handleToggleTiltNotifications = () => {
@@ -303,6 +311,12 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
           hint={t('account.tiltNotificationsHint')}
           checked={tiltNotificationsEnabled}
           onChange={handleToggleTiltNotifications}
+        />
+        <SettingsToggleRow
+          label={t('account.perfLiteLabel')}
+          hint={t('account.perfLiteHint')}
+          checked={perfLiteEnabled}
+          onChange={handleTogglePerfLite}
         />
       </CollapsibleCard>
 

@@ -15,6 +15,7 @@ import { StrictMode, Suspense, lazy, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import TitleBar from './renderer/TitleBar.jsx';
 import LoadingState from './renderer/LoadingState.jsx';
+import { applyPerfLite } from './renderer/perfMode.js';
 import { CollapsedBlocksProvider } from './renderer/CollapsedBlocksContext.jsx';
 import { E2EEProvider } from './renderer/E2EEContext.jsx';
 
@@ -27,6 +28,8 @@ import { E2EEProvider } from './renderer/E2EEContext.jsx';
 const App = lazy(() => import('./renderer/App.jsx'));
 const AimTrainerHub = lazy(() => import('./renderer/AimTrainerHub.jsx'));
 const DailyOverlay = lazy(() => import('./renderer/DailyOverlay.jsx'));
+
+applyPerfLite();
 
 window.addEventListener('error', (e) => {
   console.error('window error', e.message, e.filename);

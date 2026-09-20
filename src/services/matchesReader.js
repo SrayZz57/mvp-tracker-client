@@ -50,10 +50,13 @@ function ensureWorker() {
   return worker;
 }
 
-export function getCachedMatchesAsync(puuid) {
+// `limit` optionnel : ne lit que les N matchs les plus récents (les plus
+// lourds, mais bien moins que tout l'historique) — pour les appelants
+// périodiques qui n'ont pas besoin du reste.
+export function getCachedMatchesAsync(puuid, limit) {
   return new Promise((resolve, reject) => {
     const id = nextRequestId++;
     pending.set(id, { resolve, reject });
-    ensureWorker().postMessage({ id, puuid });
+    ensureWorker().postMessage({ id, puuid, limit });
   });
 }

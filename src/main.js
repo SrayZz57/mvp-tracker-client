@@ -11,6 +11,7 @@ import {
   saveMatches,
   savePingSample,
   getAllPingSamples,
+  prunePingSamples,
   saveCrosshair,
   getCrosshairs,
   deleteCrosshair,
@@ -33,7 +34,7 @@ import {
   saveCareerRecords,
   pruneOldMatchDetail,
 } from './services/db.js';
-import { isValorantRunning, pingOnce, isValorantFocused, isValorantGameRunning } from './services/network.js';
+import { isValorantRunning, pingOnce, isValorantGameRunning } from './services/network.js';
 import { syncMatches } from './services/matchSync.js';
 import { getCachedMatchesAsync } from './services/matchesReader.js';
 import { updateElectronApp } from 'update-electron-app';
@@ -140,20 +141,28 @@ function currentPuuid() {
 // compte réellement lié (currentPuuid()) : Hall of Fame ne s'affiche jamais
 // pour un profil simplement consulté, inutile d'y calculer quoi que ce soit
 // — mais on allège quand même SON historique aussi, pour la taille du cache.
-async function updateCareerRecordsAndPrune(puuid, name, tag) {
-  if (puuid && puuid === currentPuuid()) {
+//
+// `newMatchCount` (retour de saveMatches) : le recalcul relit TOUT l'historique
+// du compte (des dizaines de Mo à parser) — inutile, et coûteux en pleine
+// partie, quand la synchro n'a rien ramené de nouveau (cas de la quasi-totalité
+// des vérifications toutes les 2 et 5 minutes). Seul le premier passage (aucun
+// record encore figé) recalcule sans nouveau match.
+async function updateCareerRecordsAndPrune(puuid, name, tag, newMatchCount) {
+  const isSelf = !!puuid && puuid === currentPuuid();
+  if (isSelf && (newMatchCount > 0 || !getCareerRecords(puuid))) {
     try {
       const allMatches = await getCachedMatchesAsync(puuid);
       const records = computeHallOfFame(allMatches, name, tag);
       saveCareerRecords(puuid, records);
     } catch (err) {
-      // Un souci ici ne doit pas empêcher l'allègement en dessous, ni faire
-      // échouer la synchro qui a déclenché cet appel — au pire, les records
-      // resteront basés sur l'ancien détail pour ce match-là, rattrapé à la
-      // prochaine synchro.
+      // Un souci ici ne doit pas faire échouer la synchro qui a déclenché cet
+      // appel — mais voir plus bas : sans records figés, on n'allège pas.
       console.error('[career-records] échec de mise à jour', err.message);
     }
   }
+  // Jamais d'allègement du compte lié tant que ses records ne sont pas figés :
+  // le détail supprimé ne pourrait plus jamais être relu pour les recalculer.
+  if (isSelf && !getCareerRecords(puuid)) return;
   try {
     pruneOldMatchDetail(puuid);
   } catch (err) {
@@ -407,6 +416,10 @@ const createWindow = () => {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    // Icône de la barre des tâches : une fois l'app empaquetée, celle de
+    // l'exécutable suffit, mais en dev (npm start) Windows affichait celle
+    // d'Electron faute de cette option.
+    icon: trayIconPath,
     // `show: false` + maximize()/show() une fois prête évite un flash visible
     // de la fenêtre à sa petite taille par défaut avant l'agrandissement.
     show: false,
@@ -566,6 +579,7 @@ ipcMain.handle('aim-trainer:open', (_event, config) => {
 
   aimTrainerWindow = new BrowserWindow({
     fullscreen: true,
+    icon: trayIconPath,
     autoHideMenuBar: true,
     backgroundColor: '#0a0c10',
     webPreferences: {
@@ -829,13 +843,14 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
   const cachedIds = new Set((await getCachedMatchesAsync(account.puuid)).map((m) => m.metadata.matchid));
 
   let rateLimited = false;
+  let newMatchCount = 0;
   for (const candidate of platformCandidates(account)) {
     if (rateLimited) break;
     for (let start = 0; start < HISTORY_CAP; start += PAGE_SIZE) {
       try {
         const page = await getMatches(account.region, candidate, name, tag, apiKey, { size: PAGE_SIZE, start });
         console.log(`[henrikdev] page ${candidate}/start=${start} → ${page.length} match(s) normalisé(s)`);
-        if (page.length > 0) saveMatches(account.puuid, page);
+        if (page.length > 0) newMatchCount += saveMatches(account.puuid, page);
         if (page.length > 0 && page.every((m) => cachedIds.has(m.metadata.matchid))) break; // rien de nouveau au-delà
         if (page.length < PAGE_SIZE) break; // plus d'historique derrière sur cette plateforme
       } catch (err) {
@@ -855,7 +870,7 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
     }
   }
 
-  await updateCareerRecordsAndPrune(account.puuid, name, tag);
+  await updateCareerRecordsAndPrune(account.puuid, name, tag, newMatchCount);
 
   return {
     matches: patchSelfIdentity(await getCachedMatchesAsync(account.puuid), account.puuid, name, tag),
@@ -916,28 +931,46 @@ ipcMain.handle('network:get-status', () => networkStatus);
 // session, cet appel et celui qui enregistre linkedAccountPuuid partent en
 // parallèle depuis le renderer — currentPuuid() peut donc encore être vide
 // au moment où celui-ci s'exécute, même si le puuid demandé est le bon.
+// Fenêtre de lecture (interface) plus courte que la durée de conservation
+// (disque) : les mesures un peu plus anciennes restent en base sans être
+// transférées à chaque lancement.
+const PING_READ_WINDOW_MS = 60 * 24 * 60 * 60 * 1000;
+const PING_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
 ipcMain.handle('network:get-ping-samples', (_event, puuid) => {
   const target = puuid ?? currentPuuid();
-  return target ? getAllPingSamples(target) : [];
+  return target ? getAllPingSamples(target, Date.now() - PING_READ_WINDOW_MS) : [];
 });
 
-// Coupe aussi les animations décoratives dès qu'une partie est LANCÉE (pas
-// juste le client ouvert) — un joueur qui garde l'app visible sur un second
-// écran pendant qu'il joue n'aurait sinon jamais le bénéfice de la coupure
-// sur perte de focus (voir window:focus-change) puisque la fenêtre reste au
-// premier plan. Signal : Valorant au premier plan côté Windows (couvre le
-// Terrain d'entraînement, les menus et une vraie partie). Anciennement
-// combiné avec un second signal issu de l'API locale du client (pregame/
-// core-game) — retiré (2026-09-15, voir le retrait complet de cette API) ;
-// perte mineure : ne détecte plus "en partie mais fenêtre pas au premier
-// plan" (cas marginal, ex. double écran avec Valorant pas focus).
-// isValorantRunning() d'abord pour éviter tout appel PowerShell tant que le
-// client est fermé.
+// Purge des vieilles mesures, un peu après le démarrage (pas dans le chemin
+// d'affichage de la fenêtre) puis une fois par jour si l'app reste ouverte.
+function purgeOldPingSamples() {
+  try {
+    const removed = prunePingSamples(Date.now() - PING_RETENTION_MS);
+    if (removed > 0) console.log(`[db] ${removed} ancienne(s) mesure(s) de ping purgée(s)`);
+  } catch (err) {
+    console.error('[db] échec de la purge des mesures de ping', err.message);
+  }
+}
+setTimeout(purgeOldPingSamples, 60 * 1000);
+setInterval(purgeOldPingSamples, 24 * 60 * 60 * 1000);
+
+// Coupe aussi les animations décoratives dès que le JEU est lancé (pas juste
+// le client ouvert) — un joueur qui garde l'app visible sur un second écran
+// pendant qu'il joue n'aurait sinon jamais le bénéfice de la coupure sur
+// perte de focus (voir window:focus-change).
+// Signal : le process du jeu tourne (tasklist, très léger). Anciennement :
+// Valorant au premier plan, mesuré par un powershell.exe + Add-Type (compilation
+// C#) relancé toutes les 6 s — un pic CPU régulier en pleine partie, signalé
+// comme perte de FPS par un joueur (80-90 → 50-60 en skirmish). Contrepartie :
+// les animations sont aussi coupées si le joueur alt-tab pendant que le jeu
+// tourne, ce qui est plutôt un avantage.
+// isValorantRunning() d'abord pour ne rien lancer tant que le client est fermé.
 let lastMatchActive = false;
 
 async function pollMatchActive() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const active = isValorantRunning() && (await isValorantFocused());
+  const active = isValorantRunning() && (await isValorantGameRunning());
   if (active !== lastMatchActive) {
     lastMatchActive = active;
     mainWindow.webContents.send('window:match-active-change', active);
@@ -978,8 +1011,8 @@ async function checkTiltAndNotify() {
   try {
     const account = await getAccount(settings.name, settings.tag, settings.apiKey);
     const freshMatches = await getMatchesWithFallback(account, settings.name, settings.tag, settings.apiKey);
-    saveMatches(account.puuid, freshMatches);
-    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag);
+    const newMatchCount = saveMatches(account.puuid, freshMatches);
+    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag, newMatchCount);
 
     const latestId = freshMatches[0]?.metadata?.matchid ?? null;
     if (!latestId || latestId === tiltPollState.lastMatchId) return;
@@ -1110,6 +1143,12 @@ function createDailyOverlay() {
   dailyOverlayWindow.webContents.on('console-message', (_e, _level, message) => {
     console.log('[daily-overlay]', message);
   });
+  dailyOverlayWindow.webContents.on('did-fail-load', (_e, code, description) => {
+    console.error(`[daily-overlay] échec de chargement de la page (${code} ${description})`);
+  });
+  dailyOverlayWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[daily-overlay] process de rendu arrêté :', details.reason);
+  });
 
   dailyOverlayWindow.showInactive();
   if (!dailyOverlayTopmostInterval) {
@@ -1144,12 +1183,25 @@ function closeDailyOverlay() {
 // la faire glisser, jamais persisté nulle part.
 const DAILY_OVERLAY_PREVIEW_STATS = { dayKey: 'preview', matchesPlayed: 1, wins: 3, losses: 1, kd: 1.24, hsPercent: 53 };
 
+// Dernières vraies stats calculées — la fenêtre overlay les redemande elle-même
+// une fois montée (voir daily-overlay:get-stats). Envoyer uniquement au
+// 'did-finish-load' ne suffit plus : DailyOverlay est chargé en React.lazy
+// (renderer.jsx), son composant et son écouteur IPC n'existent donc qu'APRÈS
+// ce signal — le message partait dans le vide et l'overlay restait invisible
+// (impossible à déplacer hors partie, et absent en jeu jusqu'au refresh suivant).
+let dailyOverlayLatestStats = null;
+
+ipcMain.handle('daily-overlay:get-stats', () =>
+  dailyOverlayLatestStats ?? (dailyOverlayDragMode ? DAILY_OVERLAY_PREVIEW_STATS : null),
+);
+
 // Active/désactive le mode déplacement — voir le commentaire sur
 // dailyOverlayDragMode plus haut. Toujours forcé à `false` dès qu'une vraie
 // partie démarre (voir la boucle de détection plus bas) : ne doit jamais
 // rester interactif pendant que l'utilisateur joue.
 function setDailyOverlayDragMode(enabled) {
   dailyOverlayDragMode = enabled;
+  console.log(`[daily-overlay] mode déplacement ${enabled ? 'activé' : 'désactivé'} (jeu détecté : ${dailyOverlayLastRunning})`);
 
   if (enabled) {
     const needsPreview = !dailyOverlayWindow || dailyOverlayWindow.isDestroyed();
@@ -1238,18 +1290,22 @@ async function refreshDailyOverlay() {
     const t1 = Date.now();
     const freshMatches = await getMatchesWithFallback(account, settings.name, settings.tag, settings.apiKey);
     const t2 = Date.now();
-    saveMatches(account.puuid, freshMatches);
+    const newMatchCount = saveMatches(account.puuid, freshMatches);
     const t3 = Date.now();
 
-    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag);
+    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag, newMatchCount);
 
-    const allMatches = await getCachedMatchesAsync(account.puuid);
+    // Seule la journée en cours compte pour l'overlay : les 100 matchs les
+    // plus récents suffisent largement, inutile de reparser tout l'historique
+    // toutes les 5 minutes en pleine partie.
+    const allMatches = await getCachedMatchesAsync(account.puuid, 100);
     const t4 = Date.now();
     dailyOverlayState.dayKey = resolveSessionDay(allMatches, dailyOverlayState.dayKey);
     const excludedModes = store.get('dailyOverlayExcludedModes') ?? [];
     const stats = computeDailyStats(allMatches, settings.name, settings.tag, dailyOverlayState.dayKey, excludedModes);
     const t5 = Date.now();
     console.log('[daily-overlay] stats calculées', stats);
+    dailyOverlayLatestStats = stats;
     console.log(
       `[daily-overlay] timing: getAccount=${t1 - t0}ms getMatches=${t2 - t1}ms saveMatches=${t3 - t2}ms getCachedMatches=${t4 - t3}ms compute=${t5 - t4}ms TOTAL=${t5 - t0}ms`,
     );

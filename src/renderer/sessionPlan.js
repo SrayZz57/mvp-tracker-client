@@ -58,9 +58,10 @@ export function buildSessionPlan(t, matches, name, tag) {
 
   const matchCount = tilt.isTilted ? 2 : 3;
 
-  const objective = targetMap
-    ? t('session.objectiveWithMap', { count: matchCount, map: targetMap, hsTarget })
-    : t('session.objectiveNoMap', { count: matchCount, hsTarget });
+  // Volontairement sans map : on ne choisit pas la map en file d'attente, un
+  // objectif "3 matchs sur Split" n'était donc pas atteignable de façon fiable
+  // (signalé sur Discord). targetMap ne sert plus qu'à la checklist Stratégie.
+  const objective = t('session.objectiveNoMap', { count: matchCount, hsTarget });
 
   return { warmup, targetMap, tilt, matchCount, hsTarget, objective };
 }

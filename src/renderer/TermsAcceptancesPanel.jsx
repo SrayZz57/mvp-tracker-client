@@ -6,7 +6,11 @@ import LoadingState from './LoadingState.jsx';
 import { normalizeRiotIdPart } from './valorantStats.js';
 
 const PAGE_SIZE = 1000;
-const MAX_ROWS_SHOWN = 200;
+// Affichage progressif : quelques lignes au départ, puis "Voir plus" en
+// ajoute STEP à la fois — plusieurs centaines de lignes d'un coup rendaient
+// la page interminable à faire défiler.
+const INITIAL_ROWS = 20;
+const ROWS_STEP = 50;
 
 // PostgREST plafonne une requête à 1000 lignes par défaut — on pagine pour
 // que la liste reste complète quand la base d'utilisateurs dépasse ça.
@@ -33,6 +37,8 @@ function TermsAcceptancesPanel() {
   const { t, i18n } = useTranslation();
   const [state, setState] = useState({ loading: true, error: null, profiles: [], acceptedAtById: new Map() });
   const [filter, setFilter] = useState('');
+  const [acceptedShown, setAcceptedShown] = useState(INITIAL_ROWS);
+  const [pendingShown, setPendingShown] = useState(INITIAL_ROWS);
   const locale = i18n.language === 'en' ? 'en-US' : 'fr-FR';
 
   useEffect(() => {
@@ -93,7 +99,11 @@ function TermsAcceptancesPanel() {
         className="terms-admin-filter"
         placeholder={t('terms.admin.filterPlaceholder')}
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
+        onChange={(e) => {
+          setFilter(e.target.value);
+          setAcceptedShown(INITIAL_ROWS);
+          setPendingShown(INITIAL_ROWS);
+        }}
       />
 
       <section className="admin-section">
@@ -102,7 +112,7 @@ function TermsAcceptancesPanel() {
           <p className="label">{t('terms.admin.noneAccepted')}</p>
         ) : (
           <ul className="tournament-admin-list">
-            {accepted.slice(0, MAX_ROWS_SHOWN).map((p) => (
+            {accepted.slice(0, acceptedShown).map((p) => (
               <li key={p.id} className="tournament-admin-item">
                 <span className="tournament-admin-name">{displayName(p)}</span>
                 <span className="label">
@@ -112,7 +122,11 @@ function TermsAcceptancesPanel() {
             ))}
           </ul>
         )}
-        {accepted.length > MAX_ROWS_SHOWN && <p className="label">{t('terms.admin.truncated', { count: MAX_ROWS_SHOWN })}</p>}
+        {accepted.length > acceptedShown && (
+          <button className="account-forgot-password" onClick={() => setAcceptedShown((n) => n + ROWS_STEP)}>
+            {t('terms.admin.showMore', { count: accepted.length - acceptedShown })}
+          </button>
+        )}
       </section>
 
       <section className="admin-section">
@@ -121,14 +135,18 @@ function TermsAcceptancesPanel() {
           <p className="label">{t('terms.admin.nonePending')}</p>
         ) : (
           <ul className="tournament-admin-list">
-            {pending.slice(0, MAX_ROWS_SHOWN).map((p) => (
+            {pending.slice(0, pendingShown).map((p) => (
               <li key={p.id} className="tournament-admin-item">
                 <span className="tournament-admin-name">{displayName(p)}</span>
               </li>
             ))}
           </ul>
         )}
-        {pending.length > MAX_ROWS_SHOWN && <p className="label">{t('terms.admin.truncated', { count: MAX_ROWS_SHOWN })}</p>}
+        {pending.length > pendingShown && (
+          <button className="account-forgot-password" onClick={() => setPendingShown((n) => n + ROWS_STEP)}>
+            {t('terms.admin.showMore', { count: pending.length - pendingShown })}
+          </button>
+        )}
       </section>
     </div>
   );

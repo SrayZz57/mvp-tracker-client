@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Trophy } from 'lucide-react';
+import { X, Trophy, Plus, Search } from 'lucide-react';
 import Icon from '../Icon.jsx';
 import { supabase } from '../supabaseClient.js';
 import { useMapImages } from '../mapImages.js';
 import { useAgentPortraits } from '../agentIcons.js';
+import { useRankLadder } from '../rankData.js';
 import { pickSplash } from '../tournamentVisuals.js';
 import TournamentDetail from '../TournamentDetail.jsx';
+import TournamentCreateForm from '../TournamentCreateForm.jsx';
 
 const STATUS_LABELS = {
   registration: 'tournaments.status.registration',
@@ -17,7 +19,17 @@ const STATUS_LABELS = {
 // Nombre de cartes affichées avant "Voir plus" — le panneau promo à droite a
 // une hauteur fixe (calée sur la fenêtre) : sans cette limite, une longue
 // liste l'étirerait avec elle plutôt que de simplement défiler/se replier.
+// Ne s'applique qu'à la section Communauté (voir plus bas) : la section
+// Officiels reste courte par nature (curée par les admins), jamais paginée.
 const VISIBLE_COUNT = 4;
+
+function rankRangeLabel(ladderByTier, rankMin, rankMax, t) {
+  if (!rankMin && !rankMax) return t('tournaments.anyRank');
+  const minName = rankMin ? ladderByTier.get(rankMin)?.tierName ?? rankMin : t('tournaments.noMin');
+  if (rankMin === rankMax) return minName;
+  const maxName = rankMax ? ladderByTier.get(rankMax)?.tierName ?? rankMax : t('tournaments.noMax');
+  return `${minName} — ${maxName}`;
+}
 
 // Panneau décoratif dans l'espace vide à droite de la liste — Neon en
 // vedette (thème électrique/néon, cohérent avec l'identité du module),
@@ -136,13 +148,85 @@ function TournamentsMine({ myId, onSelect }) {
   );
 }
 
+// Une carte de tournoi — partagée entre la section Officiels et la section
+// Communauté. La suppression est proposée à l'admin (modération) ET au
+// créateur du tournoi (gère le sien) — voir sql/tournaments_community.sql,
+// la policy delete autorise les deux.
+function TournamentCard({
+  tournament,
+  index,
+  splash,
+  winner,
+  canDelete,
+  confirming,
+  deleting,
+  onSelect,
+  onConfirmDelete,
+  onCancelDelete,
+  onDelete,
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="tournament-card"
+      role="button"
+      tabIndex={0}
+      style={{ '--i': index, ...(splash ? { backgroundImage: `url(${splash})` } : null) }}
+      onClick={onSelect}
+      onKeyDown={(e) => e.key === 'Enter' && onSelect()}
+    >
+      {canDelete && (
+        <div className="tournament-card-admin-actions" onClick={(e) => e.stopPropagation()}>
+          {confirming ? (
+            <>
+              <button className="tournament-card-delete-confirm" disabled={deleting} onClick={onDelete}>
+                {deleting ? t('tournaments.saving') : t('tournaments.confirmDelete')}
+              </button>
+              <button className="tournament-card-delete-cancel" onClick={onCancelDelete}>
+                {t('tournaments.cancel')}
+              </button>
+            </>
+          ) : (
+            <button className="tournament-card-delete" title={t('tournaments.deleteTournament')} onClick={onConfirmDelete}>
+              <Icon icon={X} size={14} />
+            </button>
+          )}
+        </div>
+      )}
+      <span className={`tournament-status-badge ${tournament.status}`}>
+        {t(STATUS_LABELS[tournament.status] ?? tournament.status)}
+      </span>
+      {tournament.game_mode && (
+        <span className="tournament-mode-badge">{t(`tournaments.gameMode.${tournament.game_mode}`)}</span>
+      )}
+      <div className="tournament-card-content">
+        <span className="tournament-card-name">{tournament.name}</span>
+        {tournament.description && <p className="tournament-card-description">{tournament.description}</p>}
+        {tournament.status === 'completed' && winner && (
+          <p className="tournament-card-winner">
+            <Icon icon={Trophy} size={16} aria-hidden="true" /> {t('tournaments.winner', { name: winner })}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Liste des tournois — sert de page d'entrée pour tous les comptes connectés
 // (pas encore une vraie page publique accessible sans compte, ça viendra
 // séparément si besoin). Cliquer un tournoi ouvre TournamentDetail, qui gère
 // l'affichage + l'inscription d'équipe.
+//
+// Deux catégories : les tournois "officiels" (créés par un admin, épinglés
+// en premier, is_official posé par un trigger côté base à la création) et
+// les tournois "communauté" (créés par n'importe quel compte connecté),
+// avec leur propre recherche + filtre de rang. Voir
+// sql/tournaments_community.sql pour le schéma/les policies.
 function TournamentsTab({ myId, isAdmin }) {
   const { t } = useTranslation();
   const mapImages = useMapImages();
+  const ladder = useRankLadder();
+  const ladderByTier = useMemo(() => new Map(ladder.map((tier) => [tier.tier, tier])), [ladder]);
   const [tournaments, setTournaments] = useState([]);
   const [winnerNames, setWinnerNames] = useState(new Map());
   const [loading, setLoading] = useState(true);
@@ -150,23 +234,52 @@ function TournamentsTab({ myId, isAdmin }) {
   const [showAll, setShowAll] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [communitySearch, setCommunitySearch] = useState('');
+  const [communityRankFilter, setCommunityRankFilter] = useState('');
+
+  // Masque (sans JAMAIS supprimer) les tournois en inscriptions dont la date
+  // limite est passée ET qui n'ont aucune équipe : plus rien à y faire, mais
+  // les données restent en base. Avant, ce nettoyage SUPPRIMAIT tout tournoi
+  // expiré non complet — équipes comprises — donc un tournoi à 6 équipes sur 8
+  // disparaissait au lieu de pouvoir démarrer avec des byes. Un tournoi expiré
+  // qui a des équipes reste visible (fermé) pour que son créateur le lance.
+  async function hideEmptyExpiredTournaments(rows) {
+    const now = Date.now();
+    const expired = rows.filter(
+      (tm) => tm.status === 'registration' && tm.registration_deadline && new Date(tm.registration_deadline).getTime() < now,
+    );
+    if (expired.length === 0) return rows;
+
+    const { data: teamRows } = await supabase
+      .from('tournament_teams')
+      .select('tournament_id')
+      .in('tournament_id', expired.map((tm) => tm.id));
+    const withTeams = new Set((teamRows ?? []).map((row) => row.tournament_id));
+
+    const hidden = new Set(expired.filter((tm) => !withTeams.has(tm.id)).map((tm) => tm.id));
+    return hidden.size === 0 ? rows : rows.filter((tm) => !hidden.has(tm.id));
+  }
 
   function loadTournaments() {
     supabase
       .from('tournaments')
-      .select('id, name, description, status, max_teams')
+      .select(
+        'id, name, description, status, max_teams, created_by, is_official, rank_min, rank_max, registration_deadline, game_mode',
+      )
       .order('created_at', { ascending: false })
       .then(async ({ data, error }) => {
         if (error) {
           setLoading(false);
           return;
         }
-        setTournaments(data ?? []);
+        const rows = await hideEmptyExpiredTournaments(data ?? []);
+        setTournaments(rows);
         setLoading(false);
 
         // Vainqueur affiché sur les tournois terminés : le vainqueur du
         // match du tour le plus élevé (la finale) qui en a un.
-        const completedIds = (data ?? []).filter((tm) => tm.status === 'completed').map((tm) => tm.id);
+        const completedIds = rows.filter((tm) => tm.status === 'completed').map((tm) => tm.id);
         if (completedIds.length === 0) return;
 
         const { data: matches } = await supabase
@@ -205,10 +318,11 @@ function TournamentsTab({ myId, isAdmin }) {
 
   if (loading) return <p className="label">{t('tournaments.loading')}</p>;
 
-  // Suppression réservée à l'admin : côté serveur (RLS), la même barrière
-  // que pour créer/modifier un tournoi (public.is_admin()) — celle-ci
-  // existe déjà, aucune nouvelle policy à poser. La suppression cascade sur
-  // les équipes/matchs de ce tournoi (contrainte déjà posée sur ces tables).
+  // Suppression : admin (modération, comme avant) OU créateur du tournoi
+  // (gère le sien) — côté serveur (RLS), voir
+  // sql/tournaments_community.sql/tournaments_delete_own_or_admin_or_expired.
+  // La suppression cascade sur les équipes/matchs de ce tournoi (contrainte
+  // déjà posée sur ces tables).
   async function handleDelete(tournamentId) {
     setDeleting(true);
     await supabase.from('tournaments').delete().eq('id', tournamentId);
@@ -217,12 +331,45 @@ function TournamentsTab({ myId, isAdmin }) {
     loadTournaments();
   }
 
-  const visibleTournaments = showAll ? tournaments : tournaments.slice(0, VISIBLE_COUNT);
+  const official = tournaments.filter((tm) => tm.is_official);
+  const rankFilterValue = communityRankFilter ? Number(communityRankFilter) : null;
+  const community = tournaments.filter((tm) => {
+    if (tm.is_official) return false;
+    if (communitySearch.trim() && !tm.name.toLowerCase().includes(communitySearch.trim().toLowerCase())) return false;
+    if (rankFilterValue) {
+      if (tm.rank_min && tm.rank_min > rankFilterValue) return false;
+      if (tm.rank_max && tm.rank_max < rankFilterValue) return false;
+    }
+    return true;
+  });
+  const visibleCommunity = showAll ? community : community.slice(0, VISIBLE_COUNT);
+
+  function renderCard(tournament, index) {
+    const splash = pickSplash(tournament.id, mapImages);
+    const winner = winnerNames.get(tournament.id);
+    const confirming = confirmDeleteId === tournament.id;
+    return (
+      <TournamentCard
+        key={tournament.id}
+        tournament={tournament}
+        index={index}
+        splash={splash}
+        winner={winner}
+        canDelete={isAdmin || tournament.created_by === myId}
+        confirming={confirming}
+        deleting={deleting}
+        onSelect={() => setSelectedId(tournament.id)}
+        onConfirmDelete={() => setConfirmDeleteId(tournament.id)}
+        onCancelDelete={() => setConfirmDeleteId(null)}
+        onDelete={() => handleDelete(tournament.id)}
+      />
+    );
+  }
 
   return (
     <div className="tournaments-page">
-      <div className={`tournaments-list-block ${tournaments.length === 0 ? 'empty' : ''}`}>
-        {tournaments.length === 0 ? (
+      <div className="tournaments-list-block">
+        {official.length === 0 && community.length === 0 && (
           <div className="tournaments-empty-state">
             <span className="tournaments-empty-icon" aria-hidden="true">
               {/* Même dessin que le logo du panneau promo, mais recadré : le
@@ -239,76 +386,79 @@ function TournamentsTab({ myId, isAdmin }) {
             <h2 className="tournaments-empty-title">{t('tournaments.empty')}</h2>
             <p className="tournaments-empty-subtitle">{t('tournaments.emptySubtitle')}</p>
           </div>
-        ) : (
-          <div className="tournaments-list">
-            {visibleTournaments.map((tournament, index) => {
-              const splash = pickSplash(tournament.id, mapImages);
-              const winner = winnerNames.get(tournament.id);
-              const confirming = confirmDeleteId === tournament.id;
-              return (
-                <div
-                  key={tournament.id}
-                  className="tournament-card"
-                  role="button"
-                  tabIndex={0}
-                  style={{ '--i': index, ...(splash ? { backgroundImage: `url(${splash})` } : null) }}
-                  onClick={() => setSelectedId(tournament.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && setSelectedId(tournament.id)}
-                >
-                  {isAdmin && (
-                    <div className="tournament-card-admin-actions" onClick={(e) => e.stopPropagation()}>
-                      {confirming ? (
-                        <>
-                          <button
-                            className="tournament-card-delete-confirm"
-                            disabled={deleting}
-                            onClick={() => handleDelete(tournament.id)}
-                          >
-                            {deleting ? t('tournaments.saving') : t('tournaments.confirmDelete')}
-                          </button>
-                          <button className="tournament-card-delete-cancel" onClick={() => setConfirmDeleteId(null)}>
-                            {t('tournaments.cancel')}
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          className="tournament-card-delete"
-                          title={t('tournaments.deleteTournament')}
-                          onClick={() => setConfirmDeleteId(tournament.id)}
-                        >
-                          <Icon icon={X} size={14} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <span className={`tournament-status-badge ${tournament.status}`}>
-                    {t(STATUS_LABELS[tournament.status] ?? tournament.status)}
-                  </span>
-                  <div className="tournament-card-content">
-                    <span className="tournament-card-name">{tournament.name}</span>
-                    {tournament.description && <p className="tournament-card-description">{tournament.description}</p>}
-                    {tournament.status === 'completed' && winner && (
-                      <p className="tournament-card-winner">
-                        <Icon icon={Trophy} size={16} aria-hidden="true" /> {t('tournaments.winner', { name: winner })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {!showAll && tournaments.length > VISIBLE_COUNT && (
-              <button className="tournaments-show-more" onClick={() => setShowAll(true)}>
-                {t('tournaments.showMore', { count: tournaments.length - VISIBLE_COUNT })}
-              </button>
-            )}
-          </div>
         )}
+
+        {official.length > 0 && (
+          <div className="tournaments-list">{official.map((tournament, index) => renderCard(tournament, index))}</div>
+        )}
+
+        <div className="card tournaments-community-card">
+          <div className="tournaments-community-header">
+            <h2 className="tournaments-how-title">{t('tournaments.community.title')}</h2>
+            <button className="refresh tournaments-create-btn" onClick={() => setShowCreateForm(true)}>
+              <Icon icon={Plus} size={14} /> {t('tournaments.createOwn')}
+            </button>
+          </div>
+          <div className="filter-bar tournaments-community-filters">
+            <div className="tournaments-search">
+              <Icon icon={Search} size={14} />
+              <input
+                type="text"
+                placeholder={t('tournaments.community.searchPlaceholder')}
+                value={communitySearch}
+                onChange={(e) => setCommunitySearch(e.target.value)}
+              />
+            </div>
+            <select value={communityRankFilter} onChange={(e) => setCommunityRankFilter(e.target.value)}>
+              <option value="">{t('tournaments.community.anyRankFilter')}</option>
+              {ladder.map((tier) => (
+                <option key={tier.tier} value={tier.tier}>{tier.tierName}</option>
+              ))}
+            </select>
+          </div>
+
+          {community.length === 0 ? (
+            <div className="tournaments-community-empty">
+              <Icon icon={Trophy} size={26} aria-hidden="true" />
+              <p>{t('tournaments.community.empty')}</p>
+            </div>
+          ) : (
+            <div className="tournaments-list">
+              {visibleCommunity.map((tournament, index) => (
+                <div key={tournament.id}>
+                  {renderCard(tournament, index)}
+                  <p className="label tournament-card-rank-hint">
+                    {rankRangeLabel(ladderByTier, tournament.rank_min, tournament.rank_max, t)}
+                  </p>
+                </div>
+              ))}
+              {!showAll && community.length > VISIBLE_COUNT && (
+                <button className="tournaments-show-more" onClick={() => setShowAll(true)}>
+                  {t('tournaments.showMore', { count: community.length - VISIBLE_COUNT })}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <div className="tournaments-middle-column">
         <TournamentsHowItWorks />
         <TournamentsMine myId={myId} onSelect={setSelectedId} />
       </div>
       <TournamentsPromo />
+      {showCreateForm && (
+        <div className="custom-config-overlay" onClick={() => setShowCreateForm(false)}>
+          <div className="custom-config-card" onClick={(e) => e.stopPropagation()}>
+            <TournamentCreateForm
+              myId={myId}
+              onCreated={() => {
+                setShowCreateForm(false);
+                loadTournaments();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

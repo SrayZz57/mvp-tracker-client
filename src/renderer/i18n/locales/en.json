@@ -39,6 +39,22 @@
       "activate": "Reactivate",
       "deactivate": "Hide",
       "delete": "Delete"
+    },
+    "notify": {
+      "title": "Send a notification",
+      "intro": "The message shows up in the announcements bell. \"All players\" = an announcement for everyone; \"One player\" = a message only they can see.",
+      "everyone": "All players",
+      "onePlayer": "One player",
+      "searchPlaceholder": "Player name or Riot ID...",
+      "search": "Search",
+      "searching": "Searching...",
+      "select": "Select",
+      "selected": "Selected",
+      "recipient": "Recipient:",
+      "confirmEveryone": "Send this message to ALL players?",
+      "send": "Send",
+      "sending": "Sending...",
+      "sent": "Message sent to: {{to}}"
     }
   },
   "tournaments": {
@@ -131,6 +147,12 @@
       "registration": "Registration open",
       "ongoing": "Ongoing",
       "completed": "Completed"
+    },
+    "registrationUntil": "Registration open until {{date}}",
+    "closedReason": {
+      "started": "Registration closed: the tournament has started.",
+      "deadline": "Registration closed: the deadline ({{date}}) has passed.",
+      "full": "Registration closed: the tournament is full."
     }
   },
   "collapsible": {
@@ -181,7 +203,8 @@
       "adminTerms": "Terms accepted",
       "lineups": "Lineups",
       "clips": "Clips",
-      "teamListings": "Team Search"
+      "teamListings": "Team Search",
+      "adminNotify": "Send a notification"
     },
     "rankUnavailable": "Rank unavailable",
     "searchPlaceholder": "Search a tab...",
@@ -200,7 +223,10 @@
     "discordTitle": "Join the Discord",
     "updateReady": "Update ready — Restart",
     "profileLoadFailed": "Could not load your profile — check your internet connection.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "changelog": "What's new",
+    "changelogTitle": "See what's new",
+    "announcementsTitle": "Announcements"
   },
   "terms": {
     "title": "Terms of use",
@@ -242,7 +268,7 @@
       "pendingTitle": "Not accepted yet ({{count}})",
       "noneAccepted": "Nobody has accepted yet.",
       "nonePending": "Every account has accepted.",
-      "truncated": "Only the first {{count}} are shown — narrow down with the filter.",
+      "showMore": "Show more ({{count}} left)",
       "error": "Could not load acceptances: {{message}}"
     }
   },
@@ -492,14 +518,12 @@
     "warmupNoData": "Not enough data on this time slot yet ({{slot}}) — standard warm-up.",
     "warmupGood": "You perform well in this time slot ({{slot}}, {{percent}}% winrate) — a short warm-up is enough.",
     "warmupBad": "Your winrate is lower in this time slot ({{slot}}, {{percent}}%) — take more time to warm up before queuing ranked.",
-    "objectiveWithMap_one": "{{count}} match on {{map}}, aim for {{hsTarget}}%+ headshot accuracy",
-    "objectiveWithMap_other": "{{count}} matches on {{map}}, aim for {{hsTarget}}%+ headshot accuracy",
     "objectiveNoMap_one": "{{count}} match, aim for {{hsTarget}}%+ headshot accuracy",
     "objectiveNoMap_other": "{{count}} matches, aim for {{hsTarget}}%+ headshot accuracy"
   },
   "aimTrainer": {
     "title": "Aim Trainer",
-    "hint": "A 3D \"flick\" mode calibrated to your real Valorant sensitivity. Configure everything here, then launch the session in a fullscreen game window.",
+    "hint": "A 3D aim trainer calibrated to your real Valorant sensitivity: 20+ modes, a daily challenge, leaderboards and a Sensitivity Finder to find your sensitivity.",
     "modeSection": "Training mode",
     "showMoreModes": "Show {{count}} more modes",
     "showFewerModes": "Show fewer modes",
@@ -572,6 +596,7 @@
     "weaponDefault": "Default",
     "weaponVandal": "Vandal (animated)",
     "darkThemeLabel": "Dark room (no blue sky or bright floor)",
+    "hitSoundLabel": "Sound when a target is hit",
     "crosshairSection": "Crosshair",
     "crosshairEmpty": "No crosshair in your library yet — add one from the Crosshairs tab.",
     "crosshairDefault": "Default cross",
@@ -1399,6 +1424,8 @@
     "matchHistory_one": "Match history ({{count}})",
     "matchHistory_other": "Match history ({{count}})",
     "allModes": "All modes",
+    "allMaps": "All maps",
+    "allAgents": "All agents",
     "hitBreakdown": " — Head {{hs}}% / Body {{bs}}% / Legs {{ls}}%"
   },
   "days": {
@@ -1797,7 +1824,9 @@
     "contactSent": "Message sent — thanks, we'll get back to you as soon as possible.",
     "contactError": "Failed to send — try again in a moment.",
     "choosePhoto": "Choose a profile photo",
-    "chooseFavoriteAgent": "Choose your favorite agent"
+    "chooseFavoriteAgent": "Choose your favorite agent",
+    "perfLiteLabel": "Low-resource mode",
+    "perfLiteHint": "Reduces animations and blur effects to make the app lighter on a modest PC. Turned on automatically on low-powered PCs; you can change it here."
   },
   "heatmap": {
     "title": "Heatmap",
@@ -2012,5 +2041,13 @@
     "discordLabel": "Discord:",
     "sending": "Sending...",
     "sendResponse": "Send my application"
+  },
+  "changelog": {
+    "title": "What's new"
+  },
+  "announcements": {
+    "title": "Announcements",
+    "empty": "No announcements yet.",
+    "personal": "Message for you"
   }
 }

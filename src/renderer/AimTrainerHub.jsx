@@ -1244,6 +1244,10 @@ function AimTrainerHub({ config: initialRawConfig }) {
                   />
                   <span>{t('aimTrainer.darkThemeLabel')}</span>
                 </label>
+                <label className="aim-config-check">
+                  <input type="checkbox" checked={config.hitSound} onChange={(e) => set({ hitSound: e.target.checked })} />
+                  <span>{t('aimTrainer.hitSoundLabel')}</span>
+                </label>
                 <button className="account-forgot-password" onClick={() => setConfig({ ...DEFAULT_CONFIG })}>
                   {t('aimTrainer.resetDefaults')}
                 </button>

@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setTiltNotificationsEnabled: (enabled) => ipcRenderer.invoke('tilt-notifications:set-enabled', enabled),
   getDailyOverlayEnabled: () => ipcRenderer.invoke('daily-overlay:get-enabled'),
   setDailyOverlayEnabled: (enabled) => ipcRenderer.invoke('daily-overlay:set-enabled', enabled),
+  getDailyOverlayStats: () => ipcRenderer.invoke('daily-overlay:get-stats'),
   onDailyOverlayStats: (callback) => {
     const listener = (_event, stats) => callback(stats);
     ipcRenderer.on('daily-overlay:stats', listener);

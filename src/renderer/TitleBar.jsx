@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
-import logo from '../assets/logo.png';
+import appIcon from '../assets/app-icon.png';
 import Icon from './Icon.jsx';
 
 // Fenêtre principale ouverte sans cadre natif (frame: false côté main.js) —
@@ -17,7 +17,7 @@ function TitleBar() {
   return (
     <div className="title-bar">
       <div className="title-bar-brand">
-        <img src={logo} alt="" />
+        <img src={appIcon} alt="" />
         <span>MVP Tracker</span>
       </div>
       <div className="title-bar-controls">

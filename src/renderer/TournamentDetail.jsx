@@ -128,7 +128,7 @@ function TeamRosterForm({ initialName, initialPlayers, saving, error, onSubmit, 
 // ce composant se contente de ne PAS proposer les actions interdites — même
 // en cas de requête forcée, Supabase refuse.
 function TournamentDetail({ tournamentId, myId, isAdmin, onBack }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const agentIcons = useAgentIcons();
   const mapImages = useMapImages();
   const [tournament, setTournament] = useState(null);
@@ -204,8 +204,28 @@ function TournamentDetail({ tournamentId, myId, isAdmin, onBack }) {
   const isFull = teams.length >= tournament.max_teams;
   const deadlinePassed =
     tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date();
-  const registrationClosed =
-    tournament.status !== 'registration' || (isFull && !myTeam) || deadlinePassed || matches.length > 0;
+  // Même règle qu'avant (fermé si tournoi lancé, date passée ou complet), mais
+  // on retient POURQUOI : un simple "Inscriptions closes." ne permettait pas de
+  // savoir si c'était la date limite, le nombre d'équipes ou le lancement du
+  // bracket. Ordre de priorité : lancé > date limite > complet.
+  const closedReason =
+    tournament.status !== 'registration' || matches.length > 0
+      ? 'started'
+      : deadlinePassed
+        ? 'deadline'
+        : isFull && !myTeam
+          ? 'full'
+          : null;
+  const registrationClosed = closedReason !== null;
+  // Affichée telle que l'app la lit (fuseau de l'appareil) : si l'heure
+  // affichée ne correspond pas à celle saisie à la création, c'est le
+  // symptôme d'un décalage de fuseau à l'enregistrement.
+  const deadlineLabel = tournament.registration_deadline
+    ? new Date(tournament.registration_deadline).toLocaleString(i18n.language === 'en' ? 'en-US' : 'fr-FR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : null;
   const pendingTeams = teams.filter((team) => team.status === 'pending');
   const approvedTeams = teams.filter((team) => team.status === 'approved');
 
@@ -366,6 +386,9 @@ function TournamentDetail({ tournamentId, myId, isAdmin, onBack }) {
         <span className={`tournament-status-badge ${tournament.status}`}>
           {t(STATUS_LABELS[tournament.status] ?? tournament.status)}
         </span>
+        {tournament.game_mode && (
+          <span className="tournament-mode-badge">{t(`tournaments.gameMode.${tournament.game_mode}`)}</span>
+        )}
         <div className="tournament-hero-content">
           <h1>{tournament.name}</h1>
           {tournament.description && <p className="tournament-hero-description">{tournament.description}</p>}
@@ -375,6 +398,13 @@ function TournamentDetail({ tournamentId, myId, isAdmin, onBack }) {
             </div>
             <span className="label">{t('tournaments.teamsCount', { count: teams.length, max: tournament.max_teams })}</span>
           </div>
+          {(closedReason || deadlineLabel) && (
+            <p className="label tournament-registration-window">
+              {closedReason
+                ? t(`tournaments.closedReason.${closedReason}`, { date: deadlineLabel })
+                : t('tournaments.registrationUntil', { date: deadlineLabel })}
+            </p>
+          )}
         </div>
       </div>
 
@@ -557,7 +587,7 @@ function TournamentDetail({ tournamentId, myId, isAdmin, onBack }) {
               <button onClick={() => setEditing(false)}>{t('tournaments.cancel')}</button>
             </>
           ) : registrationClosed ? (
-            <p className="warning">{t('tournaments.registrationClosed')}</p>
+            <p className="warning">{t(`tournaments.closedReason.${closedReason}`, { date: deadlineLabel })}</p>
           ) : (
             <>
               <h2>{t('tournaments.registerTeam')}</h2>

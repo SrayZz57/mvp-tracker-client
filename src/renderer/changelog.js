@@ -5,6 +5,22 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.10.13',
+    date: '2026-09-21',
+    items: {
+      fr: [
+        'Aim Trainer : un preset personnalisé garde maintenant le comportement du mode de base choisi (Tracking, Orbit...), et chaque étape d’une playlist reprend les réglages de son preset, nombre de cibles compris. Les anciens presets restent en Flick : il faut les recréer.',
+        'Détection de tilt : elle ne tourne plus que lorsque le jeu est lancé (plus quand seul le lanceur Riot est ouvert), et repart de zéro à chaque fermeture de Valorant.',
+        'Moins d’appels à l’API HenrikDev : les données déjà récupérées sont partagées entre le bouton Rafraîchir, l’overlay de session et la détection de tilt, et la vérification toutes les 2 minutes ne télécharge plus que le dernier match. Ton quota dure plus longtemps.',
+      ],
+      en: [
+        'Aim Trainer: a custom preset now keeps the behavior of the base mode you picked (Tracking, Orbit...), and each playlist step uses its preset’s settings, including the number of targets. Older presets stay Flick: you need to recreate them.',
+        'Tilt detection: it now only runs while the game is running (no longer when only the Riot launcher is open), and starts from scratch each time Valorant is closed.',
+        'Fewer HenrikDev API calls: data already fetched is shared between the Refresh button, the session overlay and tilt detection, and the check every 2 minutes only downloads the latest match. Your quota lasts longer.',
+      ],
+    },
+  },
+  {
     version: '1.10.11',
     date: '2026-09-20',
     items: {

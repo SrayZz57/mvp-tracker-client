@@ -444,6 +444,36 @@ function App() {
     if (activeTab === 'messages') setUnreadFriendIds(new Set());
   }, [activeTab]);
 
+  // Alertes push vers le téléphone (fin de match, tilt) : le process principal
+  // demande l'envoi, on lit ici les jetons du joueur (table push_tokens, voir
+  // sql/push_tokens.sql) car lui n'a pas la session Supabase. Aucun jeton =
+  // aucun téléphone relié = rien à envoyer.
+  useEffect(() => {
+    if (!myUserId || !window.electronAPI?.onMobilePushEvent) return undefined;
+    return window.electronAPI.onMobilePushEvent(async ({ title, body }) => {
+      const { data } = await supabase.from('push_tokens').select('token').eq('user_id', myUserId);
+      if (!data?.length) return;
+      const result = await window.electronAPI.sendMobilePush({ tokens: data.map((row) => row.token), title, body });
+      if (result?.invalid?.length) {
+        await supabase.from('push_tokens').delete().eq('user_id', myUserId).in('token', result.invalid);
+      }
+    });
+  }, [myUserId]);
+
+  // Publie les stats de l'overlay de session vers Supabase (table live_session,
+  // voir sql/live_session.sql) pour l'app mobile. Si la table n'existe pas
+  // encore, l'erreur est simplement ignorée.
+  useEffect(() => {
+    if (!myUserId || !window.electronAPI?.onDailyOverlayStats) return undefined;
+    return window.electronAPI.onDailyOverlayStats((stats) => {
+      if (!stats?.dayKey) return;
+      supabase
+        .from('live_session')
+        .upsert({ user_id: myUserId, stats, updated_at: new Date().toISOString() })
+        .then(() => {});
+    });
+  }, [myUserId]);
+
   useEffect(() => {
     if (!myUserId) return undefined;
     const channel = supabase

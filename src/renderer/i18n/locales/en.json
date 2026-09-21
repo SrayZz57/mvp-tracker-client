@@ -669,7 +669,7 @@
     "customTitle": "Custom",
     "customDesc": "Set your own parameters — this mode isn't compared between players on any leaderboard.",
     "customIntro": "The 6 standard modes are fixed so records stay comparable across everyone. Here, pick a starting mode then freely adjust every setting.",
-    "customBase": "Start from:",
+    "customBase": "Base mode (behavior + starting settings):",
     "customBasePlaceholder": "— pick a mode —",
     "customEdit": "Edit settings",
     "customCancel": "Cancel",

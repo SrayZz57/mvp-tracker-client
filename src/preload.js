@@ -41,6 +41,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('daily-overlay:stats', listener);
     return () => ipcRenderer.removeListener('daily-overlay:stats', listener);
   },
+  onMobilePushEvent: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('mobile-push:event', listener);
+    return () => ipcRenderer.removeListener('mobile-push:event', listener);
+  },
+  sendMobilePush: (payload) => ipcRenderer.invoke('mobile-push:send', payload),
   getDailyOverlayExcludedModes: () => ipcRenderer.invoke('daily-overlay:get-excluded-modes'),
   setDailyOverlayExcludedModes: (modeIds) => ipcRenderer.invoke('daily-overlay:set-excluded-modes', modeIds),
   getDailyOverlaySize: () => ipcRenderer.invoke('daily-overlay:get-size'),

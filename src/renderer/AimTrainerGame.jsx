@@ -660,6 +660,17 @@ export const SPRAY_PATTERN = [
 
 const SPRAY_SHOT_INTERVAL_MS = 100; // ≈ 600 coups/min, plausible pour un fusil d'assaut
 
+// Le mode « Personnalisé » n'a pas de comportement à lui : un preset garde celui
+// de son mode de base (Tracking = cible mobile + clic maintenu, Peek, Orbit...),
+// seuls la durée, la taille, le nombre et l'écartement des cibles sont libres. La
+// clé de score reste 'custom' (voir config.mode), pour que ces réglages libres ne
+// se mélangent jamais aux records des modes standards. Sans mode de base connu
+// (anciens presets), retombe sur le comportement de Flick, comme avant.
+export function behaviorKey(cfg) {
+  if (cfg?.mode === 'custom') return MODES[cfg.baseMode] ? cfg.baseMode : 'flick';
+  return cfg?.mode;
+}
+
 export const DEFAULT_CONFIG = {
   mode: 'flick',
   dpi: 800,
@@ -741,6 +752,14 @@ function pickNonOverlappingPosition(spreadDeg, targetSize, siblings, excludeEntr
 // cycle caché/exposé) et tous les autres modes (simple sphère repositionnée
 // au hasard) restent cohérents partout où une cible est réinitialisée, sans
 // dupliquer cette branche à chaque appelant.
+// Cible du pool hors de l'exercice en cours : invisible sur tous ses éléments.
+function hideTargetEntry(entry) {
+  entry.mesh.visible = false;
+  entry.box.visible = false;
+  entry.body.visible = false;
+  entry.numberLabel.visible = false;
+}
+
 function resetTargetForMode(entry, mode, cfg, now, state) {
   if (mode.movement === 'peek') {
     // Toujours centrée pile devant le joueur (pas de position aléatoire
@@ -1074,8 +1093,8 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   // porte déjà sa config numérique complète (duration/targetSize/targetCount/
   // spread + un nom pour l'affichage), résolue côté AimTrainer.jsx avant le
   // lancement — cette fenêtre n'a pas besoin de connaître les presets
-  // sauvegardés en localStorage. Toujours des cibles statiques (comme le
-  // mode Personnalisé), les presets n'exposant pas de réglage de mouvement.
+  // sauvegardés en localStorage. Le comportement des cibles vient du mode de
+  // base du preset (baseMode, voir behaviorKey).
   const playlistSteps = rawConfig?.playlistSteps ?? null;
   const activeList = playlist ?? playlistSteps;
   const [step, setStep] = useState(0);
@@ -1097,6 +1116,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           // une routine d'échauffement classique (PlaylistManager) n'en fournit
           // pas, donc retombe sur la sensibilité de base (rawConfig.sens).
           sens: activeStepConfig.sens ?? rawConfig?.sens,
+          baseMode: activeStepConfig.baseMode ?? null,
         }
       : {}),
   };
@@ -1126,6 +1146,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   configRef.current = config;
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+
 
   // Scène Three.js — montée une seule fois, pilotée ensuite via des refs pour
   // ne jamais avoir à la reconstruire (couteux) au fil des re-renders React.
@@ -1392,10 +1413,15 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       boxCenter: entry.box.position.clone(),
     });
 
-    const targets = [];
-    for (let i = 0; i < config.targetCount; i += 1) {
+    // Les scènes ne sont construites qu'une fois : une playlist de presets qui
+    // enchaîne des exercices à 1, 2 ou 5 cibles a besoin du maximum dès le départ.
+    // `targets` (utilisé partout ensuite) ne contient que les cibles ACTIVES de
+    // l'exercice en cours — voir setActiveTargets.
+    const poolSize = Math.max(config.targetCount, ...(rawConfig?.playlistSteps ?? []).map((step) => step.targetCount ?? 1));
+    const allTargets = [];
+    for (let i = 0; i < poolSize; i += 1) {
       const mesh = new THREE.Mesh(targetGeo, targetMat);
-      mesh.position.copy(pickNonOverlappingPosition(config.spread, config.targetSize, targets));
+      mesh.position.copy(pickNonOverlappingPosition(config.spread, config.targetSize, allTargets));
       mesh.scale.setScalar(config.targetSize);
       scene.add(mesh);
 
@@ -1429,24 +1455,26 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         hitsRemaining: null,
         // PV de la cible (mode Spray uniquement — voir MODES.spray.maxHp) ;
         // null pour les autres modes, qui ne s'en servent pas.
-        hp: MODES[config.mode]?.maxHp ?? null,
+        hp: MODES[behaviorKey(config)]?.maxHp ?? null,
         snapArmedAt: null,
         peekLayout,
         spawnedAt: performance.now(),
         poppedAt: performance.now(),
         anchor: mesh.position.clone(),
-        ...makeMotion(MODES[config.mode]),
+        ...makeMotion(MODES[behaviorKey(config)]),
       };
       entry.peek = initPeekState(entry, performance.now());
-      targets.push(entry);
+      allTargets.push(entry);
     }
+    const targets = allTargets.slice(0, config.targetCount);
+    allTargets.slice(config.targetCount).forEach(hideTargetEntry);
 
     // Assigne un ordre 1..N mélangé aux cibles du mode Switch, et fait
     // pointer chaque pastille vers la texture correspondante — appelé à la
     // création ET à chaque nouveau cycle complet (voir handleClick). Les
     // textures sont créées une seule fois par session (pas à chaque mélange)
     // pour éviter d'accumuler des CanvasTexture jetables.
-    const switchNumberTextures = targets.map((_, i) => makeNumberTexture(i + 1));
+    const switchNumberTextures = allTargets.map((_, i) => makeNumberTexture(i + 1));
     const positionNumberLabel = (entry, cfg) => {
       entry.numberLabel.position.set(
         entry.mesh.position.x,
@@ -1468,7 +1496,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         positionNumberLabel(entry, cfg);
       });
     };
-    if (MODES[config.mode]?.movement === 'switch') {
+    if (MODES[behaviorKey(config)]?.movement === 'switch') {
       reshuffleSwitch(targets, config);
     }
 
@@ -1502,6 +1530,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       renderer,
       euler,
       targets,
+      allTargets,
       makeMotion,
       initPeekState,
       reshuffleSwitch,
@@ -1677,7 +1706,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       state.mixer?.update(dt / 1000);
       muzzleFlash.material.opacity = now < state.flashUntil ? 1 : 0;
 
-      const mode = MODES[configRef.current.mode] ?? MODES.flick;
+      const mode = MODES[behaviorKey(configRef.current)] ?? MODES.flick;
       const cfg = configRef.current;
 
       // Murs Dodge Flash : visibles seulement dans ce mode (voir leur
@@ -1952,10 +1981,10 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // viseur = raté, comme dans les autres modes.
       // Mode Patrol (passiveTrack) : même échantillonnage continu, mais sans
       // clic à maintenir — "held" reste vrai en permanence pendant la manche.
-      const activeTrackingMode = MODES[cfg.mode]?.holdTracking || MODES[cfg.mode]?.passiveTrack;
+      const activeTrackingMode = MODES[behaviorKey(cfg)]?.holdTracking || MODES[behaviorKey(cfg)]?.passiveTrack;
       if (activeTrackingMode && phaseRef.current === 'running') {
         const TRACK_SAMPLE_INTERVAL_MS = 100;
-        const held = MODES[cfg.mode]?.passiveTrack ? true : state.isTrackingHeld;
+        const held = MODES[behaviorKey(cfg)]?.passiveTrack ? true : state.isTrackingHeld;
         let onTarget = false;
         let endPoint = null;
         if (held) {
@@ -2135,7 +2164,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       if (hitMesh) {
         if (configRef.current.hitSound !== false) playTargetPop(state.audioCtx);
         const entry = targets.find((tgt) => tgt.mesh === hitMesh);
-        const mode = MODES[configRef.current.mode] ?? MODES.flick;
+        const mode = MODES[behaviorKey(configRef.current)] ?? MODES.flick;
         if (entry && mode.maxHp) {
           entry.hp = (entry.hp ?? mode.maxHp) - (mode.damagePerHit ?? mode.maxHp);
           if (entry.hp <= 0) {
@@ -2174,7 +2203,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // Mode Spray : le clic ARME le tir automatique (voir fireSprayShot,
       // rappelé dans la boucle d'animation tant que le bouton est maintenu)
       // plutôt que de tirer un coup unique ici.
-      if (MODES[configRef.current.mode]?.recoilControl) {
+      if (MODES[behaviorKey(configRef.current)]?.recoilControl) {
         state.sprayHeld = true;
         state.sprayIndex = 0;
         state.nextSprayShotAt = 0;
@@ -2184,7 +2213,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // Tracking : pas de tir discret, il faut rester appuyé sur la cible en
       // mouvement — le pourcentage se calcule en continu dans la boucle
       // d'animation (voir plus bas), pas ici.
-      if (MODES[configRef.current.mode]?.holdTracking) {
+      if (MODES[behaviorKey(configRef.current)]?.holdTracking) {
         state.isTrackingHeld = true;
         state.lastTrackSample = 0;
         return;
@@ -2194,7 +2223,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // uniquement de l'échantillonnage continu ci-dessous — un clic ici
       // tomberait sinon dans la logique de tir par défaut plus bas et
       // compterait des touches/ratés en double avec l'échantillonneur.
-      if (MODES[configRef.current.mode]?.passiveTrack) return;
+      if (MODES[behaviorKey(configRef.current)]?.passiveTrack) return;
 
       const { targets, raycaster, center, muzzleTip, scene, impactTexture } = state;
       raycaster.setFromCamera(center, camera);
@@ -2243,7 +2272,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       if (hitMesh) {
         if (configRef.current.hitSound !== false) playTargetPop(state.audioCtx);
         const entry = targets.find((tgt) => tgt.mesh === hitMesh);
-        const mode = MODES[configRef.current.mode] ?? MODES.flick;
+        const mode = MODES[behaviorKey(configRef.current)] ?? MODES.flick;
         if (mode.movement === 'peek') {
           // Temps de réaction mesuré depuis le début de CETTE exposition (pas
           // depuis le début de la session) — c'est la vraie donnée d'un peek.
@@ -2426,6 +2455,15 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   const savedForSessionRef = useRef(false);
   const [saveState, setSaveState] = useState(null); // null | saving | saved | error
 
+  // Ne garde actives (animées, touchables) que les N premières cibles du pool :
+  // chaque étape d'une playlist de presets a son propre nombre de cibles.
+  const setActiveTargets = (count) => {
+    const state = stateRef.current;
+    if (!state.allTargets) return;
+    state.targets = state.allTargets.slice(0, count);
+    state.allTargets.slice(count).forEach(hideTargetEntry);
+  };
+
   const startSession = () => {
     setStats({ hits: 0, misses: 0, times: [] });
     setFlashStats({ dodged: 0, failed: 0 });
@@ -2434,7 +2472,8 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     clearTrackingHold();
     const now = performance.now();
     resetFlashState(stateRef.current, now);
-    const mode = MODES[config.mode] ?? MODES.flick;
+    setActiveTargets(config.targetCount);
+    const mode = MODES[behaviorKey(config)] ?? MODES.flick;
     stateRef.current.targets?.forEach((entry) => {
       resetTargetForMode(entry, mode, config, now, stateRef.current);
     });
@@ -2464,13 +2503,15 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     if (playlistSteps) {
       const nextConfig = playlistSteps[step + 1];
       setTimeLeft(nextConfig.duration);
-      // Toujours statique : les presets personnalisés n'ont pas de réglage
-      // de mouvement (voir CustomModeConfig.jsx), inutile de chercher un
-      // "mode" dans MODES qui n'existerait pas pour eux.
-      const mode = { movement: 'none', lifetime: null };
+      setActiveTargets(nextConfig.targetCount);
+      const mode = MODES[behaviorKey({ mode: 'custom', baseMode: nextConfig.baseMode })] ?? MODES.flick;
       stateRef.current.targets?.forEach((entry) => {
         resetTargetForMode(entry, mode, nextConfig, now, stateRef.current);
       });
+      if (mode.movement === 'switch') {
+        stateRef.current.reshuffleSwitch(stateRef.current.targets, nextConfig);
+        stateRef.current.switchNext = 1;
+      }
       lockPointer(() => setPhase('running'));
       return;
     }
@@ -2519,7 +2560,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   // Exception : les modes Tracking (holdTracking) et Patrol (passiveTrack)
   // n'ont pas de "cible touchée" discrète — le viseur reste sur une cible en
   // mouvement en continu, seul le pourcentage de précision a un sens.
-  const score = (MODES[config.mode]?.holdTracking || MODES[config.mode]?.passiveTrack)
+  const score = (MODES[behaviorKey(config)]?.holdTracking || MODES[behaviorKey(config)]?.passiveTrack)
     ? (accuracy === null ? null : avgReaction === null ? Math.round(accuracy) : Math.round(accuracy * 0.7 + Math.max(0, 100 - avgReaction / 10) * 0.3))
     : (total > 0 ? stats.hits : null);
 
@@ -2588,7 +2629,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           ) : (
             <div className="aim-trainer-crosshair" />
           )}
-          {MODES[config.mode]?.flashDodge && (
+          {MODES[behaviorKey(config)]?.flashDodge && (
             <>
               <div ref={flashIndicatorRef} className="aim-flash-indicator" aria-hidden="true" />
               <div ref={flashOverlayRef} className="aim-flash-overlay" aria-hidden="true" />
@@ -2607,7 +2648,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
               <span className="aim-game-hud-value">{accuracy === null ? '—' : `${accuracy.toFixed(0)}%`}</span>
               <span className="aim-game-hud-label">précision</span>
             </div>
-            {MODES[config.mode]?.flashDodge && (
+            {MODES[behaviorKey(config)]?.flashDodge && (
               <div className="aim-game-hud-item">
                 <span className="aim-game-hud-value">{flashStats.dodged}/{flashStats.dodged + flashStats.failed}</span>
                 <span className="aim-game-hud-label">flashs esquivés</span>
@@ -2623,7 +2664,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
             {phase === 'ready' && (
               <>
                 <h1>
-                  <Icon icon={MODES[config.mode]?.icon} style={{ color: MODES[config.mode]?.accent }} /> Prêt ?
+                  <Icon icon={MODES[behaviorKey(config)]?.icon} style={{ color: MODES[behaviorKey(config)]?.accent }} /> Prêt ?
                   {playlist && (
                     <span className="aim-game-step">
                       {' '}
@@ -2642,22 +2683,22 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                   Sensibilité <strong>{config.sens}</strong> · {config.dpi} DPI · {config.duration} secondes
                 </p>
                 {config.challengeDate && <p className="aim-game-tip"><Icon icon={Trophy} size={16} /> Défi du jour — score comptabilisé au classement</p>}
-                {MODES[config.mode]?.holdTracking && (
+                {MODES[behaviorKey(config)]?.holdTracking && (
                   <p className="aim-game-tip"><Icon icon={Waves} size={16} /> Maintiens le clic enfoncé et garde le viseur sur la cible en mouvement.</p>
                 )}
-                {MODES[config.mode]?.passiveTrack && (
+                {MODES[behaviorKey(config)]?.passiveTrack && (
                   <p className="aim-game-tip"><Icon icon={Footprints} size={16} /> Pas de tir ici : garde simplement le viseur sur la cible le plus longtemps possible.</p>
                 )}
-                {MODES[config.mode]?.movement === 'switch' && (
+                {MODES[behaviorKey(config)]?.movement === 'switch' && (
                   <p className="aim-game-tip"><Icon icon={Shuffle} size={16} /> Touche les cibles dans l'ordre affiché — une erreur d'ordre compte comme un raté.</p>
                 )}
-                {MODES[config.mode]?.movement === 'snap' && (
+                {MODES[behaviorKey(config)]?.movement === 'snap' && (
                   <p className="aim-game-tip"><Icon icon={Hourglass} size={16} /> Un flick ne suffit pas : reste stabilisé sur la cible un instant pour que le tir compte.</p>
                 )}
-                {MODES[config.mode]?.flashDodge && (
+                {MODES[behaviorKey(config)]?.flashDodge && (
                   <p className="aim-game-tip"><Icon icon={EyeOff} size={16} /> Un flash arrive d'une direction aléatoire : tourne la caméra à l'opposé avant qu'il parte pour l'esquiver, sinon l'écran blanchit et tes tirs ne comptent plus le temps que ça dure.</p>
                 )}
-                {MODES[config.mode]?.recoilControl && (
+                {MODES[behaviorKey(config)]?.recoilControl && (
                   <p className="aim-game-tip"><Icon icon={Flame} size={16} /> La cible ne bouge jamais : maintiens le clic et tire le viseur vers le bas pour compenser le recul et rester dessus.</p>
                 )}
 
@@ -2665,10 +2706,10 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                   <span>
                     <kbd>Souris</kbd> viser
                   </span>
-                  {!MODES[config.mode]?.passiveTrack && (
+                  {!MODES[behaviorKey(config)]?.passiveTrack && (
                     <span>
-                      <kbd>{MODES[config.mode]?.holdTracking || MODES[config.mode]?.recoilControl ? 'Clic maintenu' : 'Clic gauche'}</kbd>{' '}
-                      {MODES[config.mode]?.holdTracking ? 'suivre' : MODES[config.mode]?.recoilControl ? 'spray' : 'tirer'}
+                      <kbd>{MODES[behaviorKey(config)]?.holdTracking || MODES[behaviorKey(config)]?.recoilControl ? 'Clic maintenu' : 'Clic gauche'}</kbd>{' '}
+                      {MODES[behaviorKey(config)]?.holdTracking ? 'suivre' : MODES[behaviorKey(config)]?.recoilControl ? 'spray' : 'tirer'}
                     </span>
                   )}
                   <span>
@@ -2753,7 +2794,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                     <span className="aim-game-result-value">{config.duration}s</span>
                     <span className="aim-game-result-label">Durée</span>
                   </div>
-                  {MODES[config.mode]?.flashDodge && (
+                  {MODES[behaviorKey(config)]?.flashDodge && (
                     <div className="aim-game-result">
                       <span className="aim-game-result-value">
                         {flashStats.dodged + flashStats.failed === 0

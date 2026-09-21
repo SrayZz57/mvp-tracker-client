@@ -7,12 +7,33 @@ const BASE_URL = 'https://api.henrikdev.xyz';
 // quota (utile pour repérer d'où vient un 429, ex. ouvrir Amis vs Rafraîchir).
 let requestCount = 0;
 
+// Dernier VRAI appel par (compte, route) — henrikFetch n'est atteint que sur
+// un cache miss (voir sharedFetchCache dans main.js), donc l'écart affiché est
+// l'intervalle réel entre deux appels HenrikDev, hits de cache exclus.
+const lastRealCallAt = new Map();
+
+// Le compte n'est pas un paramètre de henrikFetch : il se relit dans les deux
+// derniers segments du chemin (.../{nom}/{tag}), dans les 3 routes utilisées.
+function logRealCall(num, path) {
+  const [route, query] = path.split('?');
+  const segments = route.split('/').filter(Boolean);
+  const account = `${decodeURIComponent(segments.at(-2))}#${decodeURIComponent(segments.at(-1))}`;
+  const kind = `${segments.slice(0, -2).join('/')}${query ? `?${query}` : ''}`;
+  const key = `${account}|${kind}`.toLowerCase();
+  const now = Date.now();
+  const previous = lastRealCallAt.get(key);
+  lastRealCallAt.set(key, now);
+  const delta = previous === undefined ? 'premier appel' : `${((now - previous) / 1000).toFixed(1)}s depuis le précédent`;
+  console.log(`[henrikdev] APPEL RÉEL #${num} ${new Date(now).toISOString()} compte=${account} ${kind} (${delta})`);
+}
+
 async function henrikFetch(path, apiKey) {
   requestCount += 1;
   // Capturé tout de suite : avec des requêtes concurrentes, `requestCount`
   // (variable partagée) aurait déjà changé au moment du log plus bas, ce qui
   // faisait apparaître deux requêtes différentes sous le même numéro.
   const num = requestCount;
+  logRealCall(num, path);
   const label = path.split('?')[0];
   const startedAt = Date.now();
 

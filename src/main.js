@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import started from 'electron-squirrel-startup';
 import Store from 'electron-store';
 import { getAccount, getMatches, getMmr } from './services/henrikdev.js';
-import { excludeDeathmatch, formStats, tiltStatus, patchSelfIdentity } from './renderer/valorantStats.js';
+import { excludeDeathmatch, formStats, tiltStatus, patchSelfIdentity, findMe, resultLabel, matchScore, hitStats } from './renderer/valorantStats.js';
 import { computeHallOfFame } from './renderer/hallOfFame.js';
 import {
   saveMatches,
@@ -33,6 +33,7 @@ import {
   getCareerRecords,
   saveCareerRecords,
   pruneOldMatchDetail,
+  hasCachedMatch,
 } from './services/db.js';
 import { isValorantRunning, pingOnce, isValorantGameRunning } from './services/network.js';
 import { syncMatches } from './services/matchSync.js';
@@ -115,11 +116,69 @@ async function getMmrWithFallback(account, name, tag, apiKey) {
   throw lastErr;
 }
 
-async function getMatchesWithFallback(account, name, tag, apiKey, options) {
+// Cache mémoire partagé par les 3 chemins qui rafraîchissent le compte suivi :
+// le bouton Rafraîchir (valorant:get-matches), checkTiltAndNotify (2 min) et
+// refreshDailyOverlay (au lancement du jeu). Avant, chacun appelait HenrikDev
+// de son côté sans rien savoir des autres. Volontairement en mémoire (pas
+// electron-store) : tout tourne dans ce même process, et une donnée aussi
+// courte ne doit pas survivre à un redémarrage.
+//
+// TTL STRICTEMENT supérieur au cooldown du bouton (REFRESH_COOLDOWN_MS = 60 s
+// dans useValorantData.js), sinon un joueur qui clique toutes les 60 s
+// déclencherait un vrai appel à chaque clic. Et volontairement inférieur au
+// tick de checkTiltAndNotify (120 s) : à 120 s pile, un léger retard du timer
+// tomberait sur une entrée encore valide et ferait sauter un cycle sur deux.
+const SHARED_FETCH_CACHE_TTL_MS = 90 * 1000;
+const sharedFetchCache = new Map();
+
+// La promesse (pas le résultat) est stockée : deux appels simultanés — un
+// clic sur Rafraîchir pile pendant un tick tilt — partagent la même requête.
+// Une erreur (dont un 429) n'est jamais gardée, l'appel suivant réessaie.
+function fetchShared(kind, name, tag, variant, loader) {
+  const key = `${kind}:${name}#${tag}:${variant}`.toLowerCase();
+  const entry = sharedFetchCache.get(key);
+  if (entry && Date.now() - entry.at < SHARED_FETCH_CACHE_TTL_MS) return entry.promise;
+
+  const promise = loader();
+  const created = { at: Date.now(), promise };
+  sharedFetchCache.set(key, created);
+  // Les pages de matchs sont lourdes (détail complet de 10 matchs) : on les
+  // libère à l'expiration au lieu de les laisser jusqu'au prochain appel.
+  const evictTimer = setTimeout(() => {
+    if (sharedFetchCache.get(key) === created) sharedFetchCache.delete(key);
+  }, SHARED_FETCH_CACHE_TTL_MS);
+  evictTimer.unref();
+  promise.catch(() => {
+    if (sharedFetchCache.get(key) === created) sharedFetchCache.delete(key);
+    clearTimeout(evictTimer);
+  });
+  return promise;
+}
+
+const getAccountShared = (name, tag, apiKey) => fetchShared('account', name, tag, '', () => getAccount(name, tag, apiKey));
+
+const getMmrWithFallbackShared = (account, name, tag, apiKey) =>
+  fetchShared('mmr', name, tag, '', () => getMmrWithFallback(account, name, tag, apiKey));
+
+// Seule la page la plus récente (start=0) est partagée : c'est celle que les
+// 3 chemins redemandent. Les pages plus profondes (rattrapage d'historique)
+// ne sont lues que par le bouton, ne se répètent pas d'un chemin à l'autre, et
+// pèsent plusieurs Mo chacune — inutile de les garder en mémoire.
+function getMatchesPageShared(region, platform, name, tag, apiKey, options = {}) {
+  const { size = 10, start = 0 } = options;
+  if (start !== 0) return getMatches(region, platform, name, tag, apiKey, options);
+  return fetchShared('matches', name, tag, `${region}:${platform}:${size}`, () =>
+    getMatches(region, platform, name, tag, apiKey, options),
+  );
+}
+
+// `fetchPage` : par défaut un appel direct — les aperçus de coéquipiers
+// (preview-recent-stats) ont leur propre cache de 5 min et restent inchangés.
+async function getMatchesWithFallback(account, name, tag, apiKey, options, fetchPage = getMatches) {
   let lastErr;
   for (const platform of platformCandidates(account)) {
     try {
-      return await getMatches(account.region, platform, name, tag, apiKey, options);
+      return await fetchPage(account.region, platform, name, tag, apiKey, options);
     } catch (err) {
       lastErr = err;
       if (err.status === 429) break; // même quota épuisé, inutile d'essayer l'autre plateforme
@@ -783,7 +842,7 @@ ipcMain.handle('valorant:preview-recent-stats', async (_event, { name, tag, apiK
 });
 
 ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => {
-  const account = await getAccount(name, tag, apiKey);
+  const account = await getAccountShared(name, tag, apiKey);
   store.set('valorantSettings', { name, tag, apiKey, puuid: account.puuid });
 
   // Le rang passe AVANT le rattrapage d'historique : c'est une seule requête
@@ -793,7 +852,7 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
   // sans quota restant, faisant échouer silencieusement rien que lui. Là, il
   // profite du quota complet dès le début du rafraîchissement.
   try {
-    const mmr = await getMmrWithFallback(account, name, tag, apiKey);
+    const mmr = await getMmrWithFallbackShared(account, name, tag, apiKey);
     const rankInfo = {
       accountLevel: account.account_level,
       cardUuid: account.card,
@@ -848,7 +907,7 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
     if (rateLimited) break;
     for (let start = 0; start < HISTORY_CAP; start += PAGE_SIZE) {
       try {
-        const page = await getMatches(account.region, candidate, name, tag, apiKey, { size: PAGE_SIZE, start });
+        const page = await getMatchesPageShared(account.region, candidate, name, tag, apiKey, { size: PAGE_SIZE, start });
         console.log(`[henrikdev] page ${candidate}/start=${start} → ${page.length} match(s) normalisé(s)`);
         if (page.length > 0) newMatchCount += saveMatches(account.puuid, page);
         if (page.length > 0 && page.every((m) => cachedIds.has(m.metadata.matchid))) break; // rien de nouveau au-delà
@@ -985,12 +1044,16 @@ setInterval(pollMatchActive, 6000);
 // sans attendre que l'utilisateur ouvre l'app et clique sur l'onglet Tilt.
 const tiltPollState = { lastMatchId: null, notified: false };
 
+function tiltMessage(tilt, form) {
+  return tilt.lossStreakTilt
+    ? `Série de ${form.streakCount} défaites d'affilée. Une pause pourrait aider.`
+    : `Ta perf a baissé sur tes 3 derniers matchs. Une pause pourrait aider.`;
+}
+
 function notifyTilt(tilt, form) {
   if (!Notification.isSupported()) return;
   if ((store.get('tiltNotificationsEnabled') ?? true) === false) return;
-  const body = tilt.lossStreakTilt
-    ? `Série de ${form.streakCount} défaites d'affilée. Une pause pourrait aider.`
-    : `Ta perf a baissé sur tes 3 derniers matchs. Une pause pourrait aider.`;
+  const body = tiltMessage(tilt, form);
   const notification = new Notification({
     title: 'MVP Tracker — signe de tilt détecté',
     body,
@@ -1005,14 +1068,117 @@ function notifyTilt(tilt, form) {
   notification.show();
 }
 
+// Récupération des derniers matchs du compte suivi (compte + page la plus
+// récente, via le cache partagé) puis enregistrement local — la part commune
+// de checkTiltAndNotify et de refreshDailyOverlay.
+//
+// Un match complet pèse ~500-600 Ko (round par round, kills avec position) : le
+// cycle de 2 minutes en téléchargeait 10 à chaque tour pour seulement savoir
+// s'il y en avait un nouveau. On demande d'abord UN seul match ; s'il est déjà
+// en cache, il n'y a rien de nouveau et on s'arrête là (~10x moins de données
+// par tour). La page complète n'est téléchargée que quand un nouveau match existe.
+async function syncLatestMatches(settings) {
+  const account = await getAccountShared(settings.name, settings.tag, settings.apiKey);
+
+  const probe = await getMatchesWithFallback(
+    account,
+    settings.name,
+    settings.tag,
+    settings.apiKey,
+    { size: 1 },
+    getMatchesPageShared,
+  );
+  const latestId = probe[0]?.metadata?.matchid;
+  if (!latestId || hasCachedMatch(account.puuid, latestId)) {
+    return { account, freshMatches: probe };
+  }
+
+  const freshMatches = await getMatchesWithFallback(
+    account,
+    settings.name,
+    settings.tag,
+    settings.apiKey,
+    undefined,
+    getMatchesPageShared,
+  );
+  const newMatchCount = saveMatches(account.puuid, freshMatches);
+  await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag, newMatchCount);
+  return { account, freshMatches };
+}
+
+// Notifications push vers le téléphone : le process principal n'a pas la session
+// Supabase (donc pas accès aux jetons du téléphone) — il demande au renderer, qui
+// les lit puis rappelle 'mobile-push:send' pour l'envoi réel vers Expo.
+function requestMobilePush(title, body) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mobile-push:event', { title, body });
+  }
+}
+
+// Fin de partie : résultat + score, héros, K/D et % de tirs à la tête. Les modes
+// sans équipes (Combat à mort...) sont ignorés, comme pour le tilt.
+function requestMobileMatchPush(match, settings) {
+  if (!match || excludeDeathmatch([match]).length === 0) return;
+  const me = findMe(match, settings.name, settings.tag);
+  if (!me) return;
+  const label = resultLabel(match, me);
+  if (label !== 'Victoire' && label !== 'Défaite' && label !== 'Match nul') return;
+
+  const kills = me.stats?.kills ?? 0;
+  const deaths = me.stats?.deaths ?? 0;
+  const assists = me.stats?.assists ?? 0;
+  const kd = deaths > 0 ? kills / deaths : kills;
+  const { hsPercent } = hitStats(me);
+  const score = matchScore(match, me);
+  const hero = me.character ?? 'Agent inconnu';
+  const map = match.metadata?.map;
+
+  const title = `${label}${score ? ` ${score.replace('-', '–')}` : ''} · ${hero}`;
+  const body = [
+    `K/D ${kd.toFixed(2)} (${kills}/${deaths}/${assists})`,
+    hsPercent === null ? null : `HS ${hsPercent.toFixed(0)}%`,
+    map ?? null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  requestMobilePush(title, body);
+}
+
+// Envoi via le service gratuit d'Expo, qui relaie vers Apple/Google. Retourne les
+// jetons refusés (téléphone désinstallé...) pour que le renderer les supprime.
+ipcMain.handle('mobile-push:send', async (_event, { tokens, title, body }) => {
+  if (!Array.isArray(tokens) || tokens.length === 0) return { invalid: [] };
+  try {
+    const res = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(
+        tokens.map((to) => ({ to, title, body, sound: 'default', channelId: 'matches', priority: 'high', data: { push: true } })),
+      ),
+    });
+    const json = await res.json();
+    const tickets = Array.isArray(json?.data) ? json.data : [];
+    const invalid = tokens.filter((_, i) => tickets[i]?.status === 'error' && tickets[i]?.details?.error === 'DeviceNotRegistered');
+    return { invalid };
+  } catch (err) {
+    console.error("[mobile-push] échec de l'envoi", err.message);
+    return { invalid: [] };
+  }
+});
+
 async function checkTiltAndNotify() {
   const settings = store.get('valorantSettings');
   if (!settings?.name || !settings?.tag || !settings?.apiKey) return;
   try {
-    const account = await getAccount(settings.name, settings.tag, settings.apiKey);
-    const freshMatches = await getMatchesWithFallback(account, settings.name, settings.tag, settings.apiKey);
-    const newMatchCount = saveMatches(account.puuid, freshMatches);
-    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag, newMatchCount);
+    const { account, freshMatches } = await syncLatestMatches(settings);
+
+    // L'overlay de session n'a plus de timer propre : il se met à jour ici, à
+    // la cadence de ce cycle, à partir des matchs qui viennent d'être
+    // enregistrés — aucun appel API de plus. Avant les `return` ci-dessous :
+    // il doit se rafraîchir même quand il n'y a pas de nouveau match pour le tilt.
+    if (dailyOverlayLastRunning && (store.get('dailyOverlayEnabled') ?? true)) {
+      await pushDailyOverlayStats(account.puuid, settings);
+    }
 
     const latestId = freshMatches[0]?.metadata?.matchid ?? null;
     if (!latestId || latestId === tiltPollState.lastMatchId) return;
@@ -1022,6 +1188,8 @@ async function checkTiltAndNotify() {
     // départ, pour ne pas notifier immédiatement sur un tilt déjà ancien.
     if (isFirstCheck) return;
 
+    requestMobileMatchPush(freshMatches[0], settings);
+
     const played = excludeDeathmatch(await getCachedMatchesAsync(account.puuid));
     const form = formStats(played, settings.name, settings.tag);
     const tilt = tiltStatus(played, settings.name, settings.tag, form);
@@ -1030,6 +1198,7 @@ async function checkTiltAndNotify() {
       if (!tiltPollState.notified) {
         tiltPollState.notified = true;
         notifyTilt(tilt, form);
+        requestMobilePush('Signe de tilt détecté', tiltMessage(tilt, form));
       }
     } else {
       tiltPollState.notified = false;
@@ -1040,8 +1209,11 @@ async function checkTiltAndNotify() {
   }
 }
 
+// Uniquement tant que le JEU tourne (même signal que l'overlay de session : le
+// process du jeu, pas le lanceur Riot ouvert seul) : lanceur ouvert sans partie
+// lancée, il n'y a rien à calculer ni aucun appel API à faire.
 setInterval(() => {
-  if (isValorantRunning()) checkTiltAndNotify();
+  if (dailyOverlayLastRunning) checkTiltAndNotify();
 }, 120000);
 
 // --- Overlay de session quotidienne (victoires/défaites, HS%, K/D) --------
@@ -1263,52 +1435,31 @@ ipcMain.handle('daily-overlay:set-excluded-modes', (_event, modeIds) => {
   store.set('dailyOverlayExcludedModes', modeIds);
 });
 
-// Récupère les matchs, recalcule la journée en cours (voir resolveSessionDay
-// dans dailyStats.js pour la règle de bascule à minuit) et les stats, puis
-// envoie le résultat à la fenêtre — la crée si besoin, comme showBuySuggestion.
-async function refreshDailyOverlay() {
-  const enabled = store.get('dailyOverlayEnabled') ?? true;
-  if (!enabled) {
-    console.log('[daily-overlay] désactivé (toggle Mon compte)');
-    return;
-  }
-
-  const settings = store.get('valorantSettings');
-  if (!settings?.name || !settings?.tag || !settings?.apiKey) {
-    console.log('[daily-overlay] valorantSettings incomplet, abandon', {
-      hasName: !!settings?.name,
-      hasTag: !!settings?.tag,
-      hasApiKey: !!settings?.apiKey,
-    });
-    return;
-  }
-
+// Recalcule la journée en cours (voir resolveSessionDay dans dailyStats.js
+// pour la règle de bascule à minuit) à partir des matchs DÉJÀ enregistrés en
+// local, puis envoie le résultat à la fenêtre — la crée si besoin, comme
+// showBuySuggestion. Aucun appel API ici : c'est l'appelant (refreshDailyOverlay
+// au lancement du jeu, checkTiltAndNotify ensuite) qui a synchronisé les matchs.
+async function pushDailyOverlayStats(puuid, settings) {
   try {
-    console.log('[daily-overlay] rafraîchissement pour', settings.name, settings.tag);
     const t0 = Date.now();
-    const account = await getAccount(settings.name, settings.tag, settings.apiKey);
-    const t1 = Date.now();
-    const freshMatches = await getMatchesWithFallback(account, settings.name, settings.tag, settings.apiKey);
-    const t2 = Date.now();
-    const newMatchCount = saveMatches(account.puuid, freshMatches);
-    const t3 = Date.now();
-
-    await updateCareerRecordsAndPrune(account.puuid, settings.name, settings.tag, newMatchCount);
-
     // Seule la journée en cours compte pour l'overlay : les 100 matchs les
     // plus récents suffisent largement, inutile de reparser tout l'historique
-    // toutes les 5 minutes en pleine partie.
-    const allMatches = await getCachedMatchesAsync(account.puuid, 100);
-    const t4 = Date.now();
+    // en pleine partie.
+    const allMatches = await getCachedMatchesAsync(puuid, 100);
+    const t1 = Date.now();
     dailyOverlayState.dayKey = resolveSessionDay(allMatches, dailyOverlayState.dayKey);
     const excludedModes = store.get('dailyOverlayExcludedModes') ?? [];
     const stats = computeDailyStats(allMatches, settings.name, settings.tag, dailyOverlayState.dayKey, excludedModes);
-    const t5 = Date.now();
+    const t2 = Date.now();
     console.log('[daily-overlay] stats calculées', stats);
     dailyOverlayLatestStats = stats;
-    console.log(
-      `[daily-overlay] timing: getAccount=${t1 - t0}ms getMatches=${t2 - t1}ms saveMatches=${t3 - t2}ms getCachedMatches=${t4 - t3}ms compute=${t5 - t4}ms TOTAL=${t5 - t0}ms`,
-    );
+    // Le process principal n'a pas la session Supabase (elle vit dans le
+    // renderer) : on lui passe les stats pour qu'il les publie vers le téléphone.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('daily-overlay:stats', stats);
+    }
+    console.log(`[daily-overlay] timing: getCachedMatches=${t1 - t0}ms compute=${t2 - t1}ms TOTAL=${t2 - t0}ms`);
 
     if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) {
       console.log('[daily-overlay] création de la fenêtre');
@@ -1328,29 +1479,56 @@ async function refreshDailyOverlay() {
       console.log('[daily-overlay] stats envoyées à la fenêtre');
     }
   } catch (err) {
-    // Erreur ponctuelle (rate limit, réseau) : on retentera au prochain tick,
-    // même logique que checkTiltAndNotify ci-dessus.
+    console.error('[daily-overlay] échec de mise à jour des stats', err);
+  }
+}
+
+// Premier affichage de l'overlay au lancement du jeu : synchronise les matchs
+// (via le cache partagé — si le cycle tilt vient de tourner, aucun appel API
+// réel) puis affiche. Ensuite l'overlay est mis à jour par checkTiltAndNotify.
+async function refreshDailyOverlay() {
+  const enabled = store.get('dailyOverlayEnabled') ?? true;
+  if (!enabled) {
+    console.log('[daily-overlay] désactivé (toggle Mon compte)');
+    return;
+  }
+
+  const settings = store.get('valorantSettings');
+  if (!settings?.name || !settings?.tag || !settings?.apiKey) {
+    console.log('[daily-overlay] valorantSettings incomplet, abandon', {
+      hasName: !!settings?.name,
+      hasTag: !!settings?.tag,
+      hasApiKey: !!settings?.apiKey,
+    });
+    return;
+  }
+
+  try {
+    console.log('[daily-overlay] rafraîchissement pour', settings.name, settings.tag);
+    const { account } = await syncLatestMatches(settings);
+    await pushDailyOverlayStats(account.puuid, settings);
+  } catch (err) {
+    // Erreur ponctuelle (rate limit, réseau) : le prochain cycle tilt
+    // remettra l'overlay à jour, même logique que checkTiltAndNotify.
     console.error('[daily-overlay] échec de rafraîchissement', err);
   }
 }
 
-// Se déclenche DÈS le lancement du JEU, pas seulement au premier tick des 5
-// minutes — un check plus fréquent (même cadence que pollMatchActive)
-// détecte la transition et lance un premier rafraîchissement immédiat ;
-// refreshDailyOverlay() lui-même se recharge ensuite toutes les 5 minutes.
+// Se déclenche DÈS le lancement du JEU, sans attendre le prochain cycle de
+// checkTiltAndNotify (jusqu'à 2 min) — un check plus fréquent (même cadence
+// que pollMatchActive) détecte la transition et lance un premier
+// rafraîchissement immédiat. Il n'y a plus de timer de 5 min : les mises à
+// jour suivantes viennent de checkTiltAndNotify (voir pushDailyOverlayStats).
 //
 // isValorantGameRunning() (process VALORANT-Win64-Shipping.exe) plutôt que
 // isValorantRunning() (lockfile du Riot Client, vrai dès l'écran d'accueil) —
 // signalé par l'utilisateur : l'overlay apparaissait trop tôt, avant même
 // d'avoir lancé une partie.
 let dailyOverlayLastRunning = false;
-let dailyOverlayRefreshTimer = null;
 
 function scheduleDailyOverlayRefresh() {
   console.log('[daily-overlay] Valorant détecté, lancement du suivi');
-  clearInterval(dailyOverlayRefreshTimer);
   refreshDailyOverlay();
-  dailyOverlayRefreshTimer = setInterval(refreshDailyOverlay, 300000);
 }
 
 setInterval(async () => {
@@ -1373,9 +1551,13 @@ setInterval(async () => {
     scheduleDailyOverlayRefresh();
   } else if (!running && dailyOverlayLastRunning) {
     console.log('[daily-overlay] Valorant fermé, arrêt du suivi');
-    clearInterval(dailyOverlayRefreshTimer);
-    dailyOverlayRefreshTimer = null;
     closeDailyOverlay();
+    // Le tilt repart de zéro à chaque fermeture du jeu : sans ça, l'alerte déjà
+    // envoyée (notified) bloquait toute nouvelle alerte à la session suivante, et
+    // le dernier match mémorisé faisait traiter le premier match de la nouvelle
+    // session comme la suite de l'ancienne.
+    tiltPollState.lastMatchId = null;
+    tiltPollState.notified = false;
   }
   dailyOverlayLastRunning = running;
 }, 6000);

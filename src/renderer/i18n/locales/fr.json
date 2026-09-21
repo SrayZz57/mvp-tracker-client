@@ -669,7 +669,7 @@
     "customTitle": "Personnalisé",
     "customDesc": "Choisis tes propres réglages — aucun record ne compare ce mode entre joueurs.",
     "customIntro": "Les 6 modes standards sont figés pour que les records restent comparables entre tout le monde. Ici, choisis un mode de départ puis règle librement chaque paramètre.",
-    "customBase": "Partir des réglages de :",
+    "customBase": "Mode de base (comportement + réglages de départ) :",
     "customBasePlaceholder": "— choisir un mode —",
     "customEdit": "Modifier les réglages",
     "customCancel": "Annuler",

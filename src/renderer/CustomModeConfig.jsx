@@ -17,6 +17,7 @@ function encodePresetCode(preset) {
     targetSize: preset.targetSize,
     targetCount: preset.targetCount,
     spread: preset.spread,
+    baseMode: preset.baseMode ?? 'flick',
   };
   return PRESET_CODE_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
 }
@@ -41,6 +42,7 @@ function decodePresetCode(code) {
       targetSize: data.targetSize,
       targetCount: data.targetCount,
       spread: data.spread,
+      baseMode: typeof data.baseMode === 'string' && MODES[data.baseMode] ? data.baseMode : 'flick',
     };
   } catch {
     return null;
@@ -104,10 +106,12 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
   const [targetSize, setTargetSize] = useState(initial.targetSize);
   const [targetCount, setTargetCount] = useState(initial.targetCount);
   const [spread, setSpread] = useState(initial.spread);
+  const [baseMode, setBaseMode] = useState(MODES[initial.baseMode] ? initial.baseMode : 'flick');
   const [nameError, setNameError] = useState(false);
 
   const applyBase = (id) => {
     const preset = MODES[id].preset;
+    setBaseMode(id);
     setDuration(preset.duration);
     setTargetSize(preset.targetSize);
     setTargetCount(preset.targetCount);
@@ -129,6 +133,7 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
       targetSize: preset.targetSize,
       targetCount: preset.targetCount,
       spread: preset.spread,
+      baseMode: preset.baseMode ?? 'flick',
     });
   };
 
@@ -141,6 +146,7 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
       targetSize: preset.targetSize,
       targetCount: preset.targetCount,
       spread: preset.spread,
+      baseMode: preset.baseMode ?? 'flick',
     };
     const next = { ...stored, mode: 'custom', ...values };
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next));
@@ -219,11 +225,12 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
       targetSize,
       targetCount,
       spread,
+      baseMode,
     };
     const next = [...presets, preset];
     setPresets(next);
     savePresets(next);
-    const values = { duration, targetSize, targetCount, spread };
+    const values = { duration, targetSize, targetCount, spread, baseMode };
     if (launchAfter) {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...stored, mode: 'custom', ...values }));
       onLaunch({ mode: 'custom', ...values });
@@ -294,7 +301,7 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
                   <div className="custom-preset-info">
                     <strong>{preset.name}</strong>
                     <span className="label">
-                      {t('aimTrainer.presetSummary', {
+                      {t(MODES[preset.baseMode ?? 'flick']?.labelKey ?? MODES.flick.labelKey)} · {t('aimTrainer.presetSummary', {
                         seconds: preset.duration,
                         count: preset.targetCount,
                         size: preset.targetSize.toFixed(2),
@@ -361,10 +368,7 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
 
             <label className="aim-config-block">
               <span className="label">{t('aimTrainer.customBase')}</span>
-              <select className="custom-config-select" defaultValue="" onChange={(e) => e.target.value && applyBase(e.target.value)}>
-                <option value="" disabled>
-                  {t('aimTrainer.customBasePlaceholder')}
-                </option>
+              <select className="custom-config-select" value={baseMode} onChange={(e) => applyBase(e.target.value)}>
                 {Object.entries(MODES).map(([id, mode]) => (
                   <option key={id} value={id}>
                     {t(mode.labelKey)}

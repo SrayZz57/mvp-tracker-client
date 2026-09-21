@@ -329,6 +329,13 @@ export function backfillLegacyPuuid(puuid) {
   });
 }
 
+// Lecture d'une seule ligne, sans toucher au JSON du match : sert à savoir si le
+// dernier match renvoyé par HenrikDev est déjà en cache avant d'en télécharger
+// davantage (voir syncLatestMatches dans main.js).
+export function hasCachedMatch(puuid, matchId) {
+  return db.prepare('SELECT 1 FROM matches WHERE puuid = ? AND match_id = ? LIMIT 1').get(puuid, matchId) !== undefined;
+}
+
 export function saveMatches(puuid, matches) {
   const insert = db.prepare(
     'INSERT OR IGNORE INTO matches (match_id, puuid, game_start, data) VALUES (?, ?, ?, ?)',

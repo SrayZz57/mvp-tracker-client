@@ -5,6 +5,18 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.10.14',
+    date: '2026-09-21',
+    items: {
+      fr: [
+        'Premier lancement : le tutoriel ne se superpose plus aux conditions d’utilisation ni à la fenêtre de l’overlay de session. Il démarre une fois ces deux étapes terminées.',
+      ],
+      en: [
+        'First launch: the tutorial no longer overlaps the terms of use or the session overlay window. It starts once both are done.',
+      ],
+    },
+  },
+  {
     version: '1.10.13',
     date: '2026-09-21',
     items: {

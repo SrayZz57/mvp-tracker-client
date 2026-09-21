@@ -743,12 +743,24 @@ function App() {
   // finir de se peindre (sinon les mesures de position des sections seraient
   // prises avant que leur layout final ne soit stable).
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // Ordre au premier passage : CGU, puis la fenêtre de l'overlay de session (modes
+  // à exclure), puis ce tour — jamais deux fenêtres en même temps. Sans ça, dès
+  // l'acceptation des CGU le tour et la fenêtre d'overlay s'ouvraient ensemble et
+  // se chevauchaient. `overlaySettingsSeen` passe à vrai quand cette fenêtre a déjà
+  // été vue (ou vient d'être fermée) ; si le stockage est illisible on ne bloque pas le tour.
+  const [overlaySettingsSeen, setOverlaySettingsSeen] = useState(() => {
+    try {
+      return !!localStorage.getItem('mvptracker-daily-overlay-settings-shown');
+    } catch {
+      return true;
+    }
+  });
   useEffect(() => {
-    if (!enteredApp || !termsAccepted) return undefined;
+    if (!enteredApp || !termsAccepted || !overlaySettingsSeen) return undefined;
     if (localStorage.getItem('mvptracker-onboarding-done')) return undefined;
     const id = setTimeout(() => setShowOnboarding(true), 300);
     return () => clearTimeout(id);
-  }, [enteredApp, termsAccepted]);
+  }, [enteredApp, termsAccepted, overlaySettingsSeen]);
 
   const closeOnboarding = () => {
     localStorage.setItem('mvptracker-onboarding-done', '1');
@@ -767,7 +779,12 @@ function App() {
   }, [enteredApp, termsAccepted]);
 
   const closeDailyOverlaySettings = () => {
-    localStorage.setItem('mvptracker-daily-overlay-settings-shown', '1');
+    try {
+      localStorage.setItem('mvptracker-daily-overlay-settings-shown', '1');
+    } catch {
+      // stockage indisponible : la fenêtre reviendra au prochain lancement
+    }
+    setOverlaySettingsSeen(true);
     setShowDailyOverlaySettings(false);
   };
 
@@ -1574,7 +1591,7 @@ function App() {
           }}
         />
       )}
-      {showOnboarding && <OnboardingTour onClose={closeOnboarding} />}
+      {showOnboarding && termsAccepted && <OnboardingTour onClose={closeOnboarding} />}
       {showDailyOverlaySettings && (
         <DailyOverlaySettings matches={myMatches} onClose={closeDailyOverlaySettings} />
       )}

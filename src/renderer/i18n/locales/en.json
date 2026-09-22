@@ -173,6 +173,11 @@
       "tools": "Tools",
       "admin": "Administration"
     },
+    "subsections": {
+      "toolsPrep": "Preparation",
+      "toolsCommunity": "Community",
+      "toolsResources": "Resources"
+    },
     "tabs": {
       "admin": "Administration",
       "tournaments": "Tournaments",
@@ -1706,7 +1711,7 @@
     "getApiKey": "Get my HenrikDev API key"
   },
   "accountGreeting": {
-    "title": "Welcome back",
+    "title": "Hey {{name}}",
     "tagline": "Your account is linked to this Valorant profile:",
     "enter": "View my account",
     "searchOther": "Search another player",
@@ -1720,6 +1725,10 @@
     "statKd": "K/D",
     "statHs": "Headshot",
     "recentLabel": "Last 5:",
+    "streakWin_one": "{{count}} win in a row",
+    "streakWin_other": "{{count}} wins in a row",
+    "streakLoss_one": "{{count}} loss in a row",
+    "streakLoss_other": "{{count}} losses in a row",
     "noMatches": "No cached matches yet.",
     "announcementFounder": "{{name}} — Founder"
   },

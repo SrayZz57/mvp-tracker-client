@@ -58,6 +58,24 @@
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Échelle des calques flottants : avant cette échelle, chaque nouveau
+     widget/modale choisissait un nombre "assez grand" au hasard (on en a
+     retrouvé 50, 90, 100, 200, 250, 300, 500 pour des rôles qui se
+     répétaient déjà) — sans garantie que le prochain ajout ne se glisse pas
+     entre deux par erreur. Tout nouvel élément flottant doit choisir dans
+     cette liste plutôt qu'inventer un chiffre. Les petites valeurs (0-20)
+     pour de l'empilement local À L'INTÉRIEUR d'une carte/composant restent
+     ce qu'elles sont, elles ne concernent pas cette échelle.
+     Ordre : infobulle < widget permanent < modale < modale bloquante
+     (CGU) < tour guidé (doit rester lisible même si une modale traîne
+     ouverte) < effet ponctuel (confettis). */
+  --z-hover-card: 70;
+  --z-widget: 80;
+  --z-modal: 200;
+  --z-modal-critical: 220;
+  --z-tour: 240;
+  --z-celebration: 260;
 }
 
 * {
@@ -533,6 +551,24 @@ h1 {
 
 .sidebar-section {
   margin-bottom: 1.4rem;
+}
+
+/* Sous-titre à l'intérieur d'une section (ex. Outils : Préparation /
+   Communauté / Ressources) — un cran plus discret que .sidebar-section-label
+   (plus petit, plus sombre, pas de chevron ni de clic) puisqu'il ne replie
+   rien, il ne fait que séparer visuellement des onglets déjà du même thème. */
+.sidebar-subheading {
+  margin: 0.6rem 0 0.3rem 0.2rem;
+  padding: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.sidebar-link-group:first-child .sidebar-subheading {
+  margin-top: 0.15rem;
 }
 
 .sidebar-section-label {
@@ -1033,7 +1069,12 @@ button.sidebar-link.active:hover:not(:disabled) {
   color: #fff;
   font-weight: 600;
   font-size: 0.86rem;
-  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  transition: background 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+
+.discord-button:hover {
+  background: #4752c4;
+  box-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
 }
 
 .update-ready-button {
@@ -1059,11 +1100,6 @@ button.sidebar-link.active:hover:not(:disabled) {
 @keyframes update-ready-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(61, 220, 132, 0.35); }
   50% { box-shadow: 0 0 0 5px rgba(61, 220, 132, 0); }
-}
-
-.discord-button:hover {
-  background: #4752c4;
-  box-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
 }
 
 /* Écran affiché le temps que supabase.auth.getSession() réponde au tout
@@ -1190,7 +1226,7 @@ button.sidebar-link.active:hover:not(:disabled) {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: 500;
+  z-index: var(--z-celebration);
 }
 
 .confetti-piece {
@@ -2704,12 +2740,22 @@ li {
   margin-top: 1.5rem;
   position: relative;
   z-index: 1;
+  /* Chaque carte garde sa propre hauteur (contenu différent : l'une est un
+     relevé de stats dense, l'autre une illustration) plutôt que d'étirer la
+     plus courte pour égaler l'autre — un vide artificiel valait mieux évité
+     que masqué. */
+  align-items: start;
 }
 
 .greeting-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Étire les enfants sans largeur propre (libellé, titre, texte) sur toute
+     la largeur de la carte au lieu de les laisser flotter centrés au-dessus
+     d'un contenu qui, lui, est déjà aligné à gauche (aperçu de profil,
+     grille de stats) — c'était le vrai décalage visuel de cet écran. */
+  align-items: stretch;
+  text-align: left;
   gap: 1rem;
   padding: 1.75rem 1.5rem;
   border-radius: var(--r-lg, 18px);
@@ -2728,6 +2774,10 @@ li {
 
 .greeting-panel .riot-confirm-actions {
   margin-top: auto;
+  /* Un seul bouton ici (contrairement à LinkRiotAccount.jsx, où les mêmes
+     classes servent à un vrai choix oui/non centré) — aligné avec le reste
+     de la carte plutôt que centré tout seul. */
+  justify-content: flex-start;
 }
 
 .greeting-stats {
@@ -2770,6 +2820,30 @@ li {
   gap: 0.6rem;
 }
 
+.greeting-streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.greeting-streak-chip.win {
+  color: #3ddc84;
+  background: rgba(61, 220, 132, 0.12);
+  border-color: rgba(61, 220, 132, 0.35);
+}
+
+.greeting-streak-chip.loss {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: rgba(255, 70, 85, 0.35);
+}
+
 .greeting-dots {
   display: flex;
   gap: 0.3rem;
@@ -2810,16 +2884,16 @@ li {
 }
 
 .greeting-aim-text {
-  text-align: center;
   line-height: 1.5;
   margin: 0;
 }
 
 .greeting-aim-btn {
   /* `.refresh` porte un `margin-left: auto` pour son usage dans la topbar :
-     sans le neutraliser, le bouton se colle à droite du panneau au lieu
-     d'être centré. */
-  margin: auto auto 0;
+     neutralisé ici pour occuper toute la largeur de la carte, comme un
+     vrai bouton d'action principale plutôt qu'une pastille centrée. */
+  width: 100%;
+  margin: auto 0 0;
   font-size: 0.95rem;
   padding: 0.75rem 1.6rem;
   background: linear-gradient(180deg, #ff8f4d, #ff5a3c 55%, #e0342f);
@@ -3211,7 +3285,7 @@ li {
 
 .role-bar-hover-card {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-hover-card);
   width: 200px;
   padding: 0.7rem;
   border-radius: 12px;
@@ -3251,7 +3325,7 @@ li {
 
 .aim-board-hover-card {
   position: fixed;
-  z-index: 200;
+  z-index: var(--z-hover-card);
   width: 220px;
   padding: 0.85rem;
   border-radius: 12px;
@@ -3455,7 +3529,7 @@ li {
 .custom-config-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3588,7 +3662,7 @@ li {
 .onboarding-tour {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: var(--z-tour);
 }
 
 .onboarding-backdrop {
@@ -5666,7 +5740,7 @@ li {
   justify-content: center;
   padding: 2rem;
   overflow-y: auto;
-  z-index: 100;
+  z-index: var(--z-modal);
   animation: modal-overlay-fade-in 0.18s ease;
 }
 
@@ -5759,7 +5833,7 @@ li {
 
 .terms-overlay {
   align-items: center;
-  z-index: 300;
+  z-index: var(--z-modal-critical);
 }
 
 .terms-card {
@@ -6589,7 +6663,7 @@ input[type='color'] {
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 4px 18px rgba(255, 70, 85, 0.6);
-  z-index: 100;
+  z-index: var(--z-widget);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -6638,7 +6712,7 @@ input[type='color'] {
   transform-origin: bottom right;
   animation: goals-panel-pop-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-  z-index: 100;
+  z-index: var(--z-widget);
 }
 
 .goals-widget-header {
@@ -6817,7 +6891,7 @@ input[type='color'] {
   background: linear-gradient(180deg, var(--accent-hover, var(--accent)), var(--accent) 60%, var(--accent-deep, var(--accent)));
   box-shadow: var(--edge-light, none), 0 0 20px rgba(255, 70, 85, 0.75), 0 0 6px rgba(255, 70, 85, 0.9);
   cursor: pointer;
-  z-index: 90;
+  z-index: var(--z-widget);
   transition: width 0.2s ease, box-shadow 0.2s ease;
   animation: weekly-notch-pulse 2.5s ease-in-out infinite;
   animation-play-state: var(--decor-anim-state, running);
@@ -6855,7 +6929,7 @@ input[type='color'] {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  z-index: 200;
+  z-index: var(--z-modal);
   animation: weekly-fade-in 0.2s ease;
 }
 
@@ -8194,7 +8268,7 @@ input[type='color'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 250;
+  z-index: var(--z-modal);
   animation: weekly-fade-in 0.2s ease;
 }
 

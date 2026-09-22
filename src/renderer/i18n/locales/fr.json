@@ -173,6 +173,11 @@
       "tools": "Outils",
       "admin": "Administration"
     },
+    "subsections": {
+      "toolsPrep": "Préparation",
+      "toolsCommunity": "Communauté",
+      "toolsResources": "Ressources"
+    },
     "tabs": {
       "admin": "Administration",
       "tournaments": "Tournois",
@@ -1706,7 +1711,7 @@
     "getApiKey": "Obtenir ma clé API HenrikDev"
   },
   "accountGreeting": {
-    "title": "Content de te revoir",
+    "title": "Salut {{name}}",
     "tagline": "Ton compte est lié à ce profil Valorant :",
     "enter": "Voir mon compte",
     "searchOther": "Chercher un autre joueur",
@@ -1720,6 +1725,10 @@
     "statKd": "K/D",
     "statHs": "Précision tête",
     "recentLabel": "5 dernières :",
+    "streakWin_one": "{{count}} victoire d'affilée",
+    "streakWin_other": "{{count}} victoires d'affilée",
+    "streakLoss_one": "{{count}} défaite d'affilée",
+    "streakLoss_other": "{{count}} défaites d'affilée",
     "noMatches": "Aucune partie en cache pour l'instant.",
     "announcementFounder": "{{name}} — Fondateur"
   },

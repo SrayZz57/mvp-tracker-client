@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Flame, TrendingDown } from 'lucide-react';
+import Icon from './Icon.jsx';
 import RiotProfilePreview from './RiotProfilePreview.jsx';
 import AnnouncementCard from './AnnouncementCard.jsx';
 import { excludeDeathmatch, formStats, overallWinrate, overallHsPercent, resultLabelKey, resultLabel, findMe } from './valorantStats.js';
@@ -50,7 +52,7 @@ function AccountGreeting({ settings, rank, matches = [], announcements = [], onE
       </div>
 
       <img src={logo} alt="MVP Tracker" className="welcome-logo" />
-      <h1>{t('accountGreeting.title')}</h1>
+      <h1>{t('accountGreeting.title', { name: settings.name })}</h1>
       <p className="welcome-tagline">{t('accountGreeting.tagline')}</p>
 
       {announcements.length > 0 && (
@@ -102,6 +104,17 @@ function AccountGreeting({ settings, rank, matches = [], announcements = [], onE
                       return <span key={i} className={`greeting-dot ${tone}`} title={key ? t(key) : label} />;
                     })}
                   </div>
+                  {/* Déjà calculée par formStats (streakType/streakCount) mais
+                      jamais affichée nulle part sur cet écran — seul endroit
+                      de l'app où le joueur voit un aperçu avant d'entrer. */}
+                  {summary.streakType && (
+                    <span className={summary.streakType === 'Victoire' ? 'greeting-streak-chip win' : 'greeting-streak-chip loss'}>
+                      <Icon icon={summary.streakType === 'Victoire' ? Flame : TrendingDown} size={12} />
+                      {summary.streakType === 'Victoire'
+                        ? t('accountGreeting.streakWin', { count: summary.streakCount })
+                        : t('accountGreeting.streakLoss', { count: summary.streakCount })}
+                    </span>
+                  )}
                 </div>
               )}
             </>

@@ -136,17 +136,27 @@ const NAV_SECTIONS = [
   },
   {
     sectionKey: 'nav.sections.tools',
+    // Sous-titres purement visuels : la recherche d'onglet (navQuery) continue
+    // de filtrer `tabs` à plat, sans jamais regarder ce champ — seul l'affichage
+    // normal (liste complète, pas de recherche en cours) les insère. La clé
+    // de l'objet est l'id du premier onglet du groupe qu'elle introduit ;
+    // avant, ces 10 onglets se suivaient sans aucun repère intermédiaire.
+    subheadings: {
+      crosshairs: 'nav.subsections.toolsPrep',
+      lineups: 'nav.subsections.toolsCommunity',
+      skins: 'nav.subsections.toolsResources',
+    },
     tabs: [
-      { id: 'play-sessions', labelKey: 'nav.tabs.playSessions', icon: History },
       { id: 'crosshairs', labelKey: 'nav.tabs.crosshairs', icon: Target },
       { id: 'strategie', labelKey: 'nav.tabs.strategy', icon: Map },
-      { id: 'skins', labelKey: 'nav.tabs.skins', icon: Gem },
       { id: 'composition', labelKey: 'nav.tabs.composition', icon: PuzzleIcon },
       { id: 'buy-simulator', labelKey: 'nav.tabs.buySimulator', icon: Wallet },
       { id: 'lineups', labelKey: 'nav.tabs.lineups', icon: Video },
       { id: 'clips', labelKey: 'nav.tabs.clips', icon: Film },
       { id: 'team-listings', labelKey: 'nav.tabs.teamListings', icon: Users },
+      { id: 'skins', labelKey: 'nav.tabs.skins', icon: Gem },
       { id: 'wiki', labelKey: 'nav.tabs.wiki', icon: BookOpen },
+      { id: 'play-sessions', labelKey: 'nav.tabs.playSessions', icon: History },
     ],
   },
 ];
@@ -1409,28 +1419,36 @@ function App() {
                   <span className="sidebar-section-chevron"><Icon icon={ChevronDown} size={14} /></span>
                 </button>
                 {!collapsed &&
-                  matchingTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      className={tab.id === activeTab ? 'sidebar-link active' : 'sidebar-link'}
-                      onClick={() => {
-                        setActiveTab(tab.id);
-                        setNavSearch('');
-                      }}
-                      style={{ '--tab-color': tab.color }}
-                    >
-                      <span className="sidebar-link-icon">
-                        <Icon icon={tab.icon} />
-                      </span>
-                      {t(tab.labelKey)}
-                      {tab.id === 'messages' && socialNotificationCount > 0 && (
-                        <span className="sidebar-link-badge">{socialNotificationCount}</span>
-                      )}
-                      {tab.id === 'tournaments' && activeTournamentsCount > 0 && (
-                        <span className="sidebar-link-badge glow">{activeTournamentsCount}</span>
-                      )}
-                    </button>
-                  ))}
+                  matchingTabs.map((tab) => {
+                    // Ignorés dès qu'une recherche filtre la liste : le repère
+                    // n'a plus de sens une fois les onglets d'un même groupe
+                    // dispersés par le filtre.
+                    const subheadingKey = !navQuery ? section.subheadings?.[tab.id] : null;
+                    return (
+                      <div key={tab.id} className="sidebar-link-group">
+                        {subheadingKey && <p className="sidebar-subheading">{t(subheadingKey)}</p>}
+                        <button
+                          className={tab.id === activeTab ? 'sidebar-link active' : 'sidebar-link'}
+                          onClick={() => {
+                            setActiveTab(tab.id);
+                            setNavSearch('');
+                          }}
+                          style={{ '--tab-color': tab.color }}
+                        >
+                          <span className="sidebar-link-icon">
+                            <Icon icon={tab.icon} />
+                          </span>
+                          {t(tab.labelKey)}
+                          {tab.id === 'messages' && socialNotificationCount > 0 && (
+                            <span className="sidebar-link-badge">{socialNotificationCount}</span>
+                          )}
+                          {tab.id === 'tournaments' && activeTournamentsCount > 0 && (
+                            <span className="sidebar-link-badge glow">{activeTournamentsCount}</span>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
               </div>
             );
           })}

@@ -432,9 +432,13 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME);
 }
 
-// Extrait access_token/refresh_token/type du lien mvptracker://reset-password#...
-// et les transmet au renderer, qui active la session puis affiche l'écran de
-// nouveau mot de passe.
+// Extrait access_token/refresh_token du lien mvptracker://... et les
+// transmet au renderer. Deux origines possibles, distinguées par `type` :
+// - "recovery" (mvptracker://reset-password#...) : réinitialisation de mot
+//   de passe, le renderer affiche l'écran de nouveau mot de passe.
+// - sinon (mvptracker://auth/callback#...) : retour de la connexion Google
+//   ouverte dans le navigateur système (signInWithOAuth), le renderer active
+//   juste la session.
 function handleDeepLink(url) {
   if (!url || !url.startsWith(`${DEEP_LINK_SCHEME}://`)) return;
   let parsed;
@@ -445,11 +449,14 @@ function handleDeepLink(url) {
   }
   const raw = (parsed.hash ? parsed.hash.slice(1) : '') || parsed.search.slice(1);
   const params = new URLSearchParams(raw);
-  if (params.get('type') !== 'recovery') return;
   const accessToken = params.get('access_token');
   const refreshToken = params.get('refresh_token');
   if (!accessToken || !refreshToken) return;
-  mainWindow?.webContents.send('deep-link:recovery', { accessToken, refreshToken });
+  if (params.get('type') === 'recovery') {
+    mainWindow?.webContents.send('deep-link:recovery', { accessToken, refreshToken });
+  } else {
+    mainWindow?.webContents.send('deep-link:oauth', { accessToken, refreshToken });
+  }
 }
 
 // Windows lance une deuxième instance quand on clique le lien — le verrou

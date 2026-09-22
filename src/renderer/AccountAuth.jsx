@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from './supabaseClient.js';
 import { useE2EE } from './E2EEContext.jsx';
+import logoText from '../assets/logo-text.png';
 
 function AccountAuth() {
   const { t } = useTranslation();
@@ -111,6 +112,28 @@ function AccountAuth() {
     resetMessages();
   };
 
+  // Ouvre l'écran de consentement Google dans le navigateur système (jamais
+  // dans une fenêtre de l'app — Electron l'interdit de toute façon, voir le
+  // handler 'will-navigate' dans main.js). Supabase redirige ensuite vers
+  // mvptracker://auth/callback#access_token=..., que main.js intercepte
+  // (handleDeepLink) et renvoie à App.jsx (onOAuthDeepLink) pour activer la
+  // session — cette fonction-ci n'attend donc pas de retour, elle ouvre
+  // juste le navigateur.
+  const handleGoogleSignIn = async () => {
+    resetMessages();
+    setLoading(true);
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: 'mvptracker://auth/callback', skipBrowserRedirect: true },
+    });
+    setLoading(false);
+    if (oauthError || !data?.url) {
+      setError(oauthError?.message ?? t('auth.googleFailed'));
+      return;
+    }
+    window.electronAPI.openExternal(data.url);
+  };
+
   return (
     <div className="welcome-screen">
       <div className="welcome-bg" aria-hidden="true">
@@ -123,103 +146,126 @@ function AccountAuth() {
         <span className="welcome-orb welcome-orb-7" />
       </div>
 
-      <h1>MVP Tracker</h1>
-      <p className="welcome-tagline">{TITLES[mode]}</p>
+      <div className="auth-card">
+        <img src={logoText} alt="MVP Tracker" className="auth-card-logo" />
+        <p className="welcome-tagline auth-card-tagline">{TITLES[mode]}</p>
 
-      {(mode === 'signin' || mode === 'signup') && (
-        <form className="account-auth-form" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder={t('auth.emailPlaceholder')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder={t('auth.passwordPlaceholder')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? t('auth.loading') : mode === 'signup' ? t('auth.createAccount') : t('auth.signIn')}
-          </button>
-        </form>
-      )}
+        {(mode === 'signin' || mode === 'signup') && (
+          <form className="account-auth-form" onSubmit={handleSubmit}>
+            <input
+              type="email"
+              placeholder={t('auth.emailPlaceholder')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder={t('auth.passwordPlaceholder')}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? t('auth.loading') : mode === 'signup' ? t('auth.createAccount') : t('auth.signIn')}
+            </button>
+          </form>
+        )}
 
-      {mode === 'forgot' && (
-        <form className="account-auth-form" onSubmit={handleSendReset}>
-          <input
-            type="email"
-            placeholder={t('auth.emailPlaceholder')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? t('auth.sending') : t('auth.sendCode')}
-          </button>
-        </form>
-      )}
+        {mode === 'forgot' && (
+          <form className="account-auth-form" onSubmit={handleSendReset}>
+            <input
+              type="email"
+              placeholder={t('auth.emailPlaceholder')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? t('auth.sending') : t('auth.sendCode')}
+            </button>
+          </form>
+        )}
 
-      {mode === 'reset' && (
-        <form className="account-auth-form" onSubmit={handleResetPassword}>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder={t('auth.codePlaceholder')}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder={t('auth.newPasswordPlaceholder')}
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            minLength={6}
-            required
-          />
-          <input
-            type="password"
-            placeholder={t('auth.confirmPasswordPlaceholder')}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            minLength={6}
-            required
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? t('auth.validating') : t('auth.resetPassword')}
-          </button>
-        </form>
-      )}
+        {mode === 'reset' && (
+          <form className="account-auth-form" onSubmit={handleResetPassword}>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder={t('auth.codePlaceholder')}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder={t('auth.newPasswordPlaceholder')}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <input
+              type="password"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? t('auth.validating') : t('auth.resetPassword')}
+            </button>
+          </form>
+        )}
 
-      {error && <p className="warning">{error}</p>}
-      {info && <p className="label">{info}</p>}
+        {error && <p className="warning auth-card-message">{error}</p>}
+        {info && <p className="label auth-card-message">{info}</p>}
 
-      {mode === 'signin' && (
-        <button type="button" className="account-auth-switch" onClick={() => switchMode('forgot')}>
-          {t('auth.forgotPassword')}
-        </button>
-      )}
+        {mode === 'signin' && (
+          <>
+            <button type="button" className="account-auth-switch" onClick={() => switchMode('forgot')}>
+              {t('auth.forgotPassword')}
+            </button>
 
-      {(mode === 'forgot' || mode === 'reset') && (
-        <button type="button" className="account-auth-switch" onClick={() => switchMode('signin')}>
-          {t('auth.backToSignin')}
-        </button>
-      )}
+            <p className="account-auth-divider">{t('auth.or')}</p>
 
-      {(mode === 'signin' || mode === 'signup') && (
-        <button
-          type="button"
-          className="account-auth-switch"
-          onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
-        >
-          {mode === 'signup' ? t('auth.alreadyHaveAccount') : t('auth.noAccountYet')}
-        </button>
-      )}
+            <button
+              type="button"
+              className="account-auth-google-button"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+                <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
+                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.4 18.9 12 24 12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+                <path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.5-5.5C29.6 35.1 26.9 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.6 5.1C9.6 39.7 16.2 44 24 44z" />
+                <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.6l6.5 5.5C41.5 35.9 44 30.4 44 24c0-1.3-.1-2.7-.4-3.5z" />
+              </svg>
+              {t('auth.continueWithGoogle')}
+            </button>
+          </>
+        )}
+
+        <div className="auth-card-footer">
+          {(mode === 'forgot' || mode === 'reset') && (
+            <button type="button" className="account-auth-switch" onClick={() => switchMode('signin')}>
+              {t('auth.backToSignin')}
+            </button>
+          )}
+
+          {(mode === 'signin' || mode === 'signup') && (
+            <button
+              type="button"
+              className="account-auth-switch"
+              onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
+            >
+              {mode === 'signup' ? t('auth.alreadyHaveAccount') : t('auth.noAccountYet')}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1253,6 +1253,72 @@ button.sidebar-link.active:hover:not(:disabled) {
   margin-bottom: 2.5rem;
 }
 
+/* Carte de connexion : même matière que .card (dégradé profond, liseré
+   d'arête, reflet rasant) mais posée seule au centre de l'écran plutôt
+   qu'empilée dans une liste — le fond animé (.welcome-bg) reste visible
+   tout autour, la carte donne juste un point d'ancrage net au formulaire
+   au lieu de le laisser flotter à même les orbes. */
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  padding: 2.5rem 2.25rem 2rem;
+  position: relative;
+  background: linear-gradient(168deg, rgba(38, 43, 56, 0.78) 0%, var(--surface) 42%, #12151d 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-3), var(--edge-light);
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(255, 70, 85, 0.09), transparent 60%);
+}
+
+.auth-card-logo {
+  position: relative;
+  width: 100%;
+  max-width: 190px;
+  height: auto;
+  margin-bottom: 0.6rem;
+  filter: drop-shadow(0 0 22px rgba(255, 70, 85, 0.25));
+}
+
+.auth-card-tagline {
+  position: relative;
+  margin-bottom: 1.75rem;
+  font-size: 0.92rem;
+}
+
+.auth-card-message {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin: -0.3rem 0 0.6rem;
+}
+
+.auth-card-footer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--border);
+}
+
+.auth-card-footer .account-auth-switch {
+  margin-top: 0;
+}
+
 .account-auth-form {
   display: flex;
   flex-direction: column;
@@ -1297,6 +1363,47 @@ button.sidebar-link.active:hover:not(:disabled) {
   font-size: 0.85rem;
   line-height: 1.5;
   color: var(--text-muted);
+}
+
+/* Séparateur "ou" entre connexion par mot de passe et Google — même logique
+   que .card > h3:first-child::after (liseré dégradé), mais horizontal de
+   part et d'autre du mot plutôt que sous un titre. */
+.account-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 320px;
+  margin: 0.9rem 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.account-auth-divider::before,
+.account-auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.account-auth-google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  color: #1f1f1f;
+  border-color: #fff;
+}
+
+.account-auth-google-button:hover:not(:disabled) {
+  background: #f2f2f2;
+  border-color: #f2f2f2;
 }
 
 .account-auth-switch {
@@ -6152,23 +6259,133 @@ input[type='color'] {
   text-align: center;
 }
 
-.collection-value-card {
-  text-align: center;
+/* Page "Ma collection" — repris du port mobile (Wrapped card look) : carte de
+   valeur totale et skin le plus cher côte à côte, puis la répartition par rareté. */
+.collection-highlights {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 
-.collection-value-card .value {
-  font-size: 2.4rem;
+.collection-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  min-height: 190px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 200, 87, 0.16), rgba(255, 200, 87, 0.02)), var(--surface-alt);
+  border: 1px solid rgba(255, 200, 87, 0.35);
+  border-radius: 14px;
+}
+
+.collection-hero-skin {
+  position: absolute;
+  right: -1rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 44%;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+}
+
+/* Décor de la carte de valeur : plus de skin réel à afficher (elle ne
+   représente pas UN skin en particulier), un simple diamant de la banque
+   d'icônes suffit — même esprit que le liseré doré, sans se référer à un
+   objet précis de la collection. */
+.collection-hero-decor {
+  position: absolute;
+  right: 1.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ffc857;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.collection-hero-text {
+  position: relative;
+  padding: 1.5rem 1.75rem;
+  max-width: 60%;
+}
+
+.collection-hero-amount {
+  font-size: 3rem;
   font-weight: 800;
-  color: var(--accent);
-  text-shadow: 0 0 16px rgba(255, 70, 85, 0.5);
+  line-height: 1.1;
+  color: #ffc857;
+  text-shadow: 0 0 20px rgba(255, 200, 87, 0.45);
+  font-variant-numeric: tabular-nums;
 }
 
-.collection-value-card .label {
-  margin-top: 0.3rem;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
+.collection-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.collection-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Variante "skin le plus cher" : même gabarit que la carte de valeur, mais
+   le gros chiffre devient le nom du skin (police plus modeste pour rester
+   lisible sur des noms longs). */
+.collection-top-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.collection-top-name {
+  font-size: 1.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-segmented {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  margin-bottom: 0.9rem;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.collection-segment {
+  border-radius: 3px;
+}
+
+.collection-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+
+.collection-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.collection-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 .skin-detail-actions {

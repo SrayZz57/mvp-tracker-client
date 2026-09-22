@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Crown, Gem, Shirt } from 'lucide-react';
+import Icon from './Icon.jsx';
 import { useSkinsCatalog } from './skinsData.js';
 import SkinDetailModal from './SkinDetailModal.jsx';
 import Skeleton from './Skeleton.jsx';
@@ -7,9 +9,13 @@ import CountUp from './CountUp.jsx';
 import { loadCollection, loadWishlist, toggleWishlist, toggleCollection, setCollectionPrice } from './personalData.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
 
+const GOLD = '#ffc857';
+
 // Page dédiée à la collection personnelle — auparavant un petit onglet noyé
 // dans "Skins", maintenant sa propre page dans "Mon compte" puisque c'est une
-// donnée intrinsèquement personnelle (pas liée au joueur qu'on suit).
+// donnée intrinsèquement personnelle (pas liée au joueur qu'on suit). Repris
+// du port mobile (app/account/collection.tsx) : valeur totale en avant, skin
+// le plus cher mis en avant, répartition par rareté, puis la grille.
 function MySkinsCollection({ myId }) {
   const { t } = useTranslation();
   const catalog = useSkinsCatalog();
@@ -34,10 +40,22 @@ function MySkinsCollection({ myId }) {
       .sort((a, b) => (b.priceVp || 0) - (a.priceVp || 0));
   }, [catalog, collection]);
 
-  const totalValueEuros = useMemo(
-    () => collection.reduce((sum, entry) => sum + (entry.priceVp || 0), 0) * 0.01,
-    [collection],
-  );
+  const totalVp = useMemo(() => collection.reduce((sum, entry) => sum + (entry.priceVp || 0), 0), [collection]);
+  const totalValueEuros = totalVp * 0.01;
+  const topSkin = collectionSkins[0];
+
+  // Répartition par rareté : barre segmentée + légende, même principe que le
+  // graphique de répartition des matchs par map/mode (StatsTab).
+  const tiers = useMemo(() => {
+    const byTier = new Map();
+    collectionSkins.forEach((skin) => {
+      const name = skin.tierName ?? t('skins.otherTier');
+      const entry = byTier.get(name) ?? { name, color: skin.tierColor ?? 'var(--text-muted)', count: 0 };
+      entry.count += 1;
+      byTier.set(name, entry);
+    });
+    return [...byTier.values()].sort((a, b) => b.count - a.count);
+  }, [collectionSkins, t]);
 
   const handleToggleWishlist = (uuid) => {
     toggleWishlist(myId, uuid).then(setWishlist);
@@ -61,20 +79,67 @@ function MySkinsCollection({ myId }) {
 
   return (
     <div>
-      <div className="card comp-score-card">
-        <div className="comp-score-main">
-          <div className="comp-score-ring" style={{ background: 'conic-gradient(#ffc857, #ff8fab, #ffc857)' }}>
-            <div className="comp-score-ring-inner">
-              <div className="comp-score-value" style={{ color: '#ffc857', fontSize: '1.7rem' }}>
-                <CountUp value={totalValueEuros} decimals={2} suffix="€" />
+      <div className="collection-highlights">
+        <div className="collection-hero">
+          <Icon icon={Gem} className="collection-hero-decor" size={140} strokeWidth={1} />
+          <div className="collection-hero-text">
+            <div className="label">{t('skins.estimatedValue')}</div>
+            <div className="collection-hero-amount">
+              <CountUp value={totalValueEuros} decimals={2} suffix="€" />
+            </div>
+            <div className="collection-hero-chips">
+              <span className="collection-hero-chip">
+                <Icon icon={Shirt} size={13} />
+                {t('skins.skinCount', { count: collection.length })}
+              </span>
+              <span className="collection-hero-chip">
+                <Icon icon={Gem} size={13} />
+                {totalVp.toLocaleString()} VP
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {topSkin && (
+          <div className="collection-hero collection-hero-top">
+            {topSkin.displayIcon && <img className="collection-hero-skin" src={topSkin.displayIcon} alt="" />}
+            <div className="collection-hero-text">
+              <div className="label collection-top-label">
+                <Icon icon={Crown} size={14} color={GOLD} />
+                {t('skins.mostExpensive')}
+              </div>
+              <div className="collection-hero-amount collection-top-name">{topSkin.name}</div>
+              <div className="collection-hero-chips">
+                <span className="collection-hero-chip">
+                  <Icon icon={Gem} size={13} />
+                  {topSkin.priceVp} VP
+                </span>
               </div>
             </div>
           </div>
-          <div className="label">{t('skins.totalValue', { count: collectionSkins.length })}</div>
-        </div>
+        )}
       </div>
 
-      <CollapsibleCard id="skins.myCollection" title={t('skins.myCollectionTitle')}>
+      {tiers.length > 1 && (
+        <CollapsibleCard id="skins.rarities" title={t('skins.raritiesTitle')}>
+          <div className="collection-segmented">
+            {tiers.map((tier) => (
+              <div key={tier.name} className="collection-segment" style={{ flex: tier.count, background: tier.color }} />
+            ))}
+          </div>
+          <div className="collection-legend">
+            {tiers.map((tier) => (
+              <span key={tier.name} className="collection-legend-item">
+                <span className="collection-legend-dot" style={{ background: tier.color }} />
+                {tier.name}
+                <span className="label">{tier.count}</span>
+              </span>
+            ))}
+          </div>
+        </CollapsibleCard>
+      )}
+
+      <CollapsibleCard id="skins.myCollection" title={t('skins.myCollectionTitle', { count: collectionSkins.length })}>
         {collectionSkins.length === 0 ? (
           <p>{t('skins.emptyCollection')}</p>
         ) : (

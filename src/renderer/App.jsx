@@ -411,6 +411,19 @@ function App() {
     return unsubscribe;
   }, []);
 
+  // Retour de la connexion Google ouverte dans le navigateur système (voir
+  // AccountAuth.jsx) : Supabase a redirigé vers mvptracker://auth/callback
+  // avec les tokens dans le fragment d'URL, main.js les a extraits et
+  // renvoyés ici — il ne reste qu'à activer la session, onAuthStateChange
+  // (plus bas) bascule alors automatiquement vers l'app.
+  useEffect(() => {
+    const unsubscribe = window.electronAPI.onOAuthDeepLink(async ({ accessToken, refreshToken }) => {
+      const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error) console.error('[auth] échec de la session Google :', error.message);
+    });
+    return unsubscribe;
+  }, []);
+
   const myUserId = session?.user?.id ?? null;
   const onlineFriendIds = useOnlinePresence(myUserId);
 

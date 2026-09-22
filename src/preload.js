@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('deep-link:recovery', listener);
     return () => ipcRenderer.removeListener('deep-link:recovery', listener);
   },
+  onOAuthDeepLink: (callback) => {
+    const listener = (_event, tokens) => callback(tokens);
+    ipcRenderer.on('deep-link:oauth', listener);
+    return () => ipcRenderer.removeListener('deep-link:oauth', listener);
+  },
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:set', settings),
   getLanguage: () => ipcRenderer.invoke('language:get'),

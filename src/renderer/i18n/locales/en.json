@@ -492,7 +492,14 @@
     "colorVariants": "Color variants",
     "totalValue_one": "Total value of your collection ({{count}} skin owned)",
     "totalValue_other": "Total value of your collection ({{count}} skins owned)",
-    "myCollectionTitle": "My collection",
+    "estimatedValue": "Estimated value",
+    "skinCount_one": "{{count}} skin",
+    "skinCount_other": "{{count}} skins",
+    "mostExpensive": "Your most expensive skin",
+    "raritiesTitle": "Rarities",
+    "otherTier": "Other",
+    "myCollectionTitle_one": "My collection ({{count}})",
+    "myCollectionTitle_other": "My collection ({{count}})",
     "emptyCollection": "No skin marked as owned yet — add some from the catalog (Skins tab).",
     "removeFromCollection": "Remove from my collection"
   },
@@ -1762,7 +1769,10 @@
     "forgotPassword": "Forgot your password?",
     "backToSignin": "← Back to sign in",
     "alreadyHaveAccount": "Already have an account? Sign in",
-    "noAccountYet": "No account yet? Sign up"
+    "noAccountYet": "No account yet? Sign up",
+    "or": "or",
+    "continueWithGoogle": "Continue with Google",
+    "googleFailed": "Couldn't start Google sign-in."
   },
   "setNewPassword": {
     "tagline": "Choose your new password.",

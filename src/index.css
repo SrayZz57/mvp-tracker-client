@@ -1274,6 +1274,18 @@ button.sidebar-link.active:hover:not(:disabled) {
   margin-bottom: 0.5rem;
 }
 
+/* Nouveau logo (icône + texte, format large) de l'écran d'accueil — même
+   fichier que la carte de connexion (voir .auth-card-logo) ; .welcome-logo
+   reste un carré 100×100 pensé pour l'ancienne icône seule, encore utilisé
+   par les autres écrans d'accueil. */
+.greeting-logo {
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  filter: drop-shadow(0 0 22px rgba(255, 70, 85, 0.35));
+  margin-bottom: 0.5rem;
+}
+
 .welcome-screen h1 {
   font-size: 2.2rem;
   letter-spacing: 0.03em;
@@ -1440,6 +1452,24 @@ button.sidebar-link.active:hover:not(:disabled) {
 .account-auth-google-button:hover:not(:disabled) {
   background: #f2f2f2;
   border-color: #f2f2f2;
+}
+
+.account-auth-discord-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 320px;
+  background: #5865f2;
+  color: #fff;
+  border-color: #5865f2;
+  margin-top: 0.6rem;
+}
+
+.account-auth-discord-button:hover:not(:disabled) {
+  background: #4752c4;
+  border-color: #4752c4;
 }
 
 .account-auth-switch {
@@ -2583,7 +2613,7 @@ button {
     background 0.2s var(--ease-out);
 }
 
-button:hover:not(:disabled):not(.weekly-notch) {
+button:hover:not(:disabled):not(.weekly-notch):not(.account-auth-google-button):not(.account-auth-discord-button):not(.danger-zone-button) {
   border-color: rgba(255, 70, 85, 0.55);
   background: linear-gradient(180deg, #2c3240, var(--surface-hi));
   box-shadow: var(--edge-light-strong), 0 4px 14px rgba(0, 0, 0, 0.3);
@@ -2740,22 +2770,12 @@ li {
   margin-top: 1.5rem;
   position: relative;
   z-index: 1;
-  /* Chaque carte garde sa propre hauteur (contenu différent : l'une est un
-     relevé de stats dense, l'autre une illustration) plutôt que d'étirer la
-     plus courte pour égaler l'autre — un vide artificiel valait mieux évité
-     que masqué. */
-  align-items: start;
 }
 
 .greeting-panel {
   display: flex;
   flex-direction: column;
-  /* Étire les enfants sans largeur propre (libellé, titre, texte) sur toute
-     la largeur de la carte au lieu de les laisser flotter centrés au-dessus
-     d'un contenu qui, lui, est déjà aligné à gauche (aperçu de profil,
-     grille de stats) — c'était le vrai décalage visuel de cet écran. */
-  align-items: stretch;
-  text-align: left;
+  align-items: center;
   gap: 1rem;
   padding: 1.75rem 1.5rem;
   border-radius: var(--r-lg, 18px);
@@ -2774,10 +2794,6 @@ li {
 
 .greeting-panel .riot-confirm-actions {
   margin-top: auto;
-  /* Un seul bouton ici (contrairement à LinkRiotAccount.jsx, où les mêmes
-     classes servent à un vrai choix oui/non centré) — aligné avec le reste
-     de la carte plutôt que centré tout seul. */
-  justify-content: flex-start;
 }
 
 .greeting-stats {
@@ -2884,16 +2900,16 @@ li {
 }
 
 .greeting-aim-text {
+  text-align: center;
   line-height: 1.5;
   margin: 0;
 }
 
 .greeting-aim-btn {
   /* `.refresh` porte un `margin-left: auto` pour son usage dans la topbar :
-     neutralisé ici pour occuper toute la largeur de la carte, comme un
-     vrai bouton d'action principale plutôt qu'une pastille centrée. */
-  width: 100%;
-  margin: auto 0 0;
+     sans le neutraliser, le bouton se colle à droite du panneau au lieu
+     d'être centré. */
+  margin: auto auto 0;
   font-size: 0.95rem;
   padding: 0.75rem 1.6rem;
   background: linear-gradient(180deg, #ff8f4d, #ff5a3c 55%, #e0342f);
@@ -5979,6 +5995,18 @@ li {
 
 .team-blue h4 {
   color: #5fb3ff;
+}
+
+/* Modes à plus de deux équipes (Gauntlet: Glitched...) : équipes classées, la
+   mienne mise en avant. flex-basis plus étroit que les deux colonnes
+   Rouge/Bleu pour que 8 duos passent à la ligne proprement. */
+.team-ranked {
+  flex: 1 1 200px;
+  min-width: 200px;
+}
+
+.team-mine h4 {
+  color: var(--accent);
 }
 
 .team-player {
@@ -9591,6 +9619,58 @@ input[type='color'] {
   margin-top: 0.5rem;
 }
 
+.danger-zone-card {
+  border-color: rgba(255, 70, 85, 0.35);
+}
+
+.danger-zone-button {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.danger-zone-button:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.danger-zone-button:disabled {
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.delete-account-modal {
+  max-width: 440px;
+}
+
+.delete-account-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.delete-account-reason-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.delete-account-other-text {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 1rem;
+}
+
+.delete-account-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
 .account-contact-button {
   display: inline-flex;
   align-items: center;
@@ -12165,4 +12245,26 @@ input[type='color'] {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+/* --- Barre du haut : mise à l'échelle Windows (125 % / 150 %) --------------
+   Sur un portable 1920×1080 à 150 %, la fenêtre ne fait plus que ~1280 px CSS
+   de large : les 13 éléments de la topbar (titre, Riot ID, Aim Trainer,
+   Rafraîchir, Discord, Nouveautés, langue, cloche, messages, amis, Recherche
+   de Team, réglages, avatar) ne tiennent plus sur une ligne et passent sur
+   deux, avec des icônes mal alignées. On la réduit ici (uniquement elle, pas
+   le reste de l'app, qui garde la taille choisie dans Windows) au format
+   qu'elle a à 100 % : le résultat est identique à ce qu'on voit sur un écran
+   1920 px non mis à l'échelle. Le garde-fou en largeur évite de la rétrécir
+   sur un grand écran (4K à 150 %) où elle tient déjà sans aide. */
+@media (min-resolution: 1.4dppx) and (max-width: 1800px) {
+  .topbar {
+    zoom: 0.667;
+  }
+}
+
+@media (min-resolution: 1.2dppx) and (max-resolution: 1.39dppx) and (max-width: 1800px) {
+  .topbar {
+    zoom: 0.8;
+  }
 }

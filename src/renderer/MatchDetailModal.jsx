@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { findMe, weaponKillsFor } from './valorantStats.js';
+import { findMe, weaponKillsFor, isRedBlueMatch, rankedTeamGroups } from './valorantStats.js';
 import { useMapImages } from './mapImages.js';
 
 function TeamColumn({ title, players, agentIcons, className }) {
@@ -28,6 +28,10 @@ function MatchDetailModal({ match, settings, agentIcons, onClose }) {
   const allPlayers = match?.players?.all_players || [];
   const redTeam = allPlayers.filter((p) => p.team === 'Red');
   const blueTeam = allPlayers.filter((p) => p.team === 'Blue');
+  // Modes à plus de deux équipes (ex. Gauntlet: Glitched, 8 duos) : équipes
+  // classées plutôt que deux colonnes Rouge/Bleu qui resteraient vides.
+  const redBlue = isRedBlueMatch(match);
+  const teamGroups = redBlue ? [] : rankedTeamGroups(match);
 
   const weaponCounts = new Map();
   if (me) {
@@ -53,8 +57,25 @@ function MatchDetailModal({ match, settings, agentIcons, onClose }) {
         <div className="card">
           <h3>{t('detail.players')}</h3>
           <div className="team-columns">
-            <TeamColumn title={t('detail.redTeam')} players={redTeam} agentIcons={agentIcons} className="team-red" />
-            <TeamColumn title={t('detail.blueTeam')} players={blueTeam} agentIcons={agentIcons} className="team-blue" />
+            {redBlue ? (
+              <>
+                <TeamColumn title={t('detail.redTeam')} players={redTeam} agentIcons={agentIcons} className="team-red" />
+                <TeamColumn title={t('detail.blueTeam')} players={blueTeam} agentIcons={agentIcons} className="team-blue" />
+              </>
+            ) : (
+              teamGroups.map((group, index) => {
+                const mine = group.players.some((p) => p.puuid === me?.puuid);
+                return (
+                  <TeamColumn
+                    key={group.team}
+                    title={`${t('detail.rankedTeam', { rank: index + 1 })}${mine ? ` — ${t('detail.yourTeam')}` : ''}`}
+                    players={group.players}
+                    agentIcons={agentIcons}
+                    className={`team-ranked${mine ? ' team-mine' : ''}`}
+                  />
+                );
+              })
+            )}
           </div>
         </div>
 

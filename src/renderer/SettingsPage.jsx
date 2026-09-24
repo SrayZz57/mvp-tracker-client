@@ -4,6 +4,7 @@ import { Pencil, Check, X } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { supabase } from './supabaseClient.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
+import DeleteAccountModal from './DeleteAccountModal.jsx';
 import { useE2EE } from './E2EEContext.jsx';
 import { isPerfLiteEnabled, setPerfLite } from './perfMode.js';
 
@@ -60,6 +61,7 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
   const [riotTagDraft, setRiotTagDraft] = useState(mySettings.tag ?? '');
   const [savingRiotId, setSavingRiotId] = useState(false);
   const [riotIdError, setRiotIdError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
@@ -367,6 +369,16 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
         )}
         {resetStatus === 'error' && <p className="warning account-reset-status">{t('account.forgotPasswordError')}</p>}
       </CollapsibleCard>
+
+      <CollapsibleCard id="settings.danger-zone" title={t('account.dangerZoneTitle')} className="danger-zone-card">
+        <button type="button" className="danger-zone-button" onClick={() => setShowDeleteModal(true)}>
+          {t('account.deleteAccountLabel')}
+        </button>
+      </CollapsibleCard>
+
+      {showDeleteModal && (
+        <DeleteAccountModal email={email} onClose={() => setShowDeleteModal(false)} onDeleted={onSignOut} />
+      )}
     </div>
   );
 }

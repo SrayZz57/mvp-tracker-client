@@ -5,7 +5,7 @@ import Icon from './Icon.jsx';
 import RiotProfilePreview from './RiotProfilePreview.jsx';
 import AnnouncementCard from './AnnouncementCard.jsx';
 import { excludeDeathmatch, formStats, overallWinrate, overallHsPercent, resultLabelKey, resultLabel, findMe } from './valorantStats.js';
-import logo from '../assets/logo.png';
+import logoText from '../assets/logo-text.png';
 
 const ORBS = [1, 2, 3, 4, 5, 6, 7];
 
@@ -51,7 +51,7 @@ function AccountGreeting({ settings, rank, matches = [], announcements = [], onE
         ))}
       </div>
 
-      <img src={logo} alt="MVP Tracker" className="welcome-logo" />
+      <img src={logoText} alt="MVP Tracker" className="greeting-logo" />
       <h1>{t('accountGreeting.title', { name: settings.name })}</h1>
       <p className="welcome-tagline">{t('accountGreeting.tagline')}</p>
 

@@ -20,8 +20,52 @@
 // perso.
 const NON_STANDARD_MODE_IDS = new Set(['deathmatch', 'custom', '', 'ggteam', 'hurm', 'console_hurm']);
 
+// Un match à plus de deux équipes (ex. Gauntlet: Glitched, patch 13.06 : 8 duos,
+// des points de vie à la place de manches gagnées/perdues) n'a pas de vrai
+// "camp gagnant" comparable — exclu sans avoir besoin de connaître son mode_id
+// à l'avance (les modes événementiels changent à chaque patch). Seuil à > 2 et
+// pas !== 2 : un match dont la liste des joueurs est vide ou partielle (cache
+// incomplet) ne doit jamais être exclu à tort.
+function hasMoreThanTwoTeams(match) {
+  const teams = new Set((match.players?.all_players ?? []).map((p) => p.team).filter(Boolean));
+  return teams.size > 2;
+}
+
 export function excludeDeathmatch(matches) {
-  return matches.filter((m) => !NON_STANDARD_MODE_IDS.has(m.metadata?.mode_id));
+  return matches.filter((m) => !NON_STANDARD_MODE_IDS.has(m.metadata?.mode_id) && !hasMoreThanTwoTeams(m));
+}
+
+// Vrai pour un match classique "Rouge contre Bleu". Faux pour un mode à
+// équipes multiples (Gauntlet: Glitched...) : la fenêtre de détail affiche
+// alors les équipes par classement (voir rankedTeamGroups) au lieu de deux
+// colonnes fixes qui resteraient vides.
+export function isRedBlueMatch(match) {
+  const players = match?.players?.all_players ?? [];
+  return players.every((p) => p.team === 'Red' || p.team === 'Blue');
+}
+
+// Équipes d'un match, classées : victorieuse d'abord, puis par manches
+// gagnées. Joueurs triés par kills. Repose uniquement sur `team` (id d'équipe
+// HenrikDev, quel qu'il soit) et sur match.teams (clé = id en minuscules,
+// voir normalizeTeams) — aucun nom d'équipe ni d'identifiant de mode supposé.
+export function rankedTeamGroups(match) {
+  const groups = new Map();
+  (match?.players?.all_players ?? []).forEach((p) => {
+    if (!p.team) return;
+    if (!groups.has(p.team)) groups.set(p.team, []);
+    groups.get(p.team).push(p);
+  });
+  return [...groups.entries()]
+    .map(([team, players]) => {
+      const info = match?.teams?.[team.toLowerCase()];
+      return {
+        team,
+        players: [...players].sort((a, b) => (b.stats?.kills ?? 0) - (a.stats?.kills ?? 0)),
+        won: info?.has_won === true,
+        rounds: info?.rounds_won ?? 0,
+      };
+    })
+    .sort((a, b) => Number(b.won) - Number(a.won) || b.rounds - a.rounds);
 }
 
 // Compare les noms SANS tenir compte des accents, pas juste en unifiant leur

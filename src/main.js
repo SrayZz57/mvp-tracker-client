@@ -810,8 +810,6 @@ ipcMain.handle('valorant:preview-account', async (_event, { name, tag, apiKey })
 // valorant:get-matches, qui écrit `valorantSettings` sur disque (bascule le
 // "joueur suivi" de toute l'app) : un simple coup d'œil ne doit jamais avoir
 // cet effet de bord.
-const NON_STANDARD_MODE_IDS_MAIN = new Set(['deathmatch', 'custom', '', 'ggteam', 'hurm', 'console_hurm']);
-
 ipcMain.handle('valorant:preview-recent-stats', async (_event, { name, tag, apiKey }) => {
   const cached = getPreviewCache('recent-stats', name, tag);
   if (cached) return cached;
@@ -824,7 +822,7 @@ ipcMain.handle('valorant:preview-recent-stats', async (_event, { name, tag, apiK
     console.error('[preview-recent-stats] échec de récupération des matchs :', err.message);
     throw err;
   }
-  const matches = rawMatches.filter((m) => !NON_STANDARD_MODE_IDS_MAIN.has(m.metadata?.mode_id));
+  const matches = excludeDeathmatch(rawMatches);
 
   let kills = 0;
   let deaths = 0;

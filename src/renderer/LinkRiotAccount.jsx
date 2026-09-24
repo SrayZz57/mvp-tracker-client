@@ -46,7 +46,14 @@ function LinkRiotAccount({ onConfirmed, linkError, onSignOut }) {
       setPreview(result);
       setStep('confirm');
     } catch (err) {
-      setError(err.message);
+      // HenrikDev répond cette erreur brute en anglais sur TOUTES ses routes
+      // par pseudo pour certains comptes (compte, rang, matchs, matchs stockés
+      // — reproduit sur geekplay#geek le 2026-09-24, même avec force=true,
+      // quelle que soit la casse du pseudo, alors que 7 autres joueurs récents
+      // se résolvaient normalement). Le compte existe bel et bien : un compte
+      // inexistant renverrait "Account not found". Cause NON identifiée, côté
+      // HenrikDev : d'où un message qui le dit plutôt que le texte brut.
+      setError(/Error while fetching needed match data/i.test(err.message) ? t('linkRiot.noRecentGameError') : err.message);
     } finally {
       setLoading(false);
     }

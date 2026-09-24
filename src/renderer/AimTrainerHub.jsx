@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import AimTrainerGame, { DEFAULT_CONFIG, MODES, WEAPON_MODELS } from './AimTrainerGame.jsx';
 import SensitivityFinder from './SensitivityFinder.jsx';
-import { suggestSensitivity } from './sensitivityFit.js';
+import { analyzeFinderResults } from './sensitivityFit.js';
 import Icon from './Icon.jsx';
 import mvpTrackerLogo from '../assets/logo.png';
 import weaponDefaultPreview from '../assets/weapon-default-preview.png';
@@ -1319,16 +1319,14 @@ function AimTrainerHub({ config: initialRawConfig }) {
               <Icon icon={Gauge} size={20} /> {t('aimTrainer.finderResultsTitle')}
             </h2>
             {(() => {
-              const withAccuracy = finderResults.filter((r) => r.accuracy !== null);
-              const best = withAccuracy.reduce(
-                (top, r) => (!top || r.accuracy > top.accuracy ? r : top),
-                null,
-              );
-              const maxAccuracy = best?.accuracy ?? 0;
-              // Régression sur la courbe complète plutôt que "la meilleure
-              // des valeurs testées" — le vrai optimum tombe rarement pile
-              // sur l'une des sensibilités essayées (voir sensitivityFit.js).
-              const suggested = suggestSensitivity(withAccuracy);
+              // Score = touches × précision (voir sensitivityFit.js) : la
+              // précision seule plafonne à 100 % pour tous les essais, ou
+              // récompense une sensibilité si basse qu'on ne touche que 2
+              // cibles. Régression sur la courbe complète plutôt que "la
+              // meilleure des valeurs testées" — le vrai optimum tombe
+              // rarement pile sur l'une des sensibilités essayées.
+              const { suggested, indistinct, edge, best, scored } = analyzeFinderResults(finderResults, config.sens);
+              const maxEffective = Math.max(1, ...scored.map((r) => r.effective));
               return (
                 <>
                   <p className="label">{t('aimTrainer.finderResultsIntro')}</p>
@@ -1337,31 +1335,42 @@ function AimTrainerHub({ config: initialRawConfig }) {
                     <div className="card aim-finder-suggestion">
                       <span className="aim-finder-suggestion-label">{t('aimTrainer.finderSuggestedLabel')}</span>
                       <span className="aim-finder-suggestion-value">{suggested}</span>
-                      <p className="label">{t('aimTrainer.finderSuggestedHint')}</p>
+                      <p className="label">
+                        {indistinct
+                          ? t('aimTrainer.finderIndistinctHint')
+                          : edge
+                            ? t(edge === 'up' ? 'aimTrainer.finderEdgeHintUp' : 'aimTrainer.finderEdgeHintDown', { sens: suggested })
+                            : t('aimTrainer.finderSuggestedHint')}
+                      </p>
                     </div>
                   )}
 
                   <div className="aim-finder-results-list">
-                    {finderResults.map((r, i) => (
-                      <div
-                        key={i}
-                        className={best && r.sens === best.sens ? 'aim-finder-result-row best' : 'aim-finder-result-row'}
-                      >
-                        <span className="aim-finder-result-sens">{r.sens}</span>
-                        <div className="aim-finder-result-bar-track">
-                          <div
-                            className="aim-finder-result-bar-fill"
-                            style={{ width: r.accuracy === null ? '0%' : `${Math.max(4, (r.accuracy / Math.max(maxAccuracy, 1)) * 100)}%` }}
-                          />
+                    {/* Les essais sont joués dans un ordre aléatoire : affichés
+                        du plus bas au plus haut pour que la courbe se lise. */}
+                    {[...finderResults].sort((a, b) => a.sens - b.sens).map((r, i) => {
+                      const scoredRow = scored.find((s) => s.sens === r.sens);
+                      const isBest = best && r.sens === best.sens;
+                      return (
+                        <div key={i} className={isBest ? 'aim-finder-result-row best' : 'aim-finder-result-row'}>
+                          <span className="aim-finder-result-sens">{r.sens}</span>
+                          <div className="aim-finder-result-bar-track">
+                            <div
+                              className="aim-finder-result-bar-fill"
+                              style={{ width: scoredRow ? `${Math.max(4, (scoredRow.effective / maxEffective) * 100)}%` : '0%' }}
+                            />
+                          </div>
+                          <span className="aim-finder-result-value">
+                            {scoredRow
+                              ? t('aimTrainer.finderRowDetail', { hits: r.hits, accuracy: r.accuracy.toFixed(0), score: scoredRow.effective.toFixed(1) })
+                              : '—'}
+                          </span>
+                          {isBest && !indistinct && (
+                            <span className="aim-finder-result-badge">{t('aimTrainer.finderBestTested')}</span>
+                          )}
                         </div>
-                        <span className="aim-finder-result-value">
-                          {r.accuracy === null ? '—' : `${r.accuracy.toFixed(1)}%`}
-                        </span>
-                        {best && r.sens === best.sens && (
-                          <span className="aim-finder-result-badge">{t('aimTrainer.finderBestTested')}</span>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="account-settings-actions">
                     <button className="sidebar-signout account-signout" onClick={goBack}>

@@ -5,6 +5,32 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.10.15',
+    date: '2026-09-24',
+    items: {
+      fr: [
+        'Connexion avec Google ou avec Discord, en plus de l’e-mail, et écran de connexion redessiné.',
+        'Réglages : nouveau bouton Supprimer mon compte (zone dangereuse). Une fenêtre te demande d’abord pourquoi tu pars (optionnel), puis confirme la suppression, et un e-mail te confirme que c’est fait. Un e-mail de bienvenue est aussi envoyé à l’inscription.',
+        'Ma collection : la valeur totale est mise en avant, avec ton skin le plus cher et la répartition par rareté.',
+        'Accueil : nouveau logo, et ta série de victoires ou de défaites en cours s’affiche à côté de tes 5 dernières parties.',
+        'Barre du haut : elle tient de nouveau sur une seule ligne quand Windows est réglé à 125 % ou 150 %.',
+        'Gauntlet: Glitched (patch 13.06) : ces parties de 8 duos ne comptent plus dans tes statistiques (winrate, K/D…), et le détail d’un match affiche les équipes classées.',
+        'Sensitivity Finder : les 9 essais sont joués dans un ordre aléatoire et notés sur touches × précision. La sensibilité conseillée est calculée sur l’ensemble des essais (fini le « toujours la plus basse » quand tout est à 100 %), et l’écran te dit quand les résultats sont trop proches ou que l’optimum est hors de la plage testée.',
+        'Lier ton compte Riot : quand HenrikDev n’arrive pas à lire un compte, un message clair remplace l’erreur brute en anglais.',
+      ],
+      en: [
+        'Sign in with Google or Discord, in addition to email, and a redesigned sign-in screen.',
+        'Settings: new Delete my account button (danger zone). A window first asks why you’re leaving (optional), then confirms the deletion, and an email confirms it’s done. A welcome email is also sent when you sign up.',
+        'My collection: the total value is front and center, with your most expensive skin and a breakdown by rarity.',
+        'Home: new logo, and your current win or loss streak is shown next to your last 5 games.',
+        'Top bar: it fits on a single line again when Windows is set to 125% or 150%.',
+        'Gauntlet: Glitched (patch 13.06): these 8-duo games no longer count in your stats (winrate, K/D…), and the match detail shows the teams ranked.',
+        'Sensitivity Finder: the 9 tests are played in random order and scored on hits × accuracy. The suggested sensitivity is computed from all the tests (no more “always the lowest” when everything is at 100%), and the screen tells you when results are too close or the optimum is outside the tested range.',
+        'Linking your Riot account: when HenrikDev can’t read an account, a clear message replaces the raw English error.',
+      ],
+    },
+  },
+  {
     version: '1.10.14',
     date: '2026-09-21',
     items: {

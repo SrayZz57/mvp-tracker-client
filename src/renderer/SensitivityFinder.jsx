@@ -28,6 +28,20 @@ function buildFinderSteps(baseMode, sens) {
   }));
 }
 
+// Ordre aléatoire des essais (Fisher-Yates) : en partant toujours de la plus
+// basse, l'échauffement, la fatigue et la mémoire musculaire d'un essai à
+// l'autre se répercutaient toujours sur les mêmes sensibilités et faussaient
+// la courbe. Mélangé, ces effets se répartissent au hasard au lieu de
+// pénaliser (ou avantager) systématiquement une extrémité.
+function shuffled(items) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 function SensitivityFinder({ dpi, sens, onClose, onLaunch }) {
   const { t } = useTranslation();
   const [baseMode, setBaseMode] = useState('gridshot');
@@ -65,7 +79,7 @@ function SensitivityFinder({ dpi, sens, onClose, onLaunch }) {
           <button className="sidebar-signout account-signout" onClick={onClose}>
             {t('detail.close')}
           </button>
-          <button className="refresh aim-game-cta" onClick={() => onLaunch(buildFinderSteps(baseMode, sens))}>
+          <button className="refresh aim-game-cta" onClick={() => onLaunch(shuffled(buildFinderSteps(baseMode, sens)))}>
             {t('aimTrainer.finderStart')}
           </button>
         </div>

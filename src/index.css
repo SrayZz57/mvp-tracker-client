@@ -8135,6 +8135,123 @@ input[type='color'] {
   margin-top: 0.75rem;
 }
 
+/* Profil ADN + progression du rang sur une même ligne (page Stats), à la même
+   hauteur. Dès qu'une des deux est repliée on revient à des hauteurs libres,
+   sinon la carte repliée resterait une grande boîte vide. Sous 1100px de large
+   les deux passent l'une sous l'autre. */
+.profile-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+  margin-bottom: 1.25rem;
+}
+
+.profile-row:has(.collapsible-card.collapsed) {
+  align-items: start;
+}
+
+.profile-row > .card {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+/* Le contenu occupe toute la hauteur de la carte : les 4 barres du profil ADN
+   se répartissent l'espace disponible, et la ligne de bas de carte (« Basé sur
+   156 matchs… » / « 20 parties classées… ») tombe à la même hauteur des deux côtés. */
+.profile-row > .card .collapsible-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-row .profile-adn-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+
+.profile-row .rank-history-foot {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+@media (max-width: 1100px) {
+  .profile-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Hauteur = HEIGHT dans RankHistoryCard.jsx : le viewBox du SVG suit ce ratio,
+   un écart ici déformerait le graphique. */
+.rank-history-chart {
+  display: block;
+  width: 100%;
+  height: 280px;
+}
+
+.rank-history-current {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.rank-history-band-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* Bouton de rechargement du bloc seul : même famille visuelle que le bouton
+   Réduire/Agrandir (pastille sur --surface-alt), en rond puisqu'il ne porte
+   qu'une icône. L'icône tourne tant que la requête est en cours. */
+.rank-history-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+.rank-history-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rank-history-refresh.spinning svg {
+  animation: loading-spin 0.9s linear infinite;
+}
+
+.rank-history-net {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-history-net.up,
+.rank-history-delta.up {
+  color: var(--good);
+}
+
+.rank-history-net.down,
+.rank-history-delta.down {
+  color: var(--accent);
+}
+
+.rank-history-foot {
+  margin-top: 0.5rem;
+}
+
 .weakness-list {
   display: flex;
   flex-direction: column;

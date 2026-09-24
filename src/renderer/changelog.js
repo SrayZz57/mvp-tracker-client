@@ -5,6 +5,20 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.10.16',
+    date: '2026-09-24',
+    items: {
+      fr: [
+        'Stats : nouveau graphique de ton RR sur 20 jours, à côté du Profil ADN, avec les rangs traversés, les montées/descentes et le RR gagné ou perdu à chaque partie. Un bouton permet de le recharger seul.',
+        'L’app ne lit plus aucun fichier de Riot : la détection de Valorant se fait uniquement par le nom du processus, comme le Gestionnaire des tâches.',
+      ],
+      en: [
+        'Stats: new 20-day RR chart next to the DNA Profile, showing ranks crossed, promotions/demotions and the RR gained or lost each game. A button reloads just this block.',
+        'The app no longer reads any Riot file: Valorant detection relies only on the process name, like the Task Manager.',
+      ],
+    },
+  },
+  {
     version: '1.10.15',
     date: '2026-09-24',
     items: {

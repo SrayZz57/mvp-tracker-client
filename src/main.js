@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import started from 'electron-squirrel-startup';
 import Store from 'electron-store';
-import { getAccount, getMatches, getMmr } from './services/henrikdev.js';
+import { getAccount, getMatches, getMmr, getMmrHistory } from './services/henrikdev.js';
 import { excludeDeathmatch, formStats, tiltStatus, patchSelfIdentity, findMe, resultLabel, matchScore, hitStats } from './renderer/valorantStats.js';
 import { computeHallOfFame } from './renderer/hallOfFame.js';
 import {
@@ -846,6 +846,82 @@ ipcMain.handle('valorant:preview-recent-stats', async (_event, { name, tag, apiK
   return result;
 });
 
+// Historique de RR du compte suivi (graphique de la page Stats). Une entrée par
+// partie classée : on ne garde que ce qui sert au graphique pour que le cache
+// disque reste léger, et la liste est mise en cache 15 min par compte — un
+// appel de plus par ouverture de la page aurait coûté du quota HenrikDev pour
+// une donnée qui ne bouge qu'à la fin d'une partie classée. En cas d'échec
+// (429...), on ressert l'ancienne copie plutôt que de vider le graphique.
+const MMR_HISTORY_TTL_MS = 15 * 60 * 1000;
+// Le bouton de rechargement du bloc contourne ce délai de 15 min, mais pas plus
+// souvent qu'une fois par minute : deux clics rapprochés ne doivent pas coûter
+// deux vraies requêtes HenrikDev.
+const MMR_HISTORY_MIN_REFRESH_MS = 60 * 1000;
+
+function slimMmrHistory(rawEntries) {
+  return rawEntries
+    .map((entry) => ({
+      date: entry.date,
+      tierId: entry.tier?.id ?? null,
+      tierName: entry.tier?.name ?? null,
+      rr: entry.rr,
+      elo: typeof entry.elo === 'number' ? entry.elo : null,
+      change: typeof entry.last_change === 'number' ? entry.last_change : null,
+      map: entry.map?.name ?? null,
+    }))
+    .filter((entry) => entry.date && entry.tierId !== null && typeof entry.rr === 'number');
+}
+
+// HenrikDev ne renvoie que les 20 dernières parties classées (≈ 12 jours pour un
+// joueur régulier) : pour que le graphique puisse vraiment couvrir 20 jours, les
+// parties déjà vues sont conservées localement et complétées à chaque appel.
+// Clé de fusion = la date (unique par partie) ; en cas de doublon, la version
+// la plus récente de l'API l'emporte. Au-delà de 30 jours on oublie, pour que le
+// fichier de réglages ne grossisse pas indéfiniment.
+const MMR_HISTORY_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
+
+function mergeMmrHistory(stored, fresh) {
+  const byDate = new Map();
+  for (const entry of [...stored, ...fresh]) byDate.set(entry.date, entry);
+  const cutoff = Date.now() - MMR_HISTORY_KEEP_MS;
+  return [...byDate.values()]
+    .filter((entry) => new Date(entry.date).getTime() >= cutoff)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+ipcMain.handle('valorant:get-mmr-history', async (_event, { force = false } = {}) => {
+  const settings = store.get('valorantSettings');
+  if (!settings?.name || !settings?.tag || !settings?.apiKey) return { history: [] };
+
+  const cached = store.get('mmrHistoryCache');
+  const sameAccount = cached && cached.key === `${settings.name}#${settings.tag}`.toLowerCase();
+  const maxAge = force ? MMR_HISTORY_MIN_REFRESH_MS : MMR_HISTORY_TTL_MS;
+  if (sameAccount && Date.now() - cached.at < maxAge) return { history: cached.history };
+
+  try {
+    const account = await getAccountShared(settings.name, settings.tag, settings.apiKey);
+    let raw = null;
+    let lastErr;
+    for (const platform of platformCandidates(account)) {
+      try {
+        raw = await getMmrHistory(account.region, platform, settings.name, settings.tag, settings.apiKey);
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (err.status === 429) break; // même quota, inutile d'essayer l'autre plateforme
+      }
+    }
+    if (raw === null) throw lastErr;
+    const history = mergeMmrHistory(sameAccount ? cached.history : [], slimMmrHistory(raw));
+    store.set('mmrHistoryCache', { key: `${settings.name}#${settings.tag}`.toLowerCase(), at: Date.now(), history });
+    return { history };
+  } catch (err) {
+    console.error('[henrikdev] historique de RR indisponible :', err.message);
+    if (sameAccount) return { history: cached.history, stale: true };
+    return { history: [], error: err.message };
+  }
+});
+
 ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => {
   const account = await getAccountShared(name, tag, apiKey);
   store.set('valorantSettings', { name, tag, apiKey, puuid: account.puuid });
@@ -980,7 +1056,7 @@ ipcMain.handle('hall-of-fame:get-records', (_event, puuid) => {
 let networkStatus = { valorantRunning: false, latestPing: null };
 
 setInterval(async () => {
-  const valorantRunning = isValorantRunning();
+  const valorantRunning = await isValorantRunning();
   const latestPing = valorantRunning ? await pingOnce() : null;
   networkStatus = { valorantRunning, latestPing };
   if (valorantRunning && latestPing !== null && currentPuuid()) {
@@ -1034,7 +1110,7 @@ let lastMatchActive = false;
 
 async function pollMatchActive() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  const active = isValorantRunning() && (await isValorantGameRunning());
+  const active = (await isValorantRunning()) && (await isValorantGameRunning());
   if (active !== lastMatchActive) {
     lastMatchActive = active;
     mainWindow.webContents.send('window:match-active-change', active);
@@ -1526,7 +1602,7 @@ async function refreshDailyOverlay() {
 // jour suivantes viennent de checkTiltAndNotify (voir pushDailyOverlayStats).
 //
 // isValorantGameRunning() (process VALORANT-Win64-Shipping.exe) plutôt que
-// isValorantRunning() (lockfile du Riot Client, vrai dès l'écran d'accueil) —
+// isValorantRunning() (process du Riot Client, vrai dès l'écran d'accueil) —
 // signalé par l'utilisateur : l'overlay apparaissait trop tôt, avant même
 // d'avoir lancé une partie.
 let dailyOverlayLastRunning = false;

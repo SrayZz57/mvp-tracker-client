@@ -380,6 +380,16 @@
     "roleDistributionTitle": "Role distribution",
     "matchLabel": "Match {{n}}"
   },
+  "rankHistory": {
+    "title": "Rank progress",
+    "loading": "Loading your RR history...",
+    "notEnough": "Not enough recent ranked games to draw a curve (at least 2 in the last 20 days are needed).",
+    "unavailable": "RR history unavailable right now — try again in a few minutes.",
+    "refresh": "Reload rank progress",
+    "refreshCooldown": "Reload available in under a minute (limits calls to HenrikDev)",
+    "foot_one": "{{count}} ranked game over the last {{days}} days — green dots: RR gained, red: RR lost.",
+    "foot_other": "{{count}} ranked games over the last {{days}} days — green dots: RR gained, red: RR lost."
+  },
   "rankMomentum": {
     "title": "Momentum",
     "notReady_one": "{{count}} more ranked match needed before comparing your recent form to your usual level.",

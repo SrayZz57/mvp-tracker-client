@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCachedMessagingKey: (userId) => ipcRenderer.invoke('messaging:get-cached-key', userId),
   clearCachedMessagingKey: (userId) => ipcRenderer.invoke('messaging:clear-cached-key', userId),
   getMatches: (settings) => ipcRenderer.invoke('valorant:get-matches', settings),
+  getMmrHistory: (options) => ipcRenderer.invoke('valorant:get-mmr-history', options),
   previewRiotAccount: (payload) => ipcRenderer.invoke('valorant:preview-account', payload),
   previewRecentStats: (payload) => ipcRenderer.invoke('valorant:preview-recent-stats', payload),
   getCachedMatches: () => ipcRenderer.invoke('valorant:get-cached-matches'),

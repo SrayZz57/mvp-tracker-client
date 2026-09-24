@@ -112,3 +112,16 @@ export async function getMmr(region, platform, name, tag, apiKey) {
     apiKey,
   );
 }
+
+// Historique des variations de RR : une entrée par partie classée (date, rang,
+// RR après la partie, variation). Sert au graphique de progression de la page
+// Stats. La doc HenrikDev annonce `data: { account, history: [...] }` — on
+// accepte aussi un tableau direct au cas où la forme changerait, sans planter.
+export async function getMmrHistory(region, platform, name, tag, apiKey) {
+  const data = await henrikFetch(
+    `/valorant/v2/mmr-history/${region}/${platform}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`,
+    apiKey,
+  );
+  if (Array.isArray(data)) return data;
+  return Array.isArray(data?.history) ? data.history : [];
+}

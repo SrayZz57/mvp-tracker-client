@@ -380,6 +380,16 @@
     "roleDistributionTitle": "Répartition par rôle",
     "matchLabel": "Match {{n}}"
   },
+  "rankHistory": {
+    "title": "Progression du rang",
+    "loading": "Chargement de ton historique de RR...",
+    "notEnough": "Pas assez de parties classées récentes pour tracer une courbe (il en faut au moins 2 sur les 20 derniers jours).",
+    "unavailable": "Historique de RR indisponible pour le moment — réessaie dans quelques minutes.",
+    "refresh": "Recharger la progression du rang",
+    "refreshCooldown": "Rechargement possible dans moins d'une minute (limite les appels à HenrikDev)",
+    "foot_one": "{{count}} partie classée sur les {{days}} derniers jours — points verts : RR gagné, rouges : RR perdu.",
+    "foot_other": "{{count}} parties classées sur les {{days}} derniers jours — points verts : RR gagné, rouges : RR perdu."
+  },
   "rankMomentum": {
     "title": "Progression",
     "notReady_one": "Encore {{count}} match classé avant de pouvoir comparer ta forme récente à ton niveau habituel.",

@@ -20,6 +20,7 @@ import { useMapImages } from '../mapImages.js';
 import { useWeaponIcons } from '../weaponIcons.js';
 import { useRankTiers, usePlayerCardArt, useSeasonNames } from '../rankData.js';
 import PlayerProfileCard from '../PlayerProfileCard.jsx';
+import RankHistoryCard from '../RankHistoryCard.jsx';
 import PlatformFilterToggle from '../PlatformFilterToggle.jsx';
 import usePlatformFilter from '../usePlatformFilter.js';
 import CollapsibleCard from '../CollapsibleCard.jsx';
@@ -492,7 +493,12 @@ function StatsTab({ settings, matches, rank, loading }) {
         </div>
       </div>
 
-      <PlayerProfileCard settings={settings} matches={scopedMatches} />
+      {/* Profil ADN et progression du rang côte à côte : le profil ADN à lui seul
+          étirait ses 4 barres sur toute la largeur de la page. */}
+      <div className="profile-row">
+        <PlayerProfileCard settings={settings} matches={scopedMatches} />
+        <RankHistoryCard />
+      </div>
       <RankMomentumCard settings={settings} matches={scopedMatches} />
 
       <CollapsibleCard id="stats.kdProgression" title={t('stats.kdProgressionTitle', { count: kdProgression.length })}>

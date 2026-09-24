@@ -687,12 +687,17 @@ function App() {
     // recipient_id : messages ciblés (voir sql/announcements_recipient.sql). Si la
     // migration n'a pas encore été passée, la colonne n'existe pas et la requête
     // échoue — on retente sans elle pour ne jamais perdre les annonces générales.
-    const AUTHOR = 'author:profiles(display_name, riot_name, riot_tag, avatar_card_uuid)';
+    // `!created_by` : depuis que announcements a aussi `recipient_id` → profiles, PostgREST
+    // voit deux liens possibles et refuse la jointure "profiles" sans savoir lequel suivre.
+    const AUTHOR = 'author:profiles!created_by(display_name, riot_name, riot_tag, avatar_card_uuid)';
     const query = (columns) =>
       supabase.from('announcements').select(columns).eq('is_active', true).order('created_at', { ascending: false });
     const load = async () => {
       let { data, error } = await query(`id, title, body, image_url, created_at, recipient_id, ${AUTHOR}`);
-      if (error) ({ data } = await query(`id, title, body, image_url, created_at, ${AUTHOR}`));
+      if (error) {
+        console.error('[announcements]', error.message);
+        ({ data } = await query(`id, title, body, image_url, created_at, ${AUTHOR}`));
+      }
       if (!cancelled) setAnnouncements(data ?? []);
     };
     load();

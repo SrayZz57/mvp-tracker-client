@@ -11,8 +11,6 @@ import {
   weaponKillsFor,
   groupStats,
   excludeDeathmatch,
-  weaponKillsForAgent,
-  agentTotalKills,
   kastStats,
 } from '../valorantStats.js';
 import { useAgentIcons, useAgentPortraits, useAgentRoles } from '../agentIcons.js';
@@ -21,6 +19,11 @@ import { useWeaponIcons } from '../weaponIcons.js';
 import { useRankTiers, usePlayerCardArt, useSeasonNames } from '../rankData.js';
 import PlayerProfileCard from '../PlayerProfileCard.jsx';
 import RankHistoryCard from '../RankHistoryCard.jsx';
+import GlobalStatsCard from '../GlobalStatsCard.jsx';
+import WeaponStatsCard from '../WeaponStatsCard.jsx';
+import AgentStatsCard from '../AgentStatsCard.jsx';
+import MapStatsCard from '../MapStatsCard.jsx';
+import GroupStatsCard from '../GroupStatsCard.jsx';
 import PlatformFilterToggle from '../PlatformFilterToggle.jsx';
 import usePlatformFilter from '../usePlatformFilter.js';
 import CollapsibleCard from '../CollapsibleCard.jsx';
@@ -54,133 +57,6 @@ const SCOPE_OPTIONS = [
   { id: 'competitive', labelKey: 'stats.scope.ranked' },
   { id: 'unrated', labelKey: 'stats.scope.unrated' },
 ];
-
-// Fonction utilitaire (pas un composant) : reçoit `t` en paramètre plutôt que
-// d'appeler useTranslation() elle-même.
-function renderModeStats(t, id, title, rows, icons) {
-  return (
-    <CollapsibleCard id={id} title={title}>
-      {rows.length === 0 ? (
-        <p>{t('stats.noDataYet')}</p>
-      ) : (
-        rows.map((row) => (
-          <div key={row.key} className="stat-bar-row">
-            <span className="stat-bar-label">
-              {icons?.get(row.key) && <img src={icons.get(row.key)} alt="" className="stat-bar-icon" />}
-              {row.key}
-            </span>
-            <span className="stat-bar-track">
-              <span
-                className={`stat-bar-fill ${row.winrate === null ? '' : row.winrate >= 50 ? 'good' : 'bad'}`}
-                style={{ width: `${row.winrate ?? 4}%` }}
-              />
-            </span>
-            <span className="stat-bar-value">{row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`}</span>
-            <span className="stat-bar-meta">
-              {t('stats.gamesCount', { count: row.games })} — K/D/A {row.avgKills.toFixed(1)}/{row.avgDeaths.toFixed(1)}/{row.avgAssists.toFixed(1)}
-            </span>
-          </div>
-        ))
-      )}
-    </CollapsibleCard>
-  );
-}
-
-const AGENT_CARDS_PAGE_SIZE = 5;
-
-function AgentCards({ rows, portraits, icons, matches, settings, onRowClick }) {
-  const { t } = useTranslation();
-  const [showAll, setShowAll] = useState(false);
-  const visibleRows = showAll ? rows : rows.slice(0, AGENT_CARDS_PAGE_SIZE);
-
-  return (
-    <CollapsibleCard id="stats.statsByAgent" title={t('stats.statsByAgent')}>
-      <div className="map-card-list">
-        {visibleRows.map((row) => {
-          const image = portraits.get(row.key);
-          const icon = icons.get(row.key);
-          const topWeapon = weaponKillsForAgent(matches, settings.name, settings.tag, row.key)[0];
-          const kills = agentTotalKills(matches, settings.name, settings.tag, row.key);
-          const isGood = row.winrate !== null && row.winrate >= 50;
-          return (
-            <div
-              key={row.key}
-              className={`agent-card ${row.winrate === null ? '' : isGood ? 'win' : 'loss'}`}
-              onClick={() => onRowClick(row.key)}
-            >
-              <div className={`agent-card-badge ${row.winrate === null ? '' : isGood ? 'win' : 'loss'}`}>
-                <div className="agent-card-badge-value">
-                  {row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`}
-                </div>
-                <div className="agent-card-badge-label">{t('stats.winrateLabel')}</div>
-              </div>
-              <div className="agent-card-info">
-                <div className="agent-card-title-row">
-                  {icon && <img src={icon} alt="" className="agent-card-icon" />}
-                  <span className="agent-card-title">{row.key}</span>
-                </div>
-                <div className="agent-card-stats">
-                  <span className="label">{t('stats.gamesCount', { count: row.games })}</span>
-                  <span className="label">K/D/A {row.avgKills.toFixed(1)}/{row.avgDeaths.toFixed(1)}/{row.avgAssists.toFixed(1)}</span>
-                  <span className="label">{t('stats.killsCount', { count: kills })}</span>
-                  {topWeapon && <span className="label">{t('stats.favoriteWeapon', { weapon: topWeapon[0] })}</span>}
-                </div>
-              </div>
-              <div
-                className="agent-card-portrait"
-                style={image ? { backgroundImage: `url(${image})` } : undefined}
-              />
-            </div>
-          );
-        })}
-      </div>
-      {rows.length > AGENT_CARDS_PAGE_SIZE && (
-        <button className="show-more-btn" onClick={() => setShowAll(!showAll)}>
-          {showAll ? t('stats.showLess') : t('stats.showMore', { count: rows.length - AGENT_CARDS_PAGE_SIZE })}
-        </button>
-      )}
-    </CollapsibleCard>
-  );
-}
-
-const MAP_CARDS_PAGE_SIZE = 5;
-
-function MapCards({ rows, mapImages, onRowClick }) {
-  const { t } = useTranslation();
-  const [showAll, setShowAll] = useState(false);
-  const visibleRows = showAll ? rows : rows.slice(0, MAP_CARDS_PAGE_SIZE);
-
-  return (
-    <CollapsibleCard id="stats.statsByMap" title={t('stats.statsByMap')}>
-      <div className="map-card-list">
-        {visibleRows.map((row) => {
-          const image = mapImages.get(row.key);
-          return (
-            <div
-              key={row.key}
-              className="map-card"
-              style={image ? { backgroundImage: `url(${image})` } : undefined}
-              onClick={() => onRowClick(row.key)}
-            >
-              <div className="map-card-overlay">
-                <div className="map-card-title">{row.key}</div>
-                <div className="map-card-stats">
-                  {t('stats.gamesCount', { count: row.games })} — {row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`} {t('stats.winrateLabel')} — K/D/A{' '}
-                  {row.avgKills.toFixed(1)}/{row.avgDeaths.toFixed(1)}/{row.avgAssists.toFixed(1)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {rows.length > MAP_CARDS_PAGE_SIZE && (
-        <button className="show-more-btn" onClick={() => setShowAll(!showAll)}>
-          {showAll ? t('stats.showLess') : t('stats.showMore', { count: rows.length - MAP_CARDS_PAGE_SIZE })}
-        </button>
-      )}
-    </CollapsibleCard>
-  );
-}
 
 function StatsTab({ settings, matches, rank, loading }) {
   const { t, i18n } = useTranslation();
@@ -503,24 +379,24 @@ function StatsTab({ settings, matches, rank, loading }) {
 
       <CollapsibleCard id="stats.kdProgression" title={t('stats.kdProgressionTitle', { count: kdProgression.length })}>
         {kdStats && (
-          <div className="stat-tiles">
-            <div className="stat-tile">
-              <div className="value"><CountUp value={kdStats.avg} decimals={2} /></div>
-              <div className="label">{t('stats.kdAvg')}</div>
+          <div className="kp-figures">
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('stats.kdAvg')}</span>
+              <span className="gs-figure-value"><CountUp value={kdStats.avg} decimals={2} /></span>
             </div>
-            <div className="stat-tile">
-              <div className="value"><CountUp value={kdStats.best} decimals={2} /></div>
-              <div className="label">{t('stats.bestMatch')}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('stats.bestMatch')}</span>
+              <span className="gs-figure-value"><CountUp value={kdStats.best} decimals={2} /></span>
             </div>
-            <div className="stat-tile">
-              <div className="value"><CountUp value={kdStats.worst} decimals={2} /></div>
-              <div className="label">{t('stats.worstMatch')}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('stats.worstMatch')}</span>
+              <span className="gs-figure-value"><CountUp value={kdStats.worst} decimals={2} /></span>
             </div>
-            <div className="stat-tile">
-              <div className="value" style={{ color: kdStats.trend >= 0 ? '#3ddc84' : 'var(--accent)' }}>
-                <Icon icon={kdStats.trend >= 0 ? TrendingUp : TrendingDown} size={16} /> {Math.abs(kdStats.trend).toFixed(2)}
-              </div>
-              <div className="label">{t('stats.trend')}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('stats.trend')}</span>
+              <span className={`gs-figure-value ${kdStats.trend >= 0 ? 'kp-trend-up' : 'kp-trend-down'}`}>
+                <Icon icon={kdStats.trend >= 0 ? TrendingUp : TrendingDown} size={22} /> {Math.abs(kdStats.trend).toFixed(2)}
+              </span>
             </div>
           </div>
         )}
@@ -557,59 +433,41 @@ function StatsTab({ settings, matches, rank, loading }) {
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard id="stats.globalStats" title={t('stats.globalStatsTitle', { count: scopedMatches.length })}>
-        <div className="stat-tiles">
-          <div className="stat-tile">
-            <div className="value">{globalStats.hsPercent === null ? '?' : `${globalStats.hsPercent.toFixed(1)}%`}</div>
-            <div className="label">{t('stats.head')}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="value">{globalStats.bsPercent === null ? '?' : `${globalStats.bsPercent.toFixed(1)}%`}</div>
-            <div className="label">{t('stats.body')}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="value">{globalStats.lsPercent === null ? '?' : `${globalStats.lsPercent.toFixed(1)}%`}</div>
-            <div className="label">{t('stats.legs')}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="value">{globalStats.kast === null ? '?' : `${globalStats.kast.toFixed(0)}%`}</div>
-            <div className="label">{t('stats.kast')}</div>
-          </div>
-        </div>
+      <GlobalStatsCard
+        title={t('stats.globalStatsTitle', { count: scopedMatches.length })}
+        matches={scopedMatches}
+        settings={settings}
+        globalStats={globalStats}
+        topAgent={agentStats[0]}
+        portrait={agentStats[0] ? agentPortraits.get(agentStats[0].key) : null}
+        icon={agentStats[0] ? agentIcons.get(agentStats[0].key) : null}
+        onAgentClick={(name) => setSelectedAgent(name)}
+      />
 
-        <h3 style={{ marginTop: '1.25rem' }}>{t('stats.topWeapons')}</h3>
-        {globalStats.weaponRanking.length === 0 ? (
-          <p>{t('stats.noWeaponData')}</p>
-        ) : (
-          (() => {
-            const maxCount = globalStats.weaponRanking[0][1];
-            return globalStats.weaponRanking.map(([weapon, count]) => (
-              <div key={weapon} className="weapon-bar-row clickable" onClick={() => setSelectedWeapon(weapon)}>
-                <span className="name">
-                  {weaponIcons.get(weapon) && <img src={weaponIcons.get(weapon)} alt="" className="weapon-icon" />}
-                  {weapon}
-                </span>
-                <span className="weapon-bar-track">
-                  <span className="weapon-bar-fill" style={{ width: `${(count / maxCount) * 100}%` }} />
-                </span>
-                <span className="weapon-bar-count">{t('stats.killsCount', { count })}</span>
-              </div>
-            ));
-          })()
-        )}
-      </CollapsibleCard>
+      <WeaponStatsCard
+        title={t('stats.weaponStatsTitle')}
+        ranking={globalStats.weaponRanking}
+        icons={weaponIcons}
+        onWeaponClick={(weapon) => setSelectedWeapon(weapon)}
+      />
 
-      <AgentCards
+      <AgentStatsCard
+        title={t('stats.statsByAgent')}
         rows={agentStats}
         portraits={agentPortraits}
         icons={agentIcons}
         matches={scopedMatches}
         settings={settings}
-        onRowClick={(name) => setSelectedAgent(name)}
+        onAgentClick={(name) => setSelectedAgent(name)}
       />
-      <MapCards rows={mapStats} mapImages={mapImages} onRowClick={(mapName) => setSelectedMap(mapName)} />
-      {renderModeStats(t, 'stats.statsByRole', t('stats.statsByRole'), roleStats, roleIcons)}
-      {renderModeStats(t, 'stats.statsByMode', t('stats.statsByMode'), modeStats)}
+      <MapStatsCard
+        title={t('stats.statsByMap')}
+        rows={mapStats}
+        mapImages={mapImages}
+        onMapClick={(mapName) => setSelectedMap(mapName)}
+      />
+      <GroupStatsCard id="stats.statsByRole" title={t('stats.statsByRole')} rows={roleStats} icons={roleIcons} />
+      <GroupStatsCard id="stats.statsByMode" title={t('stats.statsByMode')} rows={modeStats} />
 
       <CollapsibleCard id="stats.matchHistory" title={t('stats.matchHistory', { count: filteredMatches.length })}>
         <div className="filter-bar">

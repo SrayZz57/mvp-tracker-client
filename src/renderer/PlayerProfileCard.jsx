@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Swords, Scale, RefreshCw, Target } from 'lucide-react';
+import { Swords, Scale, RefreshCw, Target, Info } from 'lucide-react';
 import { computePlayerProfile } from './playerProfile.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
 import Icon from './Icon.jsx';
@@ -99,8 +99,24 @@ function PlayerProfileCard({ settings, matches }) {
         <div className="gs-figures pa-figures">
           {Object.entries(SCORE_ICONS).map(([key, icon]) => {
             const value = profile.scores[key];
+            const infoParams = {
+              aggression: {
+                count: profile.initiativeRounds,
+                rounds: profile.roundsAnalyzed,
+                percent: profile.openingWinrate === null ? '?' : profile.openingWinrate.toFixed(0),
+              },
+              stability: { count: profile.afterLossGames },
+              versatility: { count: profile.masteredAgents, total: profile.distinctAgents },
+              clutch: { count: profile.clutchAttempts },
+            }[key];
             return (
-              <div key={key} className="gs-figure">
+              <div key={key} className="gs-figure pa-figure">
+                <button type="button" className="pa-info" aria-label={t('profile.infoLabel')}>
+                  <Icon icon={Info} size={14} />
+                </button>
+                <span className="pa-info-text" role="tooltip">
+                  {t(`profile.scoreInfo.${key}`, infoParams)}
+                </span>
                 <span className="gs-figure-label pa-label">
                   <Icon icon={icon} size={14} /> {t(`profile.scores.${key}`)}
                 </span>

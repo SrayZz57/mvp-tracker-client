@@ -1552,9 +1552,16 @@
     "archetypeLabel": "Your archetype",
     "notReady_one": "{{count}} more ranked match needed before your player profile can be generated.",
     "notReady_other": "{{count}} more ranked matches needed before your player profile can be generated.",
+    "infoLabel": "How this score is calculated",
+    "scoreInfo": {
+      "aggression": "Share of rounds where you are in the very first duel (first blood or first death): {{count}} rounds out of {{rounds}}. 100 = an opening duel every 2.5 rounds. You win {{percent}}% of them, but that figure is not part of the score.",
+      "stability": "Your performance (K/D) in games played right after a loss, compared with your average: 70 = no drop, 100 = you play better, 0 = a clear drop. Based on {{count}} games played right after a loss (8 minimum).",
+      "versatility": "Agents you have mastered: at least 5 games, with a 45% win rate or a K/D close to your average. The score rises more and more slowly and never reaches 100 (4 agents ≈ 70, 6 ≈ 82). Here {{count}} mastered out of {{total}} played.",
+      "clutch": "Your win rate when you are in a clutch (alone against several). Needs at least 3 situations. {{count}} situation(s) analysed."
+    },
     "scores": {
       "aggression": "Aggression",
-      "stability": "Mental stability",
+      "stability": "Resilience",
       "versatility": "Versatility",
       "clutch": "Clutch factor"
     },
@@ -1562,7 +1569,7 @@
     "archetypes": {
       "duelistImpulsive": {
         "title": "Impulsive duelist",
-        "text": "You take the initiative first in most rounds, but bad patches send you off the rails fast. A real aggression engine, as long as you know when to pump the brakes after a losing streak."
+        "text": "You're at the heart of round-opening duels, but it doesn't always pay off: you lose more than you win, or your performance drops after a loss. A real aggression engine, to be channelled."
       },
       "clutchFragger": {
         "title": "Clutch fragger",
@@ -1570,35 +1577,35 @@
       },
       "entryFragger": {
         "title": "Entry fragger",
-        "text": "You're often the first into contact, whether that means opening space for your team or dying first. A demanding role that carries a lot of weight early in the round."
+        "text": "You often take the first duel of the round and hold your own in it. A demanding role that opens space for your team from the start of the round."
       },
       "aggressivePolyvalent": {
         "title": "Versatile fragger",
-        "text": "You play aggressive AND rotate through a lot of different agents — a rare combination of a player who takes the initiative without ever leaning on a single kit."
+        "text": "You take the initiative AND master several different agents: a player who opens rounds without depending on a single kit."
       },
       "clutchAllrounder": {
         "title": "Complete all-rounder",
-        "text": "Lots of agents, few losing streaks, and solid clutch numbers: the most complete profile tracked here, with no glaring weakness."
+        "text": "Several agents mastered, resilience after a loss, and solid clutch numbers: the most complete profile tracked here, with no glaring weakness."
       },
       "quietFlexible": {
         "title": "Quiet flexible",
-        "text": "You switch agents easily and take bad streaks in stride, but you're not the one looking for first contact. A profile that adapts to the team rather than the ego."
+        "text": "You master several agents and bounce back well after a loss, but you're not the one looking for first contact. A profile that adapts to the team rather than the ego."
       },
       "versatileTactician": {
         "title": "Versatile tactician",
-        "text": "You move from one agent to another without losing consistency, and you take bad streaks in stride. The flexible profile of a player who adapts to the team."
+        "text": "You master several agents and your performance holds after a loss. The flexible profile of a player who adapts to the team."
       },
       "unstableCloser": {
         "title": "Unstable but clutch",
-        "text": "Your losing streaks snowball easily, but when it really matters (one-versus-multiple), you show up more often than average. An interesting contrast to watch alongside the Tilt module."
+        "text": "Your performance drops after a loss, but when it really matters (one-versus-multiple), you show up more often than average. An interesting contrast to watch alongside the Tilt module."
       },
       "inconsistentPlayer": {
         "title": "Streaky player",
-        "text": "Your losing streaks tend to snowball and weigh on your performance. The Tilt module can help you spot the right moment to take a break."
+        "text": "Your performance tends to drop right after a loss. The Tilt module can help you spot the right moment to take a break."
       },
       "clutchSpecialist": {
         "title": "Clutch specialist",
-        "text": "You stick to a small core of agents, but you're dangerous in clutch situations. Focused expertise that pays off exactly when it counts."
+        "text": "You rely on a small core of mastered agents, but you're dangerous in clutch situations. Focused expertise that pays off exactly when it counts."
       },
       "closer": {
         "title": "Closer",
@@ -1606,19 +1613,19 @@
       },
       "quietSpecialist": {
         "title": "Quiet specialist",
-        "text": "Few agents played, little first initiative taken — a composed profile that would rather play its hand than force situations."
+        "text": "Few agents mastered, little first initiative taken: a composed profile that would rather play its hand than force situations."
       },
       "specialist": {
         "title": "Specialist",
-        "text": "You stick to a small core of agents rather than rotating. Focused expertise, at the cost of a bit of flexibility when a switch is needed."
+        "text": "You rely on a small core of agents rather than rotating. Focused expertise, at the cost of a bit of flexibility when a switch is needed."
       },
       "steadyPillar": {
         "title": "Steady pillar",
-        "text": "You don't look for first contact, but you absorb bad streaks very well. The kind of teammate the squad can count on without thinking twice."
+        "text": "You don't look for first contact, but you bounce back very well after a loss. The kind of teammate the team can count on without thinking about it."
       },
       "balancedPlayer": {
         "title": "Balanced player",
-        "text": "Nothing stands out strongly either way for now — a stable profile, with no glaring excess or weakness on the axes tracked."
+        "text": "Nothing stands out strongly either way for now: a stable profile, with no excess or glaring weakness on the tracked axes."
       }
     },
     "weakness": {
@@ -1630,13 +1637,13 @@
         "action": "Open Aim Trainer"
       },
       "stability": {
-        "title": "Mental stability",
+        "title": "Resilience",
         "text": "Your performance often drops after a loss or a death streak. The Aim Trainer's Precision mode trains calm, controlled aim, useful for not tilting.",
         "action": "Open Aim Trainer"
       },
       "versatility": {
         "title": "Versatility",
-        "text": "You play a limited pool of agents. The Composition tool lets you explore other roles and prep a backup agent.",
+        "text": "You have few agents you perform on consistently. The Composition tool lets you explore other roles and prep a backup agent.",
         "action": "Open Composition"
       },
       "clutch": {

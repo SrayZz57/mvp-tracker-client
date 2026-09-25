@@ -1503,6 +1503,10 @@ ipcMain.handle('daily-overlay:get-enabled', () => store.get('dailyOverlayEnabled
 ipcMain.handle('daily-overlay:set-enabled', (_event, enabled) => {
   store.set('dailyOverlayEnabled', enabled);
   if (!enabled) closeDailyOverlay();
+  // Réactivé pendant que le jeu tourne : la fenêtre n'est sinon créée qu'au
+  // prochain lancement du jeu (transition fermé→lancé), donc rien n'apparaissait
+  // tant qu'on n'ouvrait pas le mode déplacement (qui, lui, crée la fenêtre).
+  else if (dailyOverlayLastRunning) refreshDailyOverlay();
 });
 
 // Modes à exclure du score du jour, en plus des modes sans vraie

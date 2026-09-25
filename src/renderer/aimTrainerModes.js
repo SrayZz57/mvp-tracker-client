@@ -38,12 +38,6 @@ export const WEAPON_MODELS = {
   glock: {
     labelKey: 'aimTrainer.weaponGlock',
     procedural: true,
-    // Habillages disponibles, voir createGlockViewmodel({ skin }).
-    skins: {
-      standard: { labelKey: 'aimTrainer.skinStandard' },
-      futuristic: { labelKey: 'aimTrainer.skinFuturistic' },
-      banana: { labelKey: 'aimTrainer.skinBanana' },
-    },
   },
 };
 
@@ -396,11 +390,9 @@ export const DEFAULT_CONFIG = {
   spread: 28,
   fov: 103,
   showWeapon: true,
-  // 'default' = mains + arme CC0 (fps-rifle-hands.glb) ; sinon une clé de
-  // WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
-  weaponModel: 'default',
-  // Habillage de l'arme quand elle en propose (voir WEAPON_MODELS[...].skins).
-  weaponSkin: 'standard',
+  // Une clé de WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
+  // Les anciens réglages 'default' sont lus comme 'vandal' (voir AimTrainerGame).
+  weaponModel: 'vandal',
   // 'day' (défaut, ciel + sol clair) ou 'dark' (suggéré sur Discord — salle
   // fermée, sans ciel bleu ni sol blanc). Version simple validée avec
   // l'utilisateur : teintes assombries + ciel remplacé par une couleur

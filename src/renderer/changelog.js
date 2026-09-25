@@ -5,6 +5,28 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.11.0',
+    date: '2026-09-25',
+    items: {
+      fr: [
+        'Stats : nouveau design pour Stats globales (avec ton agent phare et la répartition de tes tirs), Stats par arme, par agent, par map, par rôle et par mode, ainsi que pour la Progression.',
+        'Détail d’un match repensé : résultat et score en rounds en haut, joueurs classés par score, kills par arme, et détail round par round qu’on déplie à la demande.',
+        'Profil ADN : chaque score a maintenant une infobulle qui explique son calcul. Agressivité (fréquence des premiers duels), Résilience (tes perfs après une défaite) et Polyvalence (les agents que tu maîtrises vraiment) sont recalculées, et les archétypes réécrits en conséquence.',
+        'Aim Trainer : deux armes au choix, le Vandal (par défaut) et le Glock. L’arme « Défaut » est retirée.',
+        'Overlay de session : le réactiver pendant que Valorant est ouvert l’affiche maintenant tout de suite, sans passer par le mode déplacement.',
+        'Onglet Analyse : le bloc d’auto-évaluation post-match est retiré et le tutoriel mis à jour.',
+      ],
+      en: [
+        'Stats: new design for Global stats (with your top agent and shot distribution), Weapon, Agent, Map, Role and Mode stats, and for Progression.',
+        'Match details redesigned: result and round score at the top, players ranked by score, kills by weapon, and a round-by-round breakdown you can expand on demand.',
+        'DNA Profile: each score now has a tooltip explaining how it is calculated. Aggression (how often you take opening duels), Resilience (your performance after a loss) and Versatility (agents you truly master) are recalculated, and the archetypes rewritten accordingly.',
+        'Aim Trainer: two weapons to choose from, the Vandal (default) and the Glock. The “Default” weapon is removed.',
+        'Session overlay: turning it back on while Valorant is open now shows it right away, without going through move mode.',
+        'Analysis tab: the post-match self-assessment block is removed and the tutorial updated.',
+      ],
+    },
+  },
+  {
     version: '1.10.16',
     date: '2026-09-24',
     items: {

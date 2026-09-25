@@ -36,18 +36,10 @@ import mvpTrackerLogo from '../assets/logo.png';
 import weaponDefaultPreview from '../assets/weapon-default-preview.png';
 import weaponVandalPreview from '../assets/weapon-vandal-preview.png';
 import weaponGlockPreview from '../assets/weapon-glock-preview.png';
-import weaponGlockFuturisticPreview from '../assets/weapon-glock-futuristic-preview.png';
-import weaponGlockBananaPreview from '../assets/weapon-glock-banana-preview.png';
 
 // Vignettes des cartes de sélection d'arme (Réglages → Modèle d'arme) —
 // 'default' est géré séparément (toujours présent), le reste couvre les
 // clés de WEAPON_MODELS au fur et à mesure qu'elles sont ajoutées.
-const SKIN_PREVIEWS = {
-  standard: weaponGlockPreview,
-  futuristic: weaponGlockFuturisticPreview,
-  banana: weaponGlockBananaPreview,
-};
-
 const WEAPON_PREVIEWS = {
   vandal: weaponVandalPreview,
   glock: weaponGlockPreview,
@@ -733,6 +725,8 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const toggleMute = () => setAudioPrefs((p) => ({ ...p, muted: !p.muted }));
 
   const set = (patch) => setConfig((prev) => ({ ...prev, ...patch }));
+  // Ancien réglage 'default' (arme retirée) ou inconnu : c'est le Vandal.
+  const activeWeapon = WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal';
   const selectMode = (id) => setConfig((prev) => ({ ...prev, mode: id, ...MODES[id].preset }));
 
   const launch = useCallback(
@@ -1332,50 +1326,19 @@ function AimTrainerHub({ config: initialRawConfig }) {
                 <div className="aim-config-block">
                   <h4 className="account-subsection-title">{t('aimTrainer.weaponSection')}</h4>
                   <div className="aim-weapon-cards">
-                    <button
-                      type="button"
-                      className={config.weaponModel === 'default' ? 'aim-weapon-card active' : 'aim-weapon-card'}
-                      onClick={() => set({ weaponModel: 'default' })}
-                    >
-                      <img src={weaponDefaultPreview} alt="" />
-                      <span>{t('aimTrainer.weaponDefault')}</span>
-                      {config.weaponModel === 'default' && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
-                    </button>
                     {Object.entries(WEAPON_MODELS).map(([id, weapon]) => (
                       <button
                         type="button"
                         key={id}
-                        className={config.weaponModel === id ? 'aim-weapon-card active' : 'aim-weapon-card'}
+                        className={activeWeapon === id ? 'aim-weapon-card active' : 'aim-weapon-card'}
                         onClick={() => set({ weaponModel: id })}
                       >
                         <img src={WEAPON_PREVIEWS[id] ?? weaponDefaultPreview} alt="" />
                         <span>{t(weapon.labelKey)}</span>
-                        {config.weaponModel === id && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
+                        {activeWeapon === id && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
                       </button>
                     ))}
                   </div>
-                  {WEAPON_MODELS[config.weaponModel]?.skins && (
-                    <>
-                      <h4 className="account-subsection-title aim-skin-title">{t('aimTrainer.skinSection')}</h4>
-                      <div className="aim-weapon-cards">
-                        {Object.entries(WEAPON_MODELS[config.weaponModel].skins).map(([skinId, skin]) => {
-                          const active = (config.weaponSkin ?? 'standard') === skinId;
-                          return (
-                            <button
-                              type="button"
-                              key={skinId}
-                              className={active ? 'aim-weapon-card active' : 'aim-weapon-card'}
-                              onClick={() => set({ weaponSkin: skinId })}
-                            >
-                              <img src={SKIN_PREVIEWS[skinId] ?? weaponDefaultPreview} alt="" />
-                              <span>{t(skin.labelKey)}</span>
-                              {active && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
                 </div>
               )}
 

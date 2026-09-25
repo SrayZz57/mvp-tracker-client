@@ -1552,9 +1552,16 @@
     "archetypeLabel": "Ton archétype",
     "notReady_one": "Encore {{count}} match classé avant de pouvoir générer ton profil de joueur.",
     "notReady_other": "Encore {{count}} matchs classés avant de pouvoir générer ton profil de joueur.",
+    "infoLabel": "Comment ce score est calculé",
+    "scoreInfo": {
+      "aggression": "Part des rounds où tu es dans le tout premier duel (premier sang ou première mort) : {{count}} rounds sur {{rounds}}. 100 = un duel d'ouverture tous les 2,5 rounds. Tu en gagnes {{percent}} %, mais ce chiffre n'entre pas dans le score.",
+      "stability": "Ta performance (K/D) dans les parties jouées juste après une défaite, comparée à ta moyenne : 70 = aucune baisse, 100 = tu joues mieux, 0 = chute nette. Basé sur {{count}} parties enchaînées après une défaite (8 minimum).",
+      "versatility": "Agents que tu maîtrises : au moins 5 parties, avec 45 % de victoires ou un K/D proche de ta moyenne. Le score monte de moins en moins vite et n'atteint jamais 100 (4 agents ≈ 70, 6 ≈ 82). Ici {{count}} maîtrisé(s) sur {{total}} joué(s).",
+      "clutch": "Ton winrate quand tu es en situation de clutch (seul contre plusieurs). Calculé à partir de 3 situations minimum. {{count}} situation(s) analysée(s)."
+    },
     "scores": {
       "aggression": "Agressivité",
-      "stability": "Stabilité mentale",
+      "stability": "Résilience",
       "versatility": "Polyvalence",
       "clutch": "Clutch factor"
     },
@@ -1562,7 +1569,7 @@
     "archetypes": {
       "duelistImpulsive": {
         "title": "Duelist impulsif",
-        "text": "Tu prends l'initiative en premier sur la plupart des rounds, mais les mauvaises passes te font vite décrocher. Un vrai moteur d'agression, à condition de savoir freiner après une série de défaites."
+        "text": "Tu es au cœur des premiers duels de round, mais ça ne paye pas toujours : tu en perds plus que tu n'en gagnes, ou tes perfs chutent après une défaite. Un vrai moteur d'agression, à canaliser."
       },
       "clutchFragger": {
         "title": "Fragger clutch",
@@ -1570,35 +1577,35 @@
       },
       "entryFragger": {
         "title": "Entry fragger",
-        "text": "Tu es souvent le premier au contact, que ce soit pour ouvrir l'espace de ton équipe ou tomber en premier. Un rôle exigeant qui pèse beaucoup sur le début de round."
+        "text": "Tu prends souvent le premier duel du round et tu tiens ton rang dedans. Un rôle exigeant, qui ouvre l'espace de ton équipe dès le début du round."
       },
       "aggressivePolyvalent": {
         "title": "Fragger polyvalent",
-        "text": "Tu joues agressif ET tu tournes sur beaucoup d'agents différents — rare combinaison d'un joueur qui prend l'initiative sans jamais se reposer sur un seul kit."
+        "text": "Tu prends l'initiative ET tu maîtrises plusieurs agents différents : un joueur qui ouvre les rounds sans dépendre d'un seul kit."
       },
       "clutchAllrounder": {
         "title": "Polyvalent complet",
-        "text": "Beaucoup d'agents, peu de séries de défaites, et un bon niveau en clutch : le profil le plus complet parmi ceux suivis ici, sans faiblesse marquée."
+        "text": "Plusieurs agents maîtrisés, de la résilience après une défaite et un bon niveau en clutch : le profil le plus complet parmi ceux suivis ici, sans faiblesse marquée."
       },
       "quietFlexible": {
         "title": "Flexible discret",
-        "text": "Tu changes d'agent facilement et tu encaisses les mauvaises séries sans t'effondrer, mais sans chercher le contact en premier. Un profil qui s'adapte à l'équipe plutôt qu'à l'ego."
+        "text": "Tu maîtrises plusieurs agents et tu rebondis bien après une défaite, mais sans chercher le contact en premier. Un profil qui s'adapte à l'équipe plutôt qu'à l'ego."
       },
       "versatileTactician": {
         "title": "Tacticien polyvalent",
-        "text": "Tu passes d'un agent à l'autre sans perdre en régularité, et tu encaisses les mauvaises séries sans t'effondrer. Le profil flexible d'un joueur qui s'adapte à l'équipe."
+        "text": "Tu maîtrises plusieurs agents et tes perfs tiennent après une défaite. Le profil flexible d'un joueur qui s'adapte à l'équipe."
       },
       "unstableCloser": {
         "title": "Instable mais clutch",
-        "text": "Tes séries de défaites s'enchaînent facilement, mais quand ça compte vraiment (1 contre plusieurs), tu réponds présent plus souvent que la moyenne. Un contraste intéressant à surveiller avec le module Tilt."
+        "text": "Tes perfs baissent après une défaite, mais quand ça compte vraiment (1 contre plusieurs), tu réponds présent plus souvent que la moyenne. Un contraste intéressant à surveiller avec le module Tilt."
       },
       "inconsistentPlayer": {
         "title": "Joueur en dents de scie",
-        "text": "Tes séries de défaites ont tendance à s'enchaîner et à peser sur ta perf. Le module Tilt peut t'aider à repérer le bon moment pour souffler."
+        "text": "Tes perfs ont tendance à chuter juste après une défaite. Le module Tilt peut t'aider à repérer le bon moment pour souffler."
       },
       "clutchSpecialist": {
         "title": "Spécialiste clutch",
-        "text": "Tu restes fidèle à un petit noyau d'agents, mais tu es redoutable en situation de clutch. Une expertise ciblée qui paye pile au moment où ça compte."
+        "text": "Tu t'appuies sur un petit noyau d'agents maîtrisés, mais tu es redoutable en situation de clutch. Une expertise ciblée qui paye pile au moment où ça compte."
       },
       "closer": {
         "title": "Closeur",
@@ -1606,19 +1613,19 @@
       },
       "quietSpecialist": {
         "title": "Spécialiste discret",
-        "text": "Peu d'agents joués, peu d'initiative prise en premier — un profil posé qui préfère jouer sa carte plutôt que de forcer les situations."
+        "text": "Peu d'agents maîtrisés, peu d'initiative prise en premier : un profil posé qui préfère jouer sa carte plutôt que de forcer les situations."
       },
       "specialist": {
         "title": "Spécialiste",
-        "text": "Tu restes fidèle à un petit noyau d'agents plutôt que de tourner. Une expertise ciblée, au prix d'un peu de flexibilité en cas de besoin de switch."
+        "text": "Tu t'appuies sur un petit noyau d'agents plutôt que de tourner. Une expertise ciblée, au prix d'un peu de flexibilité en cas de besoin de switch."
       },
       "steadyPillar": {
         "title": "Pilier stable",
-        "text": "Tu ne cherches pas le contact en premier, mais tu encaisses très bien les mauvaises séries. Le genre de coéquipier sur qui l'équipe peut compter sans y penser."
+        "text": "Tu ne cherches pas le contact en premier, mais tu rebondis très bien après une défaite. Le genre de coéquipier sur qui l'équipe peut compter sans y penser."
       },
       "balancedPlayer": {
         "title": "Joueur équilibré",
-        "text": "Rien ne ressort fortement dans un sens ou l'autre pour l'instant — un profil stable, sans excès ni faiblesse marquée sur les axes suivis."
+        "text": "Rien ne ressort fortement dans un sens ou l'autre pour l'instant : un profil stable, sans excès ni faiblesse marquée sur les axes suivis."
       }
     },
     "weakness": {
@@ -1630,13 +1637,13 @@
         "action": "Ouvrir l'Aim Trainer"
       },
       "stability": {
-        "title": "Stabilité mentale",
+        "title": "Résilience",
         "text": "Tes perfs se dégradent souvent après une défaite ou une série de morts. Le mode Precision de l'Aim Trainer travaille le calme et la précision, utile pour ne pas paniquer.",
         "action": "Ouvrir l'Aim Trainer"
       },
       "versatility": {
         "title": "Polyvalence",
-        "text": "Tu joues un nombre limité d'agents. L'outil Composition permet d'explorer d'autres rôles et de préparer un agent de secours.",
+        "text": "Tu as peu d'agents sur lesquels tu performes de façon régulière. L'outil Composition permet d'explorer d'autres rôles et de préparer un agent de secours.",
         "action": "Ouvrir Composition"
       },
       "clutch": {

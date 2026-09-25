@@ -18,7 +18,6 @@ import {
 import Icon from './Icon.jsx';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import fpsRifleHandsUrl from '../assets/models/fps-rifle-hands.glb';
 
 import floorColorUrl from '../assets/textures/floor-color.jpg';
 import floorNormalUrl from '../assets/textures/floor-normal.jpg';
@@ -1273,7 +1272,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // Glock procédural : ses effets (culasse, recul, flash, douille, fumée)
       // passent par les mêmes points d'entrée que les modèles animés — le tir
       // appelle fireAction.play() et la boucle appelle mixer.update().
-      const glock = createGlockViewmodel({ renderer, scene, skin: config.weaponSkin });
+      const glock = createGlockViewmodel({ renderer, scene });
       camera.add(glock.holder);
       camera.updateMatrixWorld(true);
       const muzzleWorld = new THREE.Vector3();
@@ -1283,8 +1282,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       stateRef.current.mixer = { update: (seconds) => glock.update(seconds) };
       stateRef.current.fireAction = { stop: () => {}, play: () => glock.fire() };
     } else if (config.showWeapon) {
-      const altWeapon = WEAPON_MODELS[config.weaponModel];
-      const weaponUrl = altWeapon?.url ?? fpsRifleHandsUrl;
+      const weaponUrl = (WEAPON_MODELS[config.weaponModel] ?? WEAPON_MODELS.vandal).url;
       new GLTFLoader().load(weaponUrl, (gltf) => {
         const model = gltf.scene;
 

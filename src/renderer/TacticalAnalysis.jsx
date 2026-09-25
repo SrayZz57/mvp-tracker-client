@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Footprints, Swords, Hourglass, Coins, Banknote, Wallet, Crosshair, Target, Radar, BowArrow } from 'lucide-react';
 import { deathTimingStats, clutchStats, economyImpactStats, duelDistanceStats } from './valorantStats.js';
-import PostMortemHistory from './PostMortemHistory.jsx';
 import LoadingState from './LoadingState.jsx';
 import PlatformFilterToggle from './PlatformFilterToggle.jsx';
 import usePlatformFilter from './usePlatformFilter.js';
@@ -154,8 +153,6 @@ function TacticalAnalysis({ settings, matches, loading }) {
           </div>
         )}
       </CollapsibleCard>
-
-      <PostMortemHistory />
     </div>
   );
 }

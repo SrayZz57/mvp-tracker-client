@@ -287,14 +287,6 @@
       "full": "Full buy"
     }
   },
-  "postmortemHistory": {
-    "title": "Auto-évaluation post-match",
-    "noneYet": "Pas encore de double check répondu — la popup apparaît après un nouveau match tant que tu ne l'as pas fermée.",
-    "overallAccuracy_one": "Justesse globale ({{count}} match évalué)",
-    "overallAccuracy_other": "Justesse globale ({{count}} matchs évalués)",
-    "last5": "Sur les 5 derniers",
-    "correctCount": "{{correct}}/{{total}} justes"
-  },
   "composition": {
     "title": "Composition",
     "description": "Choisis une map et 5 agents pour voir l'équilibre des rôles, un avis communautaire par agent/map, et comment tu performes toi-même avec ces agents sur cette map.",

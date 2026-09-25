@@ -287,14 +287,6 @@
       "full": "Full buy"
     }
   },
-  "postmortemHistory": {
-    "title": "Post-match self-assessment",
-    "noneYet": "No double check answered yet — the popup appears after a new match until you close it.",
-    "overallAccuracy_one": "Overall accuracy ({{count}} match assessed)",
-    "overallAccuracy_other": "Overall accuracy ({{count}} matches assessed)",
-    "last5": "Over the last 5",
-    "correctCount": "{{correct}}/{{total}} correct"
-  },
   "composition": {
     "title": "Composition",
     "description": "Pick a map and 5 agents to see the role balance, community opinion per agent/map, and how you personally perform with these agents on this map.",

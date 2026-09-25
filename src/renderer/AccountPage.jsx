@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Check, X, Mail } from 'lucide-react';
+import { Pencil, Check, X, Mail, Palette } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { usePlayerCardArt, useAllPlayerCards } from './rankData.js';
 import { useAgentIcons, useAgentRoles } from './agentIcons.js';
@@ -26,6 +26,28 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
   const { t, i18n } = useTranslation();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
+  // Carte dont l'illustration sert de bannière. Gardée sur cet appareil (pas de
+  // colonne côté Supabase pour l'instant) ; sans choix, la bannière suit la
+  // photo de profil, comme avant.
+  const bannerStorageKey = `mvptracker-profile-banner:${profile.id ?? profile.riot_puuid ?? 'me'}`;
+  const [bannerCardUuid, setBannerCardUuid] = useState(() => {
+    try {
+      return localStorage.getItem(bannerStorageKey);
+    } catch {
+      return null;
+    }
+  });
+  const saveBanner = (uuid) => {
+    setBannerCardUuid(uuid);
+    try {
+      if (uuid) localStorage.setItem(bannerStorageKey, uuid);
+      else localStorage.removeItem(bannerStorageKey);
+    } catch {
+      // stockage indisponible : le choix vaut pour cette session seulement
+    }
+  };
   const [nameDraft, setNameDraft] = useState(profile.display_name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -38,6 +60,7 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
 
   const avatarCardUuid = profile.avatar_card_uuid ?? myRank?.cardUuid;
   const avatarArt = usePlayerCardArt(avatarCardUuid);
+  const bannerArt = usePlayerCardArt(bannerCardUuid ?? avatarCardUuid);
   const displayedName = profile.display_name || `${mySettings.name}#${mySettings.tag}`;
 
   const agentIcons = useAgentIcons();
@@ -121,7 +144,7 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
     <div>
       <div
         className="card profile-header-card account-header-card"
-        style={{ backgroundImage: avatarArt.banner ? `url(${avatarArt.banner})` : undefined }}
+        style={{ backgroundImage: bannerArt.banner ? `url(${bannerArt.banner})` : undefined }}
       >
         <div className="profile-header-overlay">
           <button className="account-avatar-button" onClick={() => setAvatarPickerOpen(true)} title={t('account.changePhoto')}>
@@ -167,6 +190,10 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
               {t('account.riotIdLinked', { name: mySettings.name, tag: mySettings.tag })}
               {memberSince && t('account.memberSince', { date: memberSince })}
             </p>
+            <button type="button" className="account-customize-button" onClick={() => setCustomizeOpen(true)}>
+              <Icon icon={Palette} size={15} />
+              {t('account.customizeProfile')}
+            </button>
           </div>
         </div>
       </div>
@@ -261,6 +288,52 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
         {contactStatus === 'sent' && <p className="label account-reset-status">{t('account.contactSent')}</p>}
         {contactStatus === 'error' && <p className="warning account-reset-status">{t('account.contactError')}</p>}
       </CollapsibleCard>
+
+      {customizeOpen && (
+        <div className="modal-overlay" onClick={() => setCustomizeOpen(false)}>
+          <div className="modal-card account-customize-modal" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="modal-close" onClick={() => setCustomizeOpen(false)}>{t('detail.close')}</button>
+            <h3 className="account-customize-title">{t('account.customizeTitle')}</h3>
+            <p className="label">{t('account.customizeHint')}</p>
+
+            <h4 className="account-subsection-title">{t('account.customizePhoto')}</h4>
+            <button type="button" className="account-agent-picker" onClick={() => setAvatarPickerOpen(true)}>
+              {avatarArt.icon ? <img src={avatarArt.icon} alt="" /> : <span>{displayedName.charAt(0)}</span>}
+              <span className="account-agent-picker-edit">{t('account.changePhoto')}</span>
+            </button>
+
+            <h4 className="account-subsection-title">{t('account.customizeBanner')}</h4>
+            <button type="button" className="account-agent-picker account-banner-picker" onClick={() => setBannerPickerOpen(true)}>
+              <span
+                className="account-banner-preview"
+                style={bannerArt.banner ? { backgroundImage: `url(${bannerArt.banner})` } : undefined}
+              />
+              <span className="account-agent-picker-edit">{t('account.changeBanner')}</span>
+            </button>
+            {bannerCardUuid && (
+              <button type="button" className="account-forgot-password" onClick={() => saveBanner(null)}>
+                {t('account.resetBanner')}
+              </button>
+            )}
+
+            <button type="button" className="account-customize-done" onClick={() => setCustomizeOpen(false)}>
+              {t('account.customizeDone')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {bannerPickerOpen && (
+        <IconPickerModal
+          title={t('account.chooseBanner')}
+          items={cardItems}
+          onSelect={(uuid) => {
+            saveBanner(uuid);
+            setBannerPickerOpen(false);
+          }}
+          onClose={() => setBannerPickerOpen(false)}
+        />
+      )}
 
       {avatarPickerOpen && (
         <IconPickerModal

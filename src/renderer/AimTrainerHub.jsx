@@ -36,10 +36,18 @@ import mvpTrackerLogo from '../assets/logo.png';
 import weaponDefaultPreview from '../assets/weapon-default-preview.png';
 import weaponVandalPreview from '../assets/weapon-vandal-preview.png';
 import weaponGlockPreview from '../assets/weapon-glock-preview.png';
+import weaponGlockFuturisticPreview from '../assets/weapon-glock-futuristic-preview.png';
+import weaponGlockBananaPreview from '../assets/weapon-glock-banana-preview.png';
 
 // Vignettes des cartes de sélection d'arme (Réglages → Modèle d'arme) —
 // 'default' est géré séparément (toujours présent), le reste couvre les
 // clés de WEAPON_MODELS au fur et à mesure qu'elles sont ajoutées.
+const SKIN_PREVIEWS = {
+  standard: weaponGlockPreview,
+  futuristic: weaponGlockFuturisticPreview,
+  banana: weaponGlockBananaPreview,
+};
+
 const WEAPON_PREVIEWS = {
   vandal: weaponVandalPreview,
   glock: weaponGlockPreview,
@@ -486,8 +494,44 @@ function HomeFriendsCard({ friendsBoard, myId, apiKey, friendStatusByUser, onAdd
 // grille technique, le personnage et toute l'interface) — change de map
 // toutes les 10s avec un fondu lent façon écran-titre cinématique. Assets
 // publics valorant-api.com (splash art), même source que le reste de l'app.
+// Les grandes images (fonds de maps de 2 à 3 Mo, portraits de ~700 Ko) étaient
+// affichées dès les premiers octets reçus : un PNG se dessine de haut en bas au
+// fur et à mesure du téléchargement, d'où l'image « qui se déroule ». Ici elle
+// est d'abord téléchargée ET décodée hors écran, puis affichée d'un bloc avec
+// un fondu. Le fichier reste dans le cache HTTP du navigateur (valable 14
+// jours) : le <img> final n'a rien à retélécharger.
+function DecodedImg({ src, className, priority = false, onReady }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    const image = new Image();
+    if (priority) image.fetchPriority = 'high';
+    image.src = src;
+    image
+      .decode()
+      .catch(() => {})
+      .then(() => {
+        if (cancelled) return;
+        setReady(true);
+        onReady?.();
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, priority]);
+
+  if (!ready) return null;
+  return <img className={`${className} aim-hub-img-fresh`} src={src} alt="" decoding="async" />;
+}
+
 function MapSlideshow({ maps }) {
   const [index, setIndex] = useState(0);
+  // La 1re map passe avant les autres : sinon les 13 fonds se partagent la
+  // connexion et celui qu'on voit arrive en dernier.
+  const [firstReady, setFirstReady] = useState(false);
 
   useEffect(() => {
     if (maps.length < 2) return undefined;
@@ -501,14 +545,17 @@ function MapSlideshow({ maps }) {
 
   return (
     <div className="aim-hub-map-slideshow" aria-hidden="true">
-      {maps.map((map, i) => (
-        <img
-          key={map.uuid}
-          className={i === index ? 'aim-hub-map-slide active' : 'aim-hub-map-slide'}
-          src={map.splash}
-          alt=""
-        />
-      ))}
+      {maps.map((map, i) =>
+        i === 0 || firstReady ? (
+          <DecodedImg
+            key={map.uuid}
+            className={i === index ? 'aim-hub-map-slide active' : 'aim-hub-map-slide'}
+            src={map.splash}
+            priority={i === 0}
+            onReady={i === 0 ? () => setFirstReady(true) : undefined}
+          />
+        ) : null,
+      )}
       <div className="aim-hub-map-slideshow-overlay" />
     </div>
   );
@@ -577,6 +624,8 @@ function AimTrainerHub({ config: initialRawConfig }) {
   // point focal à la fois, moins statique qu'une grille figée.
   const [hoveredNav, setHoveredNav] = useState('play');
   const activeHeroAgent = heroAgents[NAV_KEYS.indexOf(hoveredNav)] ?? null;
+  // Portrait affiché d'abord, les 6 autres ensuite (voir DecodedImg).
+  const [portraitReady, setPortraitReady] = useState(false);
   // La couleur d'accent suit l'agent AFFICHÉ (activeHeroAgent), pas un agent
   // fixe — sinon le fond change au survol mais le thème (bouton Jouer, barre
   // active du menu, badges...) reste figé sur la couleur du premier agent.
@@ -844,14 +893,17 @@ function AimTrainerHub({ config: initialRawConfig }) {
             <MapSlideshow maps={maps} />
 
             <div className="aim-hub-home-bg" aria-hidden="true">
-              {heroAgents.map((agent, i) => (
-                <img
-                  key={agent.uuid}
-                  className={NAV_KEYS[i] === hoveredNav ? 'aim-hub-bg-portrait active' : 'aim-hub-bg-portrait'}
-                  src={agent.fullPortrait}
-                  alt=""
-                />
-              ))}
+              {heroAgents.map((agent, i) =>
+                NAV_KEYS[i] === hoveredNav || portraitReady ? (
+                  <DecodedImg
+                    key={agent.uuid}
+                    className={NAV_KEYS[i] === hoveredNav ? 'aim-hub-bg-portrait active' : 'aim-hub-bg-portrait'}
+                    src={agent.fullPortrait}
+                    priority={NAV_KEYS[i] === hoveredNav}
+                    onReady={NAV_KEYS[i] === hoveredNav ? () => setPortraitReady(true) : undefined}
+                  />
+                ) : null,
+              )}
               <div className="aim-hub-home-bg-fade" />
             </div>
 
@@ -1302,6 +1354,28 @@ function AimTrainerHub({ config: initialRawConfig }) {
                       </button>
                     ))}
                   </div>
+                  {WEAPON_MODELS[config.weaponModel]?.skins && (
+                    <>
+                      <h4 className="account-subsection-title aim-skin-title">{t('aimTrainer.skinSection')}</h4>
+                      <div className="aim-weapon-cards">
+                        {Object.entries(WEAPON_MODELS[config.weaponModel].skins).map(([skinId, skin]) => {
+                          const active = (config.weaponSkin ?? 'standard') === skinId;
+                          return (
+                            <button
+                              type="button"
+                              key={skinId}
+                              className={active ? 'aim-weapon-card active' : 'aim-weapon-card'}
+                              onClick={() => set({ weaponSkin: skinId })}
+                            >
+                              <img src={SKIN_PREVIEWS[skinId] ?? weaponDefaultPreview} alt="" />
+                              <span>{t(skin.labelKey)}</span>
+                              {active && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

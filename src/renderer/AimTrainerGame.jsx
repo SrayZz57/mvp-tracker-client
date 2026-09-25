@@ -1273,7 +1273,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // Glock procédural : ses effets (culasse, recul, flash, douille, fumée)
       // passent par les mêmes points d'entrée que les modèles animés — le tir
       // appelle fireAction.play() et la boucle appelle mixer.update().
-      const glock = createGlockViewmodel({ renderer, scene });
+      const glock = createGlockViewmodel({ renderer, scene, skin: config.weaponSkin });
       camera.add(glock.holder);
       camera.updateMatrixWorld(true);
       const muzzleWorld = new THREE.Vector3();

@@ -35,7 +35,16 @@ export const AGENT_HEAD_RADIUS = 0.145;
 export const WEAPON_MODELS = {
   vandal: { labelKey: 'aimTrainer.weaponVandal', url: vandalArmsUrl },
   // Modélisé en code (voir glockModel.js), sans fichier ni licence externe.
-  glock: { labelKey: 'aimTrainer.weaponGlock', procedural: true },
+  glock: {
+    labelKey: 'aimTrainer.weaponGlock',
+    procedural: true,
+    // Habillages disponibles, voir createGlockViewmodel({ skin }).
+    skins: {
+      standard: { labelKey: 'aimTrainer.skinStandard' },
+      futuristic: { labelKey: 'aimTrainer.skinFuturistic' },
+      banana: { labelKey: 'aimTrainer.skinBanana' },
+    },
+  },
 };
 
 // Modes d'entraînement. Chacun n'est qu'un préréglage + un comportement de
@@ -390,6 +399,8 @@ export const DEFAULT_CONFIG = {
   // 'default' = mains + arme CC0 (fps-rifle-hands.glb) ; sinon une clé de
   // WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
   weaponModel: 'default',
+  // Habillage de l'arme quand elle en propose (voir WEAPON_MODELS[...].skins).
+  weaponSkin: 'standard',
   // 'day' (défaut, ciel + sol clair) ou 'dark' (suggéré sur Discord — salle
   // fermée, sans ciel bleu ni sol blanc). Version simple validée avec
   // l'utilisateur : teintes assombries + ciel remplacé par une couleur

@@ -14450,3 +14450,415 @@ input[type='color'] {
   overflow-wrap: normal;
 }
 
+
+/* Choix du skin, sous les cartes d'arme */
+.aim-skin-title {
+  margin-top: 0.9rem;
+}
+
+/* Aim Trainer à 125 % / 150 % de mise à l'échelle Windows : la fenêtre ne fait
+   plus que ~1536 / ~1280 px CSS de large, alors que l'écran d'accueil est
+   dessiné pour ~2560 px (--hub-fit). Sans ce correctif, il garde le facteur
+   0,75 prévu pour 1920 px et déborde : titre sur la barre du haut, astuce sous
+   le bouton Jouer, liste coupée en bas. On ramène chaque taille à ce qu'elle
+   vaut physiquement à 100 % (0,75 / 1,25 = 0,6 et 0,75 / 1,5 = 0,5). Les
+   garde-fous sont les mêmes que pour la barre du haut, pour ne rien changer
+   sur un grand écran. */
+@media (min-resolution: 1.2dppx) and (max-resolution: 1.39dppx) and (min-width: 1151px) and (max-width: 1800px) {
+  .aim-hub-home {
+    --hub-fit: 0.6;
+  }
+}
+
+@media (min-resolution: 1.4dppx) and (min-width: 1151px) and (max-width: 1800px) {
+  .aim-hub-home {
+    --hub-fit: 0.5;
+  }
+}
+
+/* Barre du haut du hub : mêmes rem fixes que le reste, donc 1,25 / 1,5 fois
+   trop grande à l'écran ; sans ça elle repousse l'astuce et le titre vers le
+   bas et les fait se chevaucher. Même principe que la barre de l'app. */
+@media (min-resolution: 1.2dppx) and (max-resolution: 1.39dppx) and (min-width: 1151px) and (max-width: 1800px) {
+  .aim-hub-topbar {
+    zoom: 0.8;
+  }
+}
+
+@media (min-resolution: 1.4dppx) and (min-width: 1151px) and (max-width: 1800px) {
+  .aim-hub-topbar {
+    zoom: 0.667;
+  }
+}
+
+/* Écrans secondaires de l'Aim Trainer (modes, stats, réglages, personnalisé,
+   playlists, fenêtres de choix, écran « Prêt ? » et résultats) : tout est en
+   rem/px fixes, donc 1,25 / 1,5 fois trop grand à l'écran avec la mise à
+   l'échelle Windows. Le zoom ramène chaque écran à sa taille physique à 100 %,
+   comme pour la barre du haut (l'écran d'accueil, lui, passe par --hub-fit). */
+@media (min-resolution: 1.2dppx) and (max-resolution: 1.39dppx) and (max-width: 1800px) {
+  .aim-hub-panel,
+  .aim-hub-back,
+  .aim-hub-mute-floating,
+  .custom-config-card,
+  .aim-game-panel,
+  .aim-game-hud {
+    zoom: 0.8;
+  }
+}
+
+@media (min-resolution: 1.4dppx) and (max-width: 1800px) {
+  .aim-hub-panel,
+  .aim-hub-back,
+  .aim-hub-mute-floating,
+  .custom-config-card,
+  .aim-game-panel,
+  .aim-game-hud {
+    zoom: 0.667;
+  }
+}
+
+/* Le zoom ne touche pas les unités vh : sans compensation, la fenêtre
+   « Personnalisé » (85 vh à 100 %) tomberait à 68 % / 57 % de la hauteur. */
+@media (min-resolution: 1.2dppx) and (max-resolution: 1.39dppx) and (max-width: 1800px) {
+  .custom-config-card {
+    max-height: calc(85vh / 0.8);
+  }
+}
+
+@media (min-resolution: 1.4dppx) and (max-width: 1800px) {
+  .custom-config-card {
+    max-height: calc(85vh / 0.667);
+  }
+}
+
+/* Apparition des grandes images du hub (fonds de maps, portraits) : elles sont
+   décodées hors écran puis affichées d'un bloc. Le fondu part de 0 vers
+   l'opacité normale de chaque image (0,7 pour les fonds, 1 pour les portraits) :
+   pas de « to », donc l'animation retombe sur la valeur calculée. */
+@keyframes aim-hub-img-in {
+  from { opacity: 0; }
+}
+
+.aim-hub-img-fresh {
+  animation: aim-hub-img-in 0.7s var(--ease-out);
+}
+
+/* ---- Menu latéral : même langage que les pages (angles coupés, liseré rouge,
+   capitales espacées). Le repère qui glisse (.sidebar-active-indicator) reste
+   piloté par App.jsx ; seul l'habillage change. ---- */
+.sidebar {
+  padding: 1.3rem 0.8rem;
+  background:
+    linear-gradient(180deg, rgba(26, 30, 40, 0.94) 0%, rgba(11, 13, 18, 0.98) 100%);
+}
+
+.sidebar-search {
+  --cut: 9px;
+  border: 0;
+  border-left: 3px solid rgba(255, 70, 85, 0.55);
+  border-radius: 0;
+  background: var(--surface-alt);
+  padding: 0.55rem 0.8rem;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.sidebar-search:focus-within {
+  border-left-color: var(--accent);
+}
+
+.sidebar-search input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.sidebar-section {
+  margin-bottom: 1.1rem;
+}
+
+.sidebar-section-label {
+  border-radius: 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  opacity: 0.85;
+  padding: 0.3rem 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.sidebar-section-label::after {
+  background: linear-gradient(90deg, rgba(255, 70, 85, 0.55), transparent);
+}
+
+.sidebar-section-label:hover {
+  background: none;
+  border-color: transparent;
+}
+
+.sidebar-link,
+.sidebar-link-icon {
+  border-radius: 0;
+}
+
+button.sidebar-link {
+  --cut: 10px;
+  border: 0;
+  border-left: 3px solid transparent;
+  padding: 0.5rem 0.75rem 0.5rem 0.65rem;
+  margin-bottom: 0.15rem;
+  font-size: 0.86rem;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+button.sidebar-link::before {
+  border-radius: 0;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--tab-color, var(--accent)) 14%, transparent), transparent 70%);
+}
+
+button.sidebar-link:hover:not(:disabled),
+button.sidebar-link:not(.active):focus-visible {
+  background: rgba(255, 255, 255, 0.045);
+  border: 0;
+  border-left: 3px solid color-mix(in srgb, var(--tab-color, var(--accent)) 70%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+button.sidebar-link.active:hover:not(:disabled) {
+  border-left: 3px solid transparent;
+}
+
+.sidebar-link-icon {
+  --cut: 6px;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: color-mix(in srgb, var(--tab-color, var(--accent)) 16%, rgba(255, 255, 255, 0.02));
+  box-shadow: none;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.sidebar-link:hover .sidebar-link-icon,
+.sidebar-link.active .sidebar-link-icon,
+.sidebar-link.active:hover .sidebar-link-icon {
+  transform: none;
+  filter: none;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--tab-color, var(--accent)) 30%, rgba(255, 255, 255, 0.02));
+}
+
+.sidebar-link.active {
+  font-weight: 600;
+}
+
+.sidebar-active-indicator {
+  --cut: 10px;
+  left: 0;
+  right: 0;
+  border: 0;
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+  background: linear-gradient(90deg, rgba(255, 70, 85, 0.26), rgba(255, 70, 85, 0.06) 75%, transparent);
+  box-shadow: none;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.sidebar-active-indicator::before {
+  content: none;
+}
+
+.sidebar-link-badge {
+  border-radius: 0;
+  transform: skewX(-12deg);
+  box-shadow: none;
+}
+
+.sidebar-footer {
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-profile,
+.sidebar-signout {
+  --cut: 10px;
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+button.sidebar-profile {
+  border: 0;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-alt);
+  padding: 0.6rem 0.7rem 0.6rem 0.6rem;
+}
+
+button.sidebar-profile:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-alt) 80%, white);
+  border: 0;
+  border-left: 3px solid var(--accent);
+  box-shadow: none;
+}
+
+.sidebar-profile-avatar {
+  --cut: 8px;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.sidebar-profile-name {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-profile-rank {
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+button.sidebar-signout {
+  border: 0;
+  border-left: 3px solid var(--border-strong, var(--border));
+  background: var(--surface-alt);
+}
+
+button.sidebar-signout:hover:not(:disabled) {
+  background: rgba(255, 70, 85, 0.16);
+  border: 0;
+  border-left: 3px solid var(--accent);
+  box-shadow: none;
+}
+
+button.sidebar-link,
+button.sidebar-link.active {
+  box-shadow: none;
+}
+
+.sidebar .sidebar-search input {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0.1rem 0;
+}
+
+button.sidebar-section-label {
+  box-shadow: none;
+}
+
+/* Le survol global des boutons (button:hover:not(...)x5, spécificité 0,6,1) redessinait
+   sur les liens du menu son dégradé gris, sa bordure rouge et son décalage de 1 px,
+   par-dessus le repère de l'onglet actif : d'où le double cadre. On répète
+   :not(:disabled) pour passer devant, sans toucher à la règle globale. */
+.sidebar button.sidebar-link:not(.active):hover:not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled),
+.sidebar button.sidebar-link:not(.active):focus-visible {
+  background: rgba(255, 255, 255, 0.045);
+  border: 0;
+  border-left: 3px solid color-mix(in srgb, var(--tab-color, var(--accent)) 70%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+.sidebar button.sidebar-link.active:hover:not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled) {
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.sidebar button.sidebar-section-label:hover:not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled) {
+  background: none;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.sidebar button.sidebar-profile:hover:not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled) {
+  background: color-mix(in srgb, var(--surface-alt) 80%, white);
+  border: 0;
+  border-left: 3px solid var(--accent);
+  box-shadow: none;
+  transform: none;
+}
+
+.sidebar button.sidebar-signout:hover:not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled) {
+  background: rgba(255, 70, 85, 0.16);
+  border: 0;
+  border-left: 3px solid var(--accent);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Bouton « Personnaliser mon profil MVP » dans l'en-tête de Mon compte. */
+
+.account-customize-button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.6rem;
+  border: 0;
+  border-left: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 0;
+  background: rgba(10, 12, 18, 0.45);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.account-header-card button.account-customize-button:hover:not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled):not(:disabled) {
+  background: rgba(10, 12, 18, 0.7);
+  border: 0;
+  border-left: 2px solid var(--accent);
+  color: var(--text);
+  box-shadow: none;
+  transform: none;
+}
+
+.account-customize-modal {
+  max-width: 520px;
+}
+
+.account-customize-title {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.account-customize-modal .account-agent-picker {
+  margin-bottom: 0.5rem;
+}
+
+.account-banner-preview {
+  flex: 1;
+  height: 56px;
+  background-color: var(--surface-alt);
+  background-size: cover;
+  background-position: center;
+}
+
+.account-customize-done {
+  margin-top: 1.1rem;
+  width: 100%;
+}
+
+/* Hall of Fame : à 125 % / 150 % de mise à l'échelle Windows la zone de contenu
+   ne fait plus que ~1000 à 1200 px CSS, et avec 320 px minimum par carte il n'en
+   tenait que 3 par ligne (la 4e passait dessous). On abaisse le minimum pour
+   que les 4 cartes restent côte à côte, comme à 100 %. */
+@media (min-resolution: 1.2dppx) and (min-width: 1000px) and (max-width: 1800px) {
+  .trophy-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+}

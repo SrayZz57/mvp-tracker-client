@@ -26,10 +26,11 @@ function KpiTile({ label, value, suffix = '', decimals = 0, icon }) {
   const animated = useCountUp(value);
 
   return (
-    <div className="kpi-tile">
-      {icon && <div className="kpi-tile-icon"><Icon icon={icon} /></div>}
-      <div className="kpi-tile-value">{value === null ? '?' : `${animated.toFixed(decimals)}${suffix}`}</div>
-      <div className="kpi-tile-label">{label}</div>
+    <div className="gs-figure">
+      <span className="gs-figure-label">
+        {icon && <Icon icon={icon} size={14} />} {label}
+      </span>
+      <span className="gs-figure-value">{value === null ? '?' : `${animated.toFixed(decimals)}${suffix}`}</span>
     </div>
   );
 }

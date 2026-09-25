@@ -173,25 +173,25 @@ function NetworkTab({ settings, matches, pingSamples, myId }) {
 
       <NetworkMonitor />
 
-      <CollapsibleCard id="network.pingHistory" title={t('network.pingHistory')}>
+      <CollapsibleCard id="network.pingHistory" title={t('network.pingHistory')} className="gs-card">
         <PingSparkline samples={pingSamples} />
       </CollapsibleCard>
 
-      <CollapsibleCard id="network.deathCorrelation" title={t('network.deathCorrelation')}>
+      <CollapsibleCard id="network.deathCorrelation" title={t('network.deathCorrelation')} className="gs-card">
         {pingStats.deathsAnalyzed === 0 ? (
           <p>{t('network.notEnoughNetworkData')}</p>
         ) : (
           <div className="ping-correlation-layout">
             <PingGauge percent={percent} />
             <div className="ping-correlation-details">
-              <div className="stat-tiles">
-                <div className="stat-tile">
-                  <div className="value">{pingStats.deathsAnalyzed}</div>
-                  <div className="label">{t('network.totalDeathsAnalyzed')}</div>
+              <div className="gs-figures fm-figures">
+                <div className="gs-figure">
+                  <span className="gs-figure-label">{t('network.totalDeathsAnalyzed')}</span>
+                  <span className="gs-figure-value">{pingStats.deathsAnalyzed}</span>
                 </div>
-                <div className="stat-tile">
-                  <div className="value">{pingStats.deathsNearSpike}</div>
-                  <div className="label">{t('network.duringPingSpike')}</div>
+                <div className="gs-figure">
+                  <span className="gs-figure-label">{t('network.duringPingSpike')}</span>
+                  <span className="gs-figure-value">{pingStats.deathsNearSpike}</span>
                 </div>
               </div>
               <p className="label" style={{ marginTop: '0.75rem' }}>

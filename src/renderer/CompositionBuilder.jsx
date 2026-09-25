@@ -341,14 +341,14 @@ function CompositionBuilder({ settings, matches, mySettings, myMatches, myId, is
             </div>
             <div className="label">{t('composition.compoScore', { map: selectedMap })}</div>
           </div>
-          <div className="stat-tiles">
-            <div className="stat-tile">
-              <div className="value">{score.roleScore}</div>
-              <div className="label">{t('composition.roleBalance')}</div>
+          <div className="gs-figures fm-figures">
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('composition.roleBalance')}</span>
+              <span className="gs-figure-value">{score.roleScore}</span>
             </div>
-            <div className="stat-tile">
-              <div className="value">{score.mapFitScore === null ? '?' : score.mapFitScore}</div>
-              <div className="label">{t('composition.mapFit')}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('composition.mapFit')}</span>
+              <span className="gs-figure-value">{score.mapFitScore === null ? '?' : score.mapFitScore}</span>
             </div>
           </div>
           <p className="label comp-disclaimer">{t('composition.disclaimer', { date: MAP_TIER_SOURCE_DATE })}</p>
@@ -356,11 +356,11 @@ function CompositionBuilder({ settings, matches, mySettings, myMatches, myId, is
       )}
 
       <CollapsibleCard id="composition.balance" title={t('composition.compoBalanceTitle')}>
-        <div className="stat-tiles">
+        <div className="gs-figures fm-figures fm-figures-4">
           {Object.entries(analysis.counts).map(([role, count]) => (
-            <div key={role} className="stat-tile">
-              <div className="value">{count}</div>
-              <div className="label">{role}</div>
+            <div key={role} className="gs-figure">
+              <span className="gs-figure-label">{role}</span>
+              <span className="gs-figure-value">{count}</span>
             </div>
           ))}
         </div>

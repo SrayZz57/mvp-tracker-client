@@ -6,8 +6,11 @@ import { PERIODS } from '../performanceCharts.js';
 import { dayLabelKey } from '../valorantStats.js';
 
 function sequentialColor(value) {
-  const alpha = 0.18 + (Math.min(100, Math.max(0, value)) / 100) * 0.72;
-  return `rgba(57, 135, 229, ${alpha})`;
+  // Vert au-dessus de 50 %, rouge Valorant en dessous : l'intensité grandit
+  // avec l'écart à 50 %.
+  const gap = Math.min(50, Math.abs(value - 50)) / 50;
+  const alpha = 0.25 + gap * 0.6;
+  return value >= 50 ? `rgba(61, 220, 132, ${alpha})` : `rgba(255, 70, 85, ${alpha})`;
 }
 
 const MIN_GAMES_FOR_PEAK = 3;

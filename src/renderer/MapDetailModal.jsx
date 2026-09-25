@@ -3,6 +3,8 @@ import { agentUsageOnMap, weaponKillsOnMap, mapSideStats, excludeDeathmatch } fr
 import { useMapImages } from './mapImages.js';
 import { useWeaponIcons } from './weaponIcons.js';
 
+const sideTone = (winrate) => (winrate === null ? '' : winrate >= 50 ? 'up' : 'down');
+
 function MapDetailModal({ mapName, matches, settings, agentIcons, onClose }) {
   const { t } = useTranslation();
   const mapImages = useMapImages();
@@ -18,25 +20,29 @@ function MapDetailModal({ mapName, matches, settings, agentIcons, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card detail-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>{t('detail.close')}</button>
 
-        <div className="modal-banner" style={mapSplash ? { backgroundImage: `url(${mapSplash})` } : undefined}>
-          <div className="modal-banner-text">
-            <h2>{mapName}</h2>
+        <div className="dm-hero dm-hero-map" style={mapSplash ? { backgroundImage: `url(${mapSplash})` } : undefined}>
+          <div className="dm-hero-text">
+            <h2 className="dm-hero-name">{mapName}</h2>
           </div>
         </div>
 
-        <div className="card">
-          <h3>{t('detail.attackDefense')}</h3>
-          <div className="stat-tiles">
-            <div className="stat-tile">
-              <div className="value">{sides.attackWinrate === null ? '?' : `${sides.attackWinrate.toFixed(0)}%`}</div>
-              <div className="label">{t('detail.attackWinrate', { count: sides.attackRounds })}</div>
+        <div className="card gs-card">
+          <h3 className="dm-title">{t('detail.attackDefense')}</h3>
+          <div className="gs-figures fm-figures">
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('detail.attackWinrate', { count: sides.attackRounds })}</span>
+              <span className={`gs-figure-value ${sideTone(sides.attackWinrate)}`}>
+                {sides.attackWinrate === null ? '?' : `${sides.attackWinrate.toFixed(0)}%`}
+              </span>
             </div>
-            <div className="stat-tile">
-              <div className="value">{sides.defenseWinrate === null ? '?' : `${sides.defenseWinrate.toFixed(0)}%`}</div>
-              <div className="label">{t('detail.defenseWinrate', { count: sides.defenseRounds })}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('detail.defenseWinrate', { count: sides.defenseRounds })}</span>
+              <span className={`gs-figure-value ${sideTone(sides.defenseWinrate)}`}>
+                {sides.defenseWinrate === null ? '?' : `${sides.defenseWinrate.toFixed(0)}%`}
+              </span>
             </div>
           </div>
           {sides.unknownRounds > 0 && (
@@ -46,37 +52,49 @@ function MapDetailModal({ mapName, matches, settings, agentIcons, onClose }) {
           )}
         </div>
 
-        <div className="card">
-          <h3>{t('detail.agentsOnMap')}</h3>
+        <div className="card gs-card">
+          <h3 className="dm-title">{t('detail.agentsOnMap')}</h3>
           {agentUsage.length === 0 ? (
             <p>{t('detail.noData')}</p>
           ) : (
-            agentUsage.map(({ character, count, percent }) => (
-              <p key={character}>
-                {agentIcons.get(character) && <img src={agentIcons.get(character)} alt="" className="agent-icon" />}
-                {character} — {t('detail.agentUsageLine', { percent: percent.toFixed(0), count })}
-              </p>
-            ))
+            <div className="fm-rows">
+              {agentUsage.map(({ character, count, percent }) => (
+                <div key={character} className="fm-row dm-row">
+                  <span className="fm-row-label">
+                    {agentIcons.get(character) && <img src={agentIcons.get(character)} alt="" className="agent-icon" />}
+                    {character}
+                  </span>
+                  <span className="fm-row-track" aria-hidden="true">
+                    <span className="fm-row-fill" style={{ width: `${percent}%` }} />
+                  </span>
+                  <span className="fm-row-value">{percent.toFixed(0)}%</span>
+                  <span className="fm-row-meta">{t('detail.agentUsageLine', { percent: percent.toFixed(0), count })}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        <div className="card">
-          <h3>{t('detail.killsByWeaponOnMap')}</h3>
+        <div className="card gs-card">
+          <h3 className="dm-title">{t('detail.killsByWeaponOnMap')}</h3>
           {weaponKills.length === 0 ? (
             <p>{t('detail.noData')}</p>
           ) : (
-            weaponKills.map(([weapon, count]) => (
-              <div key={weapon} className="weapon-bar-row">
-                <span className="name">
-                  {weaponIcons.get(weapon) && <img src={weaponIcons.get(weapon)} alt="" className="weapon-icon" />}
-                  {weapon}
-                </span>
-                <span className="weapon-bar-track">
-                  <span className="weapon-bar-fill" style={{ width: `${(count / maxWeaponCount) * 100}%` }} />
-                </span>
-                <span className="weapon-bar-count">{t('detail.killsCount', { count })}</span>
-              </div>
-            ))
+            <div className="fm-rows">
+              {weaponKills.map(([weapon, count]) => (
+                <div key={weapon} className="fm-row dm-row">
+                  <span className="fm-row-label">
+                    {weaponIcons.get(weapon) && <img src={weaponIcons.get(weapon)} alt="" className="weapon-icon" />}
+                    {weapon}
+                  </span>
+                  <span className="fm-row-track" aria-hidden="true">
+                    <span className="fm-row-fill good" style={{ width: `${(count / maxWeaponCount) * 100}%` }} />
+                  </span>
+                  <span className="fm-row-value">{count}</span>
+                  <span className="fm-row-meta">{t('detail.killsCount', { count })}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

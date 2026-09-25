@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Target,
-  Grid3x3,
   Waves,
-  Zap,
-  Microscope,
-  Orbit,
-  Package,
-  MoveHorizontal,
   Shuffle,
-  Bomb,
-  Crosshair,
-  Popcorn,
   Hourglass,
   Trophy,
   MousePointerClick,
@@ -23,19 +13,13 @@ import {
   Footprints,
   EyeOff,
   Flame,
+  Skull,
 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import fpsRifleHandsUrl from '../assets/models/fps-rifle-hands.glb';
-import vandalArmsUrl from '../assets/models/vandal-arms.glb';
 
-// Arme alternative (CC-BY 4.0, voir src/assets/models/CREDITS.md) — mains +
-// arme avec un vrai jeu d'animations (tir, rechargement, sprint...), choix
-// exposé dans Réglages → Modèle d'arme.
-export const WEAPON_MODELS = {
-  vandal: { labelKey: 'aimTrainer.weaponVandal', url: vandalArmsUrl },
-};
 import floorColorUrl from '../assets/textures/floor-color.jpg';
 import floorNormalUrl from '../assets/textures/floor-normal.jpg';
 import floorRoughnessUrl from '../assets/textures/floor-roughness.jpg';
@@ -43,6 +27,10 @@ import wallColorUrl from '../assets/textures/wall-color.jpg';
 import wallNormalUrl from '../assets/textures/wall-normal.jpg';
 import wallRoughnessUrl from '../assets/textures/wall-roughness.jpg';
 import { saveScore } from './aimScores.js';
+import { buildMonasteryArena } from './aimArenas.js';
+import { createAgentSystem, AGENT_FLOOR_Y } from './aimBots.js';
+import { MODES, WEAPON_MODELS, DEFAULT_CONFIG, behaviorKey } from './aimTrainerModes.js';
+import { createGlockViewmodel } from './glockModel.js';
 import { isPerfLiteEnabled } from './perfMode.js';
 import CrosshairPreview from './CrosshairPreview.jsx';
 
@@ -323,312 +311,6 @@ function updateFlashEffectObject(key, object, from, to, progress, elapsedMs) {
   else if (key === 'phoenix') updatePhoenixEffect(object, from, to, progress);
 }
 
-// Modes d'entraînement. Chacun n'est qu'un préréglage + un comportement de
-// cible : le moteur reste le même, ce qui évite de dupliquer la logique de
-// tir/score pour chaque mode.
-//   movement : 'none' (statique) | 'drift' (translation continue) | 'orbit'
-//   lifetime : durée de vie d'une cible en ms (null = illimitée)
-export const MODES = {
-  flick: {
-    icon: Target,
-    accent: '#ff4655',
-    labelKey: 'aimTrainer.modes.flick',
-    descKey: 'aimTrainer.modes.flickDesc',
-    movement: 'none',
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.28, spread: 28, duration: 60 },
-  },
-  gridshot: {
-    icon: Grid3x3,
-    accent: '#ffc857',
-    labelKey: 'aimTrainer.modes.gridshot',
-    descKey: 'aimTrainer.modes.gridshotDesc',
-    movement: 'none',
-    lifetime: null,
-    preset: { targetCount: 4, targetSize: 0.26, spread: 26, duration: 60 },
-  },
-  // Trois paliers de difficulté demandés par les testeurs plutôt qu'un seul
-  // Tracking figé : vitesse de dérive et fréquence de changement de cap sont
-  // les deux leviers qui rendent une cible en mouvement plus ou moins dure à
-  // suivre (voir `driftSpeed`/`driftChangeInterval`, lus par randomDrift()
-  // et le rebranchement de cap dans la boucle d'animation). "tracking" reste
-  // la clé historique (déjà utilisée par des scores enregistrés) — c'est
-  // volontairement le palier "Pro", inchangé.
-  trackingBeginner: {
-    icon: Waves,
-    accent: '#4ec9f5',
-    labelKey: 'aimTrainer.modes.trackingBeginner',
-    descKey: 'aimTrainer.modes.trackingBeginnerDesc',
-    movement: 'drift',
-    lifetime: null,
-    driftSpeed: [1, 1.8],
-    driftChangeInterval: [700, 1400],
-    preset: { targetCount: 1, targetSize: 0.42, spread: 26, duration: 60 },
-  },
-  trackingIntermediate: {
-    icon: Waves,
-    accent: '#4ec9f5',
-    labelKey: 'aimTrainer.modes.trackingIntermediate',
-    descKey: 'aimTrainer.modes.trackingIntermediateDesc',
-    movement: 'drift',
-    lifetime: null,
-    driftSpeed: [1.6, 2.8],
-    driftChangeInterval: [500, 1000],
-    preset: { targetCount: 1, targetSize: 0.36, spread: 28, duration: 60 },
-  },
-  tracking: {
-    icon: Waves,
-    accent: '#4ec9f5',
-    labelKey: 'aimTrainer.modes.tracking',
-    descKey: 'aimTrainer.modes.trackingDesc',
-    movement: 'drift',
-    // Clic maintenu + précision échantillonnée en continu, plutôt que des
-    // tirs discrets — voir le bloc dédié dans la boucle d'animation et
-    // handleClick. Réservé à "Pro" et à Multi (ci-dessous) : Débutant et
-    // Intermédiaire restent en tir classique sur cible mobile, et le
-    // resteraient même si on l'ajoutait plus tard (des scores existants sont
-    // déjà enregistrés sur leur mécanique actuelle).
-    holdTracking: true,
-    lifetime: null,
-    driftSpeed: [2, 4],
-    driftChangeInterval: [350, 850],
-    preset: { targetCount: 1, targetSize: 0.32, spread: 30, duration: 60 },
-  },
-  trackingMulti: {
-    icon: Waves,
-    accent: '#4ec9f5',
-    labelKey: 'aimTrainer.modes.trackingMulti',
-    descKey: 'aimTrainer.modes.trackingMultiDesc',
-    movement: 'drift',
-    holdTracking: true,
-    lifetime: null,
-    driftSpeed: [1.8, 3],
-    driftChangeInterval: [500, 1100],
-    preset: { targetCount: 2, targetSize: 0.34, spread: 28, duration: 60 },
-  },
-  reflex: {
-    icon: Zap,
-    accent: '#9b7bff',
-    labelKey: 'aimTrainer.modes.reflex',
-    descKey: 'aimTrainer.modes.reflexDesc',
-    movement: 'none',
-    lifetime: 1100,
-    preset: { targetCount: 1, targetSize: 0.3, spread: 34, duration: 60 },
-  },
-  micro: {
-    icon: Microscope,
-    accent: '#3ddc84',
-    labelKey: 'aimTrainer.modes.micro',
-    descKey: 'aimTrainer.modes.microDesc',
-    movement: 'none',
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.12, spread: 12, duration: 60 },
-  },
-  orbit: {
-    icon: Orbit,
-    accent: '#ff8fab',
-    labelKey: 'aimTrainer.modes.orbit',
-    descKey: 'aimTrainer.modes.orbitDesc',
-    movement: 'orbit',
-    lifetime: null,
-    preset: { targetCount: 2, targetSize: 0.26, spread: 30, duration: 60 },
-  },
-  peek: {
-    icon: Package,
-    accent: '#4ec9f5',
-    labelKey: 'aimTrainer.modes.peek',
-    descKey: 'aimTrainer.modes.peekDesc',
-    movement: 'peek',
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.16, spread: 20, duration: 60 },
-  },
-  strafe: {
-    icon: MoveHorizontal,
-    accent: '#4ec9f5',
-    labelKey: 'aimTrainer.modes.strafe',
-    descKey: 'aimTrainer.modes.strafeDesc',
-    movement: 'drift',
-    // Cap verrouillé + intervalle de changement quasi infini : la cible
-    // traverse tout droit à vitesse constante, ne rebondissant que sur les
-    // bords — un vrai strafe, pas un Tracking un peu plus rapide.
-    driftLockY: true,
-    driftSpeed: [3, 5],
-    driftChangeInterval: [999999, 999999],
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.3, spread: 30, duration: 60 },
-  },
-  // Suggéré sur Discord : une cible qui simule une personne qui marche
-  // (traversée horizontale à vitesse constante, comme Strafe ci-dessus —
-  // mêmes mécaniques de mouvement, réutilisées telles quelles) mais SANS
-  // tir : le score vient du temps passé viseur-sur-cible, comme le mode
-  // Tracking (`passiveTrack` réutilise le même échantillonnage continu que
-  // `holdTracking`, simplement sans exiger de clic maintenu — voir la
-  // boucle d'animation). Vitesse unique pour cette première version
-  // (marche/course à choisir viendront après validation).
-  // Quatre paliers de vitesse, même principe que les 4 paliers de Tracking
-  // (demandé sur Discord après le mode Patrol de base) : "patrol" garde sa
-  // clé d'origine (déjà utilisée pour d'éventuels scores enregistrés) et
-  // devient le palier "Moyen". "patrolMulti" ne fait pas suivre 2 cibles à
-  // la fois (contrairement à trackingMulti) — "alterne" fait plutôt varier
-  // la vitesse en cours de manche : driftChangeInterval réactivé (au lieu
-  // du quasi-infini des 3 autres paliers, à vitesse fixe) pour piocher une
-  // nouvelle vitesse dans la plage régulièrement, réutilisant tel quel le
-  // mécanisme déjà en place pour les modes Tracking/Drift.
-  patrolSlow: {
-    icon: Footprints,
-    accent: '#3ddc84',
-    labelKey: 'aimTrainer.modes.patrolSlow',
-    descKey: 'aimTrainer.modes.patrolSlowDesc',
-    movement: 'drift',
-    driftLockY: true,
-    driftSpeed: [1.0, 1.0],
-    driftChangeInterval: [999999, 999999],
-    passiveTrack: true,
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.34, spread: 30, duration: 60 },
-  },
-  patrol: {
-    icon: Footprints,
-    accent: '#3ddc84',
-    labelKey: 'aimTrainer.modes.patrol',
-    descKey: 'aimTrainer.modes.patrolDesc',
-    movement: 'drift',
-    driftLockY: true,
-    driftSpeed: [1.6, 1.6],
-    driftChangeInterval: [999999, 999999],
-    passiveTrack: true,
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.34, spread: 30, duration: 60 },
-  },
-  patrolFast: {
-    icon: Footprints,
-    accent: '#3ddc84',
-    labelKey: 'aimTrainer.modes.patrolFast',
-    descKey: 'aimTrainer.modes.patrolFastDesc',
-    movement: 'drift',
-    driftLockY: true,
-    driftSpeed: [2.4, 2.4],
-    driftChangeInterval: [999999, 999999],
-    passiveTrack: true,
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.34, spread: 30, duration: 60 },
-  },
-  patrolMulti: {
-    icon: Footprints,
-    accent: '#3ddc84',
-    labelKey: 'aimTrainer.modes.patrolMulti',
-    descKey: 'aimTrainer.modes.patrolMultiDesc',
-    movement: 'drift',
-    driftLockY: true,
-    driftSpeed: [1.0, 2.4],
-    driftChangeInterval: [2500, 4500],
-    passiveTrack: true,
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.34, spread: 30, duration: 60 },
-  },
-  switch: {
-    icon: Shuffle,
-    accent: '#ffc857',
-    labelKey: 'aimTrainer.modes.switchMode',
-    descKey: 'aimTrainer.modes.switchModeDesc',
-    // Cibles statiques numérotées à toucher dans l'ordre affiché — voir
-    // state.reshuffleSwitch/state.switchNext (créés dans l'effet principal)
-    // et la branche dédiée de handleClick.
-    movement: 'switch',
-    lifetime: null,
-    preset: { targetCount: 4, targetSize: 0.26, spread: 26, duration: 60 },
-  },
-  strafeTap: {
-    icon: Bomb,
-    accent: '#ff8fab',
-    labelKey: 'aimTrainer.modes.strafeTap',
-    descKey: 'aimTrainer.modes.strafeTapDesc',
-    movement: 'drift',
-    // Plusieurs touches nécessaires avant que la cible ne se replace pour de
-    // bon — voir `entry.hitsRemaining` dans handleClick.
-    hitsRequired: 3,
-    driftSpeed: [1.5, 2.5],
-    driftChangeInterval: [600, 1200],
-    lifetime: null,
-    preset: { targetCount: 1, targetSize: 0.3, spread: 26, duration: 60 },
-  },
-  precision: {
-    icon: Crosshair,
-    accent: '#3ddc84',
-    labelKey: 'aimTrainer.modes.precision',
-    descKey: 'aimTrainer.modes.precisionDesc',
-    movement: 'none',
-    lifetime: 1500,
-    preset: { targetCount: 1, targetSize: 0.08, spread: 16, duration: 60 },
-  },
-  popcorn: {
-    icon: Popcorn,
-    accent: '#ffb84d',
-    labelKey: 'aimTrainer.modes.popcorn',
-    descKey: 'aimTrainer.modes.popcornDesc',
-    movement: 'none',
-    lifetime: 1300,
-    preset: { targetCount: 3, targetSize: 0.22, spread: 32, duration: 60 },
-  },
-  snapHold: {
-    icon: Hourglass,
-    accent: '#9b7bff',
-    labelKey: 'aimTrainer.modes.snapHold',
-    descKey: 'aimTrainer.modes.snapHoldDesc',
-    // Un clic arme la cible mais ne suffit pas : il faut y rester `holdMs` —
-    // voir la branche dédiée de handleClick et le bloc de maintien dans la
-    // boucle d'animation.
-    movement: 'snap',
-    holdMs: 350,
-    lifetime: 2200,
-    preset: { targetCount: 1, targetSize: 0.24, spread: 30, duration: 60 },
-  },
-  flashDodge: {
-    icon: EyeOff,
-    accent: '#ffb454',
-    labelKey: 'aimTrainer.modes.flashDodge',
-    descKey: 'aimTrainer.modes.flashDodgeDesc',
-    movement: 'none',
-    lifetime: null,
-    // Tir classique sur cible statique (comme Flick), avec en plus un flash
-    // qui arrive d'une direction aléatoire à intervalle irrégulier — voir la
-    // gestion dédiée dans la boucle d'animation et handleClick.
-    flashDodge: true,
-    preset: { targetCount: 1, targetSize: 0.28, spread: 28, duration: 60 },
-  },
-  spray: {
-    icon: Flame,
-    accent: '#ff6b35',
-    labelKey: 'aimTrainer.modes.spray',
-    descKey: 'aimTrainer.modes.sprayDesc',
-    // Apparition positionnée EXACTEMENT comme Flick (même
-    // pickNonOverlappingPosition/randomTargetPosition, même cône ancré sur
-    // l'axe -Z du monde — la barre rouge du décor), pas de repositionnement
-    // relatif à la caméra : ancrer la cible sur la direction actuelle du
-    // joueur (mouvante, imprévisible pendant un spray) s'est révélé plus
-    // fragile qu'un repère fixe et familier que le joueur retrouve à chaque
-    // nouvelle cible. Une fois apparue, léger déplacement (comme Tracking)
-    // DANS ce même cône — pas verrouillé sur l'axe horizontal (driftLockY),
-    // sinon la trajectoire ne fait qu'un aller-retour gauche-droite parfaitement
-    // lisible. Changements de cap plus fréquents pour une trajectoire moins
-    // prévisible (le cône reste celui de Flick, donc la hauteur reste
-    // raisonnable même sans verrou).
-    movement: 'drift',
-    driftSpeed: [1.4, 2.2],
-    driftChangeInterval: [700, 1400],
-    lifetime: null,
-    // Contrôle de recul : clic MAINTENU déclenche un tir automatique en
-    // rafale (voir SPRAY_PATTERN/fireSprayShot dans la boucle principale) —
-    // il faut compenser le recul à la souris pour rester dessus. La cible a
-    // des PV (200) et chaque tir fait des dégâts fixes (40, soit 5 tirs pour
-    // la casser) : une fois détruite, elle réapparaît à un nouvel endroit
-    // aléatoire — voir entry.hp dans fireSprayShot.
-    recoilControl: true,
-    maxHp: 200,
-    damagePerHit: 40,
-    preset: { targetCount: 1, targetSize: 0.34, spread: 28, duration: 40 },
-  },
-};
 
 // Recul façon Vandal — Riot ne publie AUCUNE donnée chiffrée officielle (pas
 // de coordonnées par balle), donc impossible d'avoir les vraies valeurs.
@@ -660,43 +342,6 @@ export const SPRAY_PATTERN = [
 
 const SPRAY_SHOT_INTERVAL_MS = 100; // ≈ 600 coups/min, plausible pour un fusil d'assaut
 
-// Le mode « Personnalisé » n'a pas de comportement à lui : un preset garde celui
-// de son mode de base (Tracking = cible mobile + clic maintenu, Peek, Orbit...),
-// seuls la durée, la taille, le nombre et l'écartement des cibles sont libres. La
-// clé de score reste 'custom' (voir config.mode), pour que ces réglages libres ne
-// se mélangent jamais aux records des modes standards. Sans mode de base connu
-// (anciens presets), retombe sur le comportement de Flick, comme avant.
-export function behaviorKey(cfg) {
-  if (cfg?.mode === 'custom') return MODES[cfg.baseMode] ? cfg.baseMode : 'flick';
-  return cfg?.mode;
-}
-
-export const DEFAULT_CONFIG = {
-  mode: 'flick',
-  dpi: 800,
-  sens: 0.35,
-  duration: 60,
-  targetSize: 0.28,
-  targetColor: '#ff4655',
-  targetCount: 1,
-  spread: 28,
-  fov: 103,
-  showWeapon: true,
-  // 'default' = mains + arme CC0 (fps-rifle-hands.glb) ; sinon une clé de
-  // WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
-  weaponModel: 'default',
-  // 'day' (défaut, ciel + sol clair) ou 'dark' (suggéré sur Discord — salle
-  // fermée, sans ciel bleu ni sol blanc). Version simple validée avec
-  // l'utilisateur : teintes assombries + ciel remplacé par une couleur
-  // unie, pas encore un vrai plafond en dur.
-  theme: 'day',
-  // Code de la bibliothèque de crosshairs à afficher pendant la session ;
-  // null = croix blanche par défaut (voir .aim-trainer-crosshair).
-  crosshairCode: null,
-  // Petit "pop" joué quand une cible est touchée (demandé sur Discord :
-  // pouvoir le couper). Le bruit du tir lui-même reste actif.
-  hitSound: true,
-};
 
 // Les FPS (Valorant inclus) expriment le champ de vision à l'HORIZONTALE,
 // alors que la caméra de Three.js attend une valeur VERTICALE. Passer 103
@@ -761,6 +406,10 @@ function hideTargetEntry(entry) {
 }
 
 function resetTargetForMode(entry, mode, cfg, now, state) {
+  if (mode.movement === 'agents') {
+    hideTargetEntry(entry);
+    return;
+  }
   if (mode.movement === 'peek') {
     // Toujours centrée pile devant le joueur (pas de position aléatoire
     // comme les autres modes) : la variation du mode Peek, c'est le
@@ -834,21 +483,52 @@ function valueNoise(width, height, cellSize, seed = 1) {
 // l'éclairage de la scène.
 const textureLoader = new THREE.TextureLoader();
 
-function loadPbrMaterial({ color, normal, roughness }, repeat, extra = {}) {
-  const configure = (texture, isColor) => {
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(repeat[0], repeat[1]);
-    texture.anisotropy = 8;
-    if (isColor) texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  };
+// Images décodées une seule fois par lancement de l'app, puis partagées entre
+// les sessions : sans ce cache, chaque partie redécodait ~3,5 Mo de JPEG. Chaque
+// matériau reçoit sa propre copie (clone) pour régler sa répétition, et c'est
+// cette copie qui est libérée en fin de session, jamais l'image mise en cache.
+const baseTextures = new Map();
+function loadBaseTexture(url) {
+  if (!baseTextures.has(url)) baseTextures.set(url, textureLoader.loadAsync(url));
+  return baseTextures.get(url);
+}
 
-  return new THREE.MeshStandardMaterial({
-    map: configure(textureLoader.load(color), true),
-    normalMap: configure(textureLoader.load(normal), false),
-    roughnessMap: configure(textureLoader.load(roughness), false),
-    ...extra,
+function loadPbrMaterial({ color, normal, roughness }, repeat, extra = {}) {
+  const material = new THREE.MeshStandardMaterial(extra);
+  const assign = (slot, url, isColor) => {
+    loadBaseTexture(url).then((base) => {
+      const texture = base.clone();
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(repeat[0], repeat[1]);
+      texture.anisotropy = 8;
+      if (isColor) texture.colorSpace = THREE.SRGBColorSpace;
+      texture.needsUpdate = true;
+      material[slot] = texture;
+      material.needsUpdate = true;
+    });
+  };
+  assign('map', color, true);
+  assign('normalMap', normal, false);
+  assign('roughnessMap', roughness, false);
+  return material;
+}
+
+// Libère la mémoire graphique d'une scène (géométries, matériaux, textures) :
+// sans ça, chaque session laissait tout en mémoire et l'app s'alourdissait au
+// fil des parties.
+function disposeScene(root) {
+  const materials = new Set();
+  root.traverse((obj) => {
+    obj.geometry?.dispose();
+    const list = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
+    list.forEach((m) => materials.add(m));
+  });
+  materials.forEach((material) => {
+    Object.values(material).forEach((value) => {
+      if (value?.isTexture) value.dispose();
+    });
+    material.dispose();
   });
 }
 
@@ -1236,68 +916,77 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     const arena = new THREE.Group();
     scene.add(arena);
 
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(70, 70),
-      loadPbrMaterial(
-        { color: floorColorUrl, normal: floorNormalUrl, roughness: floorRoughnessUrl },
-        [18, 18],
-        // `color` multiplie la texture (blanc = inchangé) : simple façon
-        // d'assombrir le sol clair existant en thème sombre sans nouvel asset.
-        { metalness: 0.05, color: isDark ? 0x3a3f4a : 0xffffff },
-      ),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = FLOOR_Y;
-    arena.add(floor);
-
-    const grid = new THREE.GridHelper(70, 35, 0xff6b78, 0x7c869c);
-    grid.position.y = FLOOR_Y + 0.01;
-    grid.material.opacity = 0.25;
-    grid.material.transparent = true;
-    arena.add(grid);
-
-    // Murs bas et ouverts sur le ciel (pas de plafond), avec un liseré
-    // lumineux en crête pour délimiter proprement l'aire de jeu.
+    // Murs de la salle classique, aussi réutilisés pour les panneaux du mode
+    // Dodge Flash quelle que soit l'arène choisie.
     const wallMat = loadPbrMaterial(
       { color: wallColorUrl, normal: wallNormalUrl, roughness: wallRoughnessUrl },
       [8, 2],
       { metalness: 0.45, side: THREE.DoubleSide, color: isDark ? 0x3a3f4a : 0xffffff },
     );
-    const wallY = FLOOR_Y + WALL_HEIGHT / 2;
-    const wallPlacements = [
-      { pos: [0, wallY, -WALL_HALF], rot: 0 },
-      { pos: [0, wallY, WALL_HALF], rot: Math.PI },
-      { pos: [-WALL_HALF, wallY, 0], rot: Math.PI / 2 },
-      { pos: [WALL_HALF, wallY, 0], rot: -Math.PI / 2 },
-    ];
-    wallPlacements.forEach(({ pos, rot }) => {
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(WALL_HALF * 2, WALL_HEIGHT), wallMat);
-      wall.position.set(...pos);
-      wall.rotation.y = rot;
-      arena.add(wall);
 
-      const crest = new THREE.Mesh(
-        new THREE.PlaneGeometry(WALL_HALF * 2, 0.22),
-        new THREE.MeshBasicMaterial({ color: 0xff4655, transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
+    // L'arène dépend du mode (voir MODES[...].arena), plus d'un réglage.
+    let arenaInfo = null;
+    if (MODES[behaviorKey(config)]?.arena === 'monastery') {
+      arenaInfo = buildMonasteryArena(arena, { floorY: AGENT_FLOOR_Y, isDark });
+    } else {
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(70, 70),
+        loadPbrMaterial(
+          { color: floorColorUrl, normal: floorNormalUrl, roughness: floorRoughnessUrl },
+          [18, 18],
+          // `color` multiplie la texture (blanc = inchangé) : simple façon
+          // d'assombrir le sol clair existant en thème sombre sans nouvel asset.
+          { metalness: 0.05, color: isDark ? 0x3a3f4a : 0xffffff },
+        ),
       );
-      crest.position.set(pos[0], FLOOR_Y + WALL_HEIGHT - 0.15, pos[2]);
-      crest.rotation.y = rot;
-      arena.add(crest);
-    });
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = FLOOR_Y;
+      arena.add(floor);
 
-    // Bandeaux lumineux verticaux sur le mur du fond : repères de profondeur.
-    [-8, 0, 8].forEach((x, i) => {
-      const strip = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.3, WALL_HEIGHT * 0.8),
-        new THREE.MeshBasicMaterial({
-          color: i === 1 ? 0xff4655 : 0x9fb4ff,
-          transparent: true,
-          opacity: i === 1 ? 0.6 : 0.35,
-        }),
-      );
-      strip.position.set(x, FLOOR_Y + WALL_HEIGHT * 0.45, -WALL_HALF + 0.05);
-      arena.add(strip);
-    });
+      const grid = new THREE.GridHelper(70, 35, 0xff6b78, 0x7c869c);
+      grid.position.y = FLOOR_Y + 0.01;
+      grid.material.opacity = 0.25;
+      grid.material.transparent = true;
+      arena.add(grid);
+
+      // Murs bas et ouverts sur le ciel (pas de plafond), avec un liseré
+      // lumineux en crête pour délimiter proprement l'aire de jeu.
+      const wallY = FLOOR_Y + WALL_HEIGHT / 2;
+      const wallPlacements = [
+        { pos: [0, wallY, -WALL_HALF], rot: 0 },
+        { pos: [0, wallY, WALL_HALF], rot: Math.PI },
+        { pos: [-WALL_HALF, wallY, 0], rot: Math.PI / 2 },
+        { pos: [WALL_HALF, wallY, 0], rot: -Math.PI / 2 },
+      ];
+      wallPlacements.forEach(({ pos, rot }) => {
+        const wall = new THREE.Mesh(new THREE.PlaneGeometry(WALL_HALF * 2, WALL_HEIGHT), wallMat);
+        wall.position.set(...pos);
+        wall.rotation.y = rot;
+        arena.add(wall);
+
+        const crest = new THREE.Mesh(
+          new THREE.PlaneGeometry(WALL_HALF * 2, 0.22),
+          new THREE.MeshBasicMaterial({ color: 0xff4655, transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
+        );
+        crest.position.set(pos[0], FLOOR_Y + WALL_HEIGHT - 0.15, pos[2]);
+        crest.rotation.y = rot;
+        arena.add(crest);
+      });
+
+      // Bandeaux lumineux verticaux sur le mur du fond : repères de profondeur.
+      [-8, 0, 8].forEach((x, i) => {
+        const strip = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.3, WALL_HEIGHT * 0.8),
+          new THREE.MeshBasicMaterial({
+            color: i === 1 ? 0xff4655 : 0x9fb4ff,
+            transparent: true,
+            opacity: i === 1 ? 0.6 : 0.35,
+          }),
+        );
+        strip.position.set(x, FLOOR_Y + WALL_HEIGHT * 0.45, -WALL_HALF + 0.05);
+        arena.add(strip);
+      });
+    }
 
     // --- Murs du mode Dodge Flash --------------------------------------------
     // Repères fixes à gauche/à droite (voir FLASH_WALL_YAW_DEG/DISTANCE plus
@@ -1468,6 +1157,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     }
     const targets = allTargets.slice(0, config.targetCount);
     allTargets.slice(config.targetCount).forEach(hideTargetEntry);
+    if (MODES[behaviorKey(config)]?.movement === 'agents') allTargets.forEach(hideTargetEntry);
 
     // Assigne un ordre 1..N mélangé aux cibles du mode Switch, et fait
     // pointer chaque pastille vers la texture correspondante — appelé à la
@@ -1541,6 +1231,8 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       muzzleTip,
       muzzleFlash,
       impactTexture,
+      // Agents du mode Headshot (arène Monastère uniquement) — voir aimBots.js.
+      agents: arenaInfo ? createAgentSystem({ scene, arena: arenaInfo, camera }) : null,
       // Créé ici (pas dans handleClick) pour n'exister qu'une fois par
       // session de jeu ; `resume()` est appelé à chaque tir plutôt qu'ici,
       // pour rester dans le geste utilisateur si le navigateur avait
@@ -1577,7 +1269,20 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     // --- Modèle mains + arme (voir src/assets/models/CREDITS.md pour les
     // licences/attributions — CC0 pour le modèle par défaut, CC-BY 4.0 pour
     // les modèles alternatifs de WEAPON_MODELS) ------------------------------
-    if (config.showWeapon) {
+    if (config.showWeapon && config.weaponModel === 'glock') {
+      // Glock procédural : ses effets (culasse, recul, flash, douille, fumée)
+      // passent par les mêmes points d'entrée que les modèles animés — le tir
+      // appelle fireAction.play() et la boucle appelle mixer.update().
+      const glock = createGlockViewmodel({ renderer, scene });
+      camera.add(glock.holder);
+      camera.updateMatrixWorld(true);
+      const muzzleWorld = new THREE.Vector3();
+      glock.muzzle.getWorldPosition(muzzleWorld);
+      muzzleTip.position.copy(camera.worldToLocal(muzzleWorld));
+      muzzleFlash.visible = false;
+      stateRef.current.mixer = { update: (seconds) => glock.update(seconds) };
+      stateRef.current.fireAction = { stop: () => {}, play: () => glock.fire() };
+    } else if (config.showWeapon) {
       const altWeapon = WEAPON_MODELS[config.weaponModel];
       const weaponUrl = altWeapon?.url ?? fpsRifleHandsUrl;
       new GLTFLoader().load(weaponUrl, (gltf) => {
@@ -1844,7 +1549,10 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         return true;
       });
 
+      state.agents?.update(now, dt, phaseRef.current === 'running');
+
       state.targets.forEach((entry) => {
+        if (mode.movement === 'agents') return;
         // Pulsation à l'apparition — rend le spawn lisible.
         const age = now - entry.poppedAt;
         const scale = age < POP_DURATION_MS ? cfg.targetSize * (0.4 + 0.6 * (age / POP_DURATION_MS)) : cfg.targetSize;
@@ -2080,7 +1788,13 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
+      disposeScene(scene);
+      // Pastilles du mode Switch qui ne sont pas affichées à ce moment-là.
+      switchNumberTextures.forEach((texture) => texture.dispose());
       renderer.dispose();
+      // Rend le contexte WebGL au navigateur tout de suite : il en limite le
+      // nombre, et chaque session en crée un nouveau.
+      renderer.forceContextLoss();
       mount.removeChild(renderer.domElement);
       stateRef.current.audioCtx?.close();
     };
@@ -2227,6 +1941,49 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
 
       const { targets, raycaster, center, muzzleTip, scene, impactTexture } = state;
       raycaster.setFromCamera(center, camera);
+
+      // Mode Headshot : les agents et le décor sont testés ensemble (un tir
+      // qui touche d'abord une caisse s'arrête dessus). Seul un tir à la tête
+      // compte comme touche ; corps et jambes affichent leurs dégâts mais
+      // comptent comme ratés.
+      if (MODES[behaviorKey(configRef.current)]?.movement === 'agents' && state.agents) {
+        const now = performance.now();
+        const shot = state.agents.shoot(raycaster, now);
+        const from = new THREE.Vector3();
+        muzzleTip.getWorldPosition(from);
+        const endPoint = shot.point ?? camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(60).add(camera.position);
+        const tracer = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([from, endPoint]),
+          new THREE.LineBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 1 }),
+        );
+        scene.add(tracer);
+        state.tracers.push({ mesh: tracer, createdAt: now });
+        state.flashUntil = now + MUZZLE_FLASH_LIFETIME_MS;
+        if (state.fireAction) {
+          state.idleAction?.stop();
+          state.fireAction.stop();
+          state.fireAction.play();
+        }
+        state.audioCtx.resume();
+        playGunshot(state.audioCtx);
+        if (shot.point) {
+          const spark = new THREE.Sprite(
+            new THREE.SpriteMaterial({ map: impactTexture, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }),
+          );
+          spark.position.copy(shot.point);
+          spark.scale.setScalar(0.35);
+          scene.add(spark);
+          state.sparks.push({ mesh: spark, createdAt: now });
+        }
+        if (shot.kind === 'head') {
+          if (configRef.current.hitSound !== false) playTargetPop(state.audioCtx);
+          setStats((prev) => ({ ...prev, hits: prev.hits + 1, times: [...prev.times, shot.reactionMs] }));
+        } else {
+          setStats((prev) => ({ ...prev, misses: prev.misses + 1 }));
+        }
+        return;
+      }
+
       // Mode Peek : la tête n'est testable que quand elle est visible (sortie
       // de la box) — sinon un clic pendant qu'elle est cachée toucherait une
       // cible qu'on ne voit pas à l'écran.
@@ -2481,6 +2238,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       stateRef.current.reshuffleSwitch(stateRef.current.targets, config);
       stateRef.current.switchNext = 1;
     }
+    if (mode.movement === 'agents') stateRef.current.agents?.reset(config.targetCount, now);
     // Le verrouillage du pointeur doit être demandé de façon synchrone dans la
     // foulée du clic (exigence de sécurité de Chromium) — pas d'await avant.
     // La phase ne passe en "running" qu'une fois le verrouillage confirmé
@@ -2688,6 +2446,9 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                 )}
                 {MODES[behaviorKey(config)]?.passiveTrack && (
                   <p className="aim-game-tip"><Icon icon={Footprints} size={16} /> Pas de tir ici : garde simplement le viseur sur la cible le plus longtemps possible.</p>
+                )}
+                {MODES[behaviorKey(config)]?.movement === 'agents' && (
+                  <p className="aim-game-tip"><Icon icon={Skull} size={16} /> Des agents se déplacent sur le site A à la vitesse de Valorant : seul un tir dans la tête les tue (160 dégâts). Corps et jambes affichent leurs dégâts mais comptent comme ratés.</p>
                 )}
                 {MODES[behaviorKey(config)]?.movement === 'switch' && (
                   <p className="aim-game-tip"><Icon icon={Shuffle} size={16} /> Touche les cibles dans l'ordre affiché — une erreur d'ordre compte comme un raté.</p>

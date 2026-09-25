@@ -8112,33 +8112,16 @@ input[type='color'] {
   color: var(--text);
 }
 
-.profile-adn-card {
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(255, 70, 85, 0.08) 100%);
-}
-
-.profile-adn-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  margin: 0.4rem 0 0.6rem;
-  background: linear-gradient(90deg, var(--accent), #ff9d7a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  display: inline-block;
-}
-
-.profile-adn-bars {
-  margin-top: 1rem;
-}
-
 .profile-adn-meta {
-  margin-top: 0.75rem;
+  margin-top: 0.9rem;
 }
 
 /* Profil ADN + progression du rang sur une même ligne (page Stats), à la même
    hauteur. Dès qu'une des deux est repliée on revient à des hauteurs libres,
    sinon la carte repliée resterait une grande boîte vide. Sous 1100px de large
-   les deux passent l'une sous l'autre. */
+   les deux passent l'une sous l'autre. Chaque corps de carte est un conteneur :
+   leur mise en page s'adapte à SA largeur (demi-largeur ici, pleine largeur une
+   fois empilées), pas à celle de la fenêtre. */
 .profile-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8157,25 +8140,14 @@ input[type='color'] {
   margin-bottom: 0;
 }
 
-/* Le contenu occupe toute la hauteur de la carte : les 4 barres du profil ADN
-   se répartissent l'espace disponible, et la ligne de bas de carte (« Basé sur
-   156 matchs… » / « 20 parties classées… ») tombe à la même hauteur des deux côtés. */
+/* Le contenu occupe toute la hauteur de la carte : la ligne de bas de carte
+   (« Basé sur 156 matchs… » / « 24 parties classées… ») tombe au même niveau
+   des deux côtés. */
 .profile-row > .card .collapsible-card-body {
   flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.profile-row .profile-adn-bars {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-}
-
-.profile-row .rank-history-foot {
-  margin-top: auto;
-  padding-top: 0.5rem;
+  container-type: inline-size;
 }
 
 @media (max-width: 1100px) {
@@ -8189,7 +8161,7 @@ input[type='color'] {
 .rank-history-chart {
   display: block;
   width: 100%;
-  height: 280px;
+  height: 250px;
 }
 
 .rank-history-current {
@@ -13479,3 +13451,1002 @@ input[type='color'] {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* --- Profil ADN et progression du rang : même langage que « Stats globales » ---
+   Réutilise les panneaux .gs-agent / .gs-figure (angles coupés, liseré rouge,
+   capitales espacées, gros chiffres). Ne redéfinit que ce qui leur manque, et
+   les compacte : les deux cartes sont côte à côte, la ligne ne doit pas être
+   plus haute que le graphique de RR. */
+.gs-agent-static {
+  cursor: default;
+}
+
+.gs-agent-static:hover {
+  filter: none;
+}
+
+/* Par défaut (carte en demi-largeur) : le panneau de l'archétype au-dessus, les
+   quatre tuiles dessous, étirées pour remplir la hauteur de la carte. Une carte
+   assez large (empilée, pleine largeur) repasse en deux colonnes, comme « Stats
+   globales » — voir la règle @container en bas. */
+.pa-layout {
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 0.7rem;
+}
+
+.pa-hero {
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 0;
+  padding: 0.9rem 1.1rem 0.9rem 1.4rem;
+}
+
+.pa-hero .gs-agent-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pa-hero .gs-agent-name {
+  font-size: 1.55rem;
+}
+
+.pa-text {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin-bottom: 0;
+}
+
+/* Radar des scores : losange à 4 pointes, icônes du score posées à chaque bout. */
+.pa-radar {
+  position: relative;
+  flex: none;
+  width: 104px;
+  height: 104px;
+}
+
+.pa-radar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pa-radar-grid {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 0.6;
+}
+
+.pa-radar-shape {
+  fill: color-mix(in srgb, var(--accent) 32%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.pa-radar-icon {
+  position: absolute;
+  display: flex;
+  color: var(--text-muted);
+}
+
+.pa-radar-icon-0 {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pa-radar-icon-1 {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pa-radar-icon-2 {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pa-radar-icon-3 {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Tuiles de chiffres des deux cartes : plus basses que celles des stats
+   globales (moins de marge, chiffre plus petit). */
+.pa-figures,
+.rh-figures {
+  gap: 0.7rem;
+}
+
+.pa-figures .gs-figure,
+.rh-figures .gs-figure {
+  padding: 0.7rem 1rem 0.7rem 1.2rem;
+  gap: 0.2rem;
+}
+
+.pa-figures .gs-figure-value,
+.rh-figures .gs-figure-value {
+  font-size: 2.1rem;
+}
+
+/* Quatre scores en 2 × 2, étirés pour remplir la hauteur restante. */
+.pa-figures {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.pa-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Jauge inclinée, comme la barre victoires/défaites des stats globales. */
+.pa-bar {
+  display: block;
+  height: 6px;
+  margin-top: 0.2rem;
+  background: rgba(255, 255, 255, 0.08);
+  transform: skewX(-20deg);
+  overflow: hidden;
+}
+
+.pa-bar > span {
+  display: block;
+  height: 100%;
+}
+
+.gs-figure-value.up {
+  color: var(--good);
+}
+
+.gs-figure-value.down {
+  color: var(--accent);
+}
+
+/* Deux tuiles au-dessus du graphique de RR (le rang actuel est déjà écrit en
+   haut à droite du graphique). */
+.rh-figures {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0.7rem;
+}
+
+/* Panneau du graphique : chanfrein et liseré comme les tuiles, mais portés par
+   un pseudo-élément. Un clip-path sur le panneau lui-même couperait l'infobulle
+   du survol quand elle dépasse. */
+.rh-panel {
+  position: relative;
+  flex: 1;
+  padding: 0.7rem 1.1rem 0.3rem 1.4rem;
+}
+
+.rh-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  --cut: 14px;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  background:
+    linear-gradient(color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--accent) 55%, transparent)) left / 3px 100% no-repeat,
+    var(--surface-alt);
+}
+
+.rh-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.rh-panel .line-chart-wrap {
+  margin-top: 0;
+}
+
+/* Carte assez large (empilée en pleine largeur) : archétype et tuiles côte à
+   côte, comme « Stats globales ». Le conteneur est le corps de la carte (voir
+   .profile-row), pas la fenêtre. */
+@container (min-width: 760px) {
+  .pa-layout {
+    grid-template-columns: minmax(360px, 1.25fr) minmax(0, 1.5fr);
+    grid-template-rows: auto;
+  }
+
+  .pa-radar {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* ---- Encadré principal de la page Stats (ProfileHeaderCard) ---- */
+.ph-card {
+  --cut: 18px;
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.ph-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--rank-color, var(--accent));
+  z-index: 2;
+}
+
+.ph-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.6rem 2rem 1.6rem 2.2rem;
+  background: linear-gradient(90deg, rgba(10, 12, 18, 0.94) 0%, rgba(10, 12, 18, 0.8) 55%, rgba(10, 12, 18, 0.55) 100%);
+}
+
+.ph-identity {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  min-width: 0;
+}
+
+.ph-avatar {
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 2px solid var(--rank-color, var(--accent));
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+
+.ph-id-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.ph-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.ph-tag {
+  margin-left: 0.4rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.ph-rank {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-shrink: 0;
+  position: relative;
+  padding: 0.4rem 0.6rem 0.4rem 0;
+}
+
+.ph-rank::before {
+  content: '';
+  position: absolute;
+  left: -1.4rem;
+  top: 50%;
+  width: 200px;
+  height: 200px;
+  transform: translateY(-50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--rank-color, transparent) 35%, transparent) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.ph-rank > * {
+  position: relative;
+}
+
+.ph-rank-icon {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px var(--rank-color, transparent));
+}
+
+.ph-rank-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 190px;
+}
+
+.ph-rank-name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.ph-rr {
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+.ph-rr strong {
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.ph-rr-track {
+  display: block;
+  height: 10px;
+  margin-top: 0.4rem;
+  background: rgba(255, 255, 255, 0.12);
+  transform: skewX(-20deg);
+  overflow: hidden;
+}
+
+.ph-rr-track > span {
+  display: block;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .ph-overlay {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Écrans 1920x1080 (100 %) : Sage réduit et décalé pour ne pas chevaucher le texte */
+@media (min-width: 1700px) {
+  .gs-agent-art {
+    right: -24%;
+    bottom: -46%;
+    height: 150%;
+  }
+}
+
+/* ---- Perf & Forme : mêmes tuiles et jauges que « Stats globales » ---- */
+.fm-figures {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fm-figures-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fm-figures .gs-figure {
+  padding: 0.7rem 1rem 0.7rem 1.2rem;
+  gap: 0.25rem;
+}
+
+.fm-figures .gs-figure-value {
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fm-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fm-row {
+  --cut: 10px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 56px 230px;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 1rem 0.4rem 1.2rem;
+  background: var(--surface-alt);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.fm-row::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.fm-row-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fm-row-track {
+  display: block;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  transform: skewX(-20deg);
+  overflow: hidden;
+}
+
+.fm-row-fill {
+  display: block;
+  height: 100%;
+  background: #6b7080;
+}
+
+.fm-row-fill.good {
+  background: #3ddc84;
+}
+
+.fm-row-fill.bad {
+  background: var(--accent);
+}
+
+.fm-row-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fm-row-meta {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1000px) {
+  .fm-figures-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .fm-row {
+    grid-template-columns: 110px minmax(0, 1fr) 50px;
+  }
+
+  .fm-row-meta {
+    display: none;
+  }
+}
+
+/* Coéquipiers & rivaux : lignes plus étroites (deux colonnes côte à côte) */
+.fm-row-rival {
+  grid-template-columns: 190px minmax(0, 1fr) 48px auto;
+  gap: 0.8rem;
+}
+
+.fm-row-rival .rival-name {
+  width: auto;
+  min-width: 0;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+.fm-row-rival .fm-row-meta {
+  white-space: nowrap;
+}
+
+.fm-figures-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fm-figures .gs-figure-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.fm-row-fill {
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 1000px) {
+  .fm-figures-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---- Heatmap : panneau de la carte au style Stats ---- */
+.heatmap-canvas-wrap {
+  --cut: 14px;
+  position: relative;
+  padding: 0.8rem 0.8rem 0.8rem 1.1rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-alt);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.heatmap-canvas-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.heatmap-canvas-wrap canvas {
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.heatmap-legend-bar {
+  border-radius: 0;
+  transform: skewX(-20deg);
+}
+
+.heatmap-point-count {
+  border-radius: 0;
+  border: 0;
+  border-left: 3px solid var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+/* ---- Points à travailler, Tilt, Réseau ---- */
+.fm-figures-1 {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0.8rem;
+}
+
+.fm-figures .gs-figure-value.ping-value {
+  font-size: 2rem;
+}
+
+.weakness-item,
+.tilt-rule {
+  --cut: 10px;
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.weakness-item {
+  padding: 0.7rem 1.2rem 0.7rem 1.3rem;
+}
+
+.weakness-item-title {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.streak-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 0;
+  transform: skewX(-20deg);
+  box-shadow: none !important;
+}
+
+.streak-dot:hover {
+  transform: skewX(-20deg) scale(1.2);
+}
+
+.streak-dot.win {
+  background: #3ddc84;
+}
+
+.streak-dot.loss {
+  background: var(--accent);
+}
+
+.tilt-card {
+  --cut: 18px;
+  border: 0;
+  border-left: 4px solid var(--warning);
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+  background: var(--surface-alt);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.tilt-card:not(.calm) {
+  border-left-color: var(--accent);
+}
+
+.tilt-card.calm {
+  border: 0;
+  border-left: 4px solid #3ddc84;
+}
+
+/* ---- Composition, Clips, Lineups, Recherche team, Simulation d'achat ---- */
+.fm-figures .gs-figure-value {
+  overflow-wrap: anywhere;
+}
+
+.buy-recommendation .fm-figures .gs-figure-value {
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
+
+.tech-item {
+  --cut: 14px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--surface-alt);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.tech-item::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+  opacity: 0.55;
+  z-index: 2;
+}
+
+.tech-item:hover {
+  box-shadow: none;
+}
+
+.tech-item:hover::before {
+  opacity: 1;
+}
+
+.tech-item-agent {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tech-item-agent img {
+  border-radius: 0;
+}
+
+.comp-score-card .comp-score-ring-inner {
+  font-family: var(--font-display);
+}
+
+/* ---- Page « Mon compte » ---- */
+.account-header-card {
+  --cut: 18px;
+  border: 0;
+  border-radius: 0;
+  animation: none;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.account-header-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+  z-index: 2;
+}
+
+.account-header-card .profile-header-overlay {
+  padding: 1.6rem 2rem 1.6rem 2.2rem;
+}
+
+.account-header-card .profile-card-icon {
+  border-radius: 0;
+  border: 2px solid var(--accent);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.account-header-card .account-name-display {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  text-transform: uppercase;
+}
+
+.account-summary-tiles .gs-figure {
+  padding: 0.9rem 1.3rem 0.9rem 1.5rem;
+}
+
+.account-summary-tiles .gs-figure-value {
+  font-size: 2.4rem;
+}
+
+.account-role-option,
+.account-agent-picker,
+.account-suggestion {
+  --cut: 10px;
+  border: 0;
+  border-left: 3px solid var(--border);
+  border-radius: 0;
+  background: var(--surface-alt);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.account-role-option.active {
+  border-left-color: var(--accent);
+  background: rgba(255, 70, 85, 0.14);
+}
+
+.account-agent-picker:hover {
+  border-left-color: var(--accent);
+}
+
+.account-agent-picker img {
+  border-radius: 0;
+}
+
+.account-suggestion {
+  border-left-color: var(--accent);
+  padding: 0.6rem 1rem;
+}
+
+.gs-card .account-subsection-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---- Historique de matchs (page Stats) : colonnes lisibles, style Stats ---- */
+.mh-row {
+  --cut: 12px;
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 1fr) 110px minmax(200px, 1.6fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.3rem 1.1rem 0.3rem 1rem;
+  border: 0;
+  border-left: 4px solid var(--border);
+  border-radius: 0;
+  box-shadow: none !important;
+  background: var(--surface-alt);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.mh-row.match-win {
+  border-left-color: #3ddc84;
+}
+
+.mh-row.match-loss {
+  border-left-color: var(--accent);
+}
+
+.mh-row.clickable:hover {
+  transform: none;
+  background: color-mix(in srgb, var(--surface-alt) 82%, white);
+}
+
+.mh-map,
+.mh-kda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mh-map strong {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.mh-map span,
+.mh-kda span {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mh-agent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.mh-agent .agent-icon {
+  border-radius: 0;
+}
+
+.mh-kda strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mh-hits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.1rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.mh-hits strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mh-row .result-badge {
+  min-width: 100px;
+  text-align: center;
+  border: 0;
+  border-radius: 0;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: skewX(-12deg);
+}
+
+.match-day-header {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1100px) {
+  .mh-row {
+    grid-template-columns: minmax(110px, 1fr) minmax(100px, 1fr) 90px auto;
+  }
+
+  .mh-hits {
+    display: none;
+  }
+}
+
+.mh-agent .agent-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.match-list:has(.mh-row) {
+  gap: 0.3rem;
+}
+
+/* Windows à 125 % / 150 % sur un écran 1920x1080 (fenêtre ~1280-1540 px de
+   large) : panneaux plus étroits, donc images d'agent/map réduites et
+   repoussées à droite pour ne pas recouvrir le texte. */
+@media (max-width: 1699px) {
+  .gs-agent-art {
+    right: -34%;
+    bottom: -36%;
+    height: 130%;
+  }
+
+  .as-top-art {
+    right: -10%;
+    bottom: -44%;
+    height: 135%;
+  }
+
+  .ms-top-art {
+    width: 62%;
+  }
+}
+
+/* ---- Aperçus détaillés (clic sur une map / un agent) ---- */
+.detail-modal .card {
+  padding: 1rem 1.2rem;
+}
+
+.dm-title {
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.dm-hero {
+  --cut: 18px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 150px;
+  margin-bottom: 1.1rem;
+  overflow: hidden;
+  background-color: var(--surface-alt);
+  background-size: cover;
+  background-position: center;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+
+.dm-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+  z-index: 3;
+}
+
+.dm-hero-agent {
+  background-image: repeating-linear-gradient(115deg, transparent 0 14px, rgba(255, 70, 85, 0.05) 14px 15px);
+}
+
+.dm-hero-text {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 1.1rem 1.5rem 1.1rem 1.7rem;
+}
+
+.dm-hero-map .dm-hero-text {
+  background: linear-gradient(to top, rgba(10, 12, 18, 0.92), transparent);
+  padding-top: 3rem;
+}
+
+.dm-hero-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.dm-hero-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.dm-hero-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.dm-hero-role img {
+  width: 16px;
+  height: 16px;
+}
+
+.dm-hero-art {
+  position: absolute;
+  right: -2%;
+  bottom: -85%;
+  height: 210%;
+  width: auto;
+  max-width: none;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 40%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 40%);
+}
+
+.dm-row {
+  grid-template-columns: 150px minmax(0, 1fr) 50px 170px;
+}
+
+.detail-modal .gs-figure-value {
+  font-size: 1.8rem;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+

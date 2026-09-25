@@ -7,7 +7,7 @@ import {
   groupStats,
   excludeDeathmatch,
 } from './valorantStats.js';
-import { useAgentIcons, useAgentRoles } from './agentIcons.js';
+import { useAgentIcons, useAgentRoles, useAgentPortraits } from './agentIcons.js';
 import { useWeaponIcons } from './weaponIcons.js';
 import { useMapMinimaps } from './mapImages.js';
 
@@ -22,6 +22,7 @@ function AgentDetailModal({ character, matches, settings, onClose }) {
   const { t } = useTranslation();
   const icons = useAgentIcons();
   const icon = icons.get(character);
+  const portrait = useAgentPortraits().get(character);
   const roles = useAgentRoles();
   const role = roles.get(character);
   const weaponIcons = useWeaponIcons();
@@ -40,98 +41,107 @@ function AgentDetailModal({ character, matches, settings, onClose }) {
   )[0];
 
   const maxWeaponCount = weaponKills[0]?.[1] ?? 0;
+  const winrate = overall?.winrate ?? null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card detail-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>{t('detail.close')}</button>
 
-        <div className="agent-modal-header">
-          {icon && <img src={icon} alt="" className="agent-modal-avatar" />}
-          <div>
-            <h2>{character}</h2>
+        <div className="dm-hero dm-hero-agent">
+          {portrait && <img src={portrait} alt="" className="dm-hero-art" />}
+          <div className="dm-hero-text">
             {role?.roleName && (
-              <div className="agent-modal-role">
+              <span className="gs-eyebrow dm-hero-role">
                 {role.roleIcon && <img src={role.roleIcon} alt="" />}
                 {role.roleName}
-              </div>
+              </span>
             )}
+            <h2 className="dm-hero-name">
+              {icon && <img src={icon} alt="" className="dm-hero-icon" />}
+              {character}
+            </h2>
           </div>
         </div>
 
-        <div className="card">
-          <div className="stat-tiles">
-            <div className="stat-tile">
-              <div className="value">{overall?.games ?? 0}</div>
-              <div className="label">{t('detail.gamesPlayed')}</div>
+        <div className="card gs-card">
+          <div className="gs-figures fm-figures fm-figures-4">
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('detail.gamesPlayed')}</span>
+              <span className="gs-figure-value">{overall?.games ?? 0}</span>
             </div>
-            <div className="stat-tile">
-              <div className="value" style={{ color: overall?.winrate === null || overall?.winrate === undefined ? undefined : overall.winrate >= 50 ? '#3ddc84' : 'var(--accent)' }}>
-                {overall?.winrate === null || overall?.winrate === undefined ? '?' : `${overall.winrate.toFixed(0)}%`}
-              </div>
-              <div className="label">{t('detail.winrate')}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('detail.winrate')}</span>
+              <span className={`gs-figure-value ${winrate === null ? '' : winrate >= 50 ? 'up' : 'down'}`}>
+                {winrate === null ? '?' : `${winrate.toFixed(0)}%`}
+              </span>
             </div>
-            <div className="stat-tile">
-              <div className="value compact">
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('detail.avgKda')}</span>
+              <span className="gs-figure-value">
                 {overall ? `${overall.avgKills.toFixed(1)}/${overall.avgDeaths.toFixed(1)}/${overall.avgAssists.toFixed(1)}` : '?'}
-              </div>
-              <div className="label">{t('detail.avgKda')}</div>
+              </span>
             </div>
-            <div className="stat-tile">
-              <div className="value">{formatPlaytime(playtimeSeconds)}</div>
-              <div className="label">{t('detail.playtimeKills', { count: totalKills })}</div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('detail.playtimeKills', { count: totalKills })}</span>
+              <span className="gs-figure-value">{formatPlaytime(playtimeSeconds)}</span>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <h3>{t('detail.mostUsedWeapons')}</h3>
+        <div className="card gs-card">
+          <h3 className="dm-title">{t('detail.mostUsedWeapons')}</h3>
           {weaponKills.length === 0 ? (
             <p>{t('detail.noData')}</p>
           ) : (
-            weaponKills.map(([weapon, count]) => (
-              <div key={weapon} className="weapon-bar-row">
-                <span className="name">
-                  {weaponIcons.get(weapon) && <img src={weaponIcons.get(weapon)} alt="" className="weapon-icon" />}
-                  {weapon}
-                </span>
-                <span className="weapon-bar-track">
-                  <span className="weapon-bar-fill" style={{ width: `${(count / maxWeaponCount) * 100}%` }} />
-                </span>
-                <span className="weapon-bar-count">{t('detail.killsCount', { count })}</span>
-              </div>
-            ))
+            <div className="fm-rows">
+              {weaponKills.map(([weapon, count]) => (
+                <div key={weapon} className="fm-row dm-row">
+                  <span className="fm-row-label">
+                    {weaponIcons.get(weapon) && <img src={weaponIcons.get(weapon)} alt="" className="weapon-icon" />}
+                    {weapon}
+                  </span>
+                  <span className="fm-row-track" aria-hidden="true">
+                    <span className="fm-row-fill good" style={{ width: `${(count / maxWeaponCount) * 100}%` }} />
+                  </span>
+                  <span className="fm-row-value">{count}</span>
+                  <span className="fm-row-meta">{t('detail.killsCount', { count })}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        <div className="card">
-          <h3>{t('detail.winrateByMap')}</h3>
+        <div className="card gs-card">
+          <h3 className="dm-title">{t('detail.winrateByMap')}</h3>
           {mapStats.length === 0 ? (
             <p>{t('detail.noData')}</p>
           ) : (
-            mapStats.map((row) => (
-              <div key={row.key} className="stat-bar-row">
-                <span className="stat-bar-label">
-                  {minimaps.get(row.key) && <img src={minimaps.get(row.key)} alt="" className="stat-bar-icon" />}
-                  {row.key}
-                </span>
-                <span className="stat-bar-track">
-                  <span
-                    className={`stat-bar-fill ${row.winrate === null ? '' : row.winrate >= 50 ? 'good' : 'bad'}`}
-                    style={{ width: `${row.winrate ?? 4}%` }}
-                  />
-                </span>
-                <span className="stat-bar-value">{row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`}</span>
-                <span className="stat-bar-meta">
-                  {t('detail.gamesKda', {
-                    count: row.games,
-                    k: row.avgKills.toFixed(1),
-                    d: row.avgDeaths.toFixed(1),
-                    a: row.avgAssists.toFixed(1),
-                  })}
-                </span>
-              </div>
-            ))
+            <div className="fm-rows">
+              {mapStats.map((row) => (
+                <div key={row.key} className="fm-row dm-row">
+                  <span className="fm-row-label">
+                    {minimaps.get(row.key) && <img src={minimaps.get(row.key)} alt="" className="stat-bar-icon" />}
+                    {row.key}
+                  </span>
+                  <span className="fm-row-track" aria-hidden="true">
+                    <span
+                      className={`fm-row-fill ${row.winrate === null ? '' : row.winrate >= 50 ? 'good' : 'bad'}`}
+                      style={{ width: `${row.winrate ?? 4}%` }}
+                    />
+                  </span>
+                  <span className="fm-row-value">{row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`}</span>
+                  <span className="fm-row-meta">
+                    {t('detail.gamesKda', {
+                      count: row.games,
+                      k: row.avgKills.toFixed(1),
+                      d: row.avgDeaths.toFixed(1),
+                      a: row.avgAssists.toFixed(1),
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

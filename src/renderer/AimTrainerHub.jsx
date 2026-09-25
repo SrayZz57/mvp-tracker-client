@@ -5,7 +5,7 @@
 // mécanique de jeu elle-même reste entièrement dans AimTrainerGame.jsx,
 // inchangée, simplement montée ici au lieu d'être ouverte dans une nouvelle
 // fenêtre séparée.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Play,
@@ -28,19 +28,21 @@ import {
   Check,
   Gauge,
 } from 'lucide-react';
-import AimTrainerGame, { DEFAULT_CONFIG, MODES, WEAPON_MODELS } from './AimTrainerGame.jsx';
+import { DEFAULT_CONFIG, MODES, WEAPON_MODELS } from './aimTrainerModes.js';
 import SensitivityFinder from './SensitivityFinder.jsx';
 import { analyzeFinderResults } from './sensitivityFit.js';
 import Icon from './Icon.jsx';
 import mvpTrackerLogo from '../assets/logo.png';
 import weaponDefaultPreview from '../assets/weapon-default-preview.png';
 import weaponVandalPreview from '../assets/weapon-vandal-preview.png';
+import weaponGlockPreview from '../assets/weapon-glock-preview.png';
 
 // Vignettes des cartes de sélection d'arme (Réglages → Modèle d'arme) —
 // 'default' est géré séparément (toujours présent), le reste couvre les
 // clés de WEAPON_MODELS au fur et à mesure qu'elles sont ajoutées.
 const WEAPON_PREVIEWS = {
   vandal: weaponVandalPreview,
+  glock: weaponGlockPreview,
 };
 import { useAgentsData } from './agentIcons.js';
 import { useMapsData } from './mapImages.js';
@@ -69,6 +71,12 @@ import {
   playConfirmSfx,
   playBackSfx,
 } from './aimHubAudio.js';
+
+// Le moteur 3D (three.js, modèles, textures) n'est chargé qu'au lancement
+// d'une session, puis préchargé en tâche de fond une fois le hub affiché :
+// l'ouverture de l'Aim Trainer n'attend plus ce gros morceau de code.
+const loadGame = () => import('./AimTrainerGame.jsx');
+const AimTrainerGame = lazy(loadGame);
 
 const SETTINGS_STORAGE_KEY = 'mvptracker-aim-trainer-settings';
 const HUB_THEME_STORAGE_KEY = 'mvptracker-aim-hub-theme';
@@ -793,8 +801,23 @@ function AimTrainerHub({ config: initialRawConfig }) {
     [personalBests, globalBests],
   );
 
+  // Préchargement du moteur quand le navigateur est inactif : le clic sur
+  // « Jouer » n'a alors plus rien à télécharger ni à analyser.
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb) => setTimeout(cb, 1500));
+    const cancel = window.cancelIdleCallback ?? clearTimeout;
+    const id = idle(() => {
+      loadGame();
+    });
+    return () => cancel(id);
+  }, []);
+
   if (playing && launchConfig) {
-    return <AimTrainerGame config={launchConfig} onExit={exitGame} onSessionComplete={handleFinderSessionComplete} />;
+    return (
+      <Suspense fallback={<div className="aim-game" />}>
+        <AimTrainerGame config={launchConfig} onExit={exitGame} onSessionComplete={handleFinderSessionComplete} />
+      </Suspense>
+    );
   }
 
   return (

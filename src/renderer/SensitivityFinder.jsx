@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import Icon from './Icon.jsx';
-import { MODES } from './AimTrainerGame.jsx';
+import { MODES } from './aimTrainerModes.js';
 
 // Modes statiques uniquement (comme les routines PlaylistManager) — le but
 // est de comparer la précision pure à différentes sensibilités, pas de tester

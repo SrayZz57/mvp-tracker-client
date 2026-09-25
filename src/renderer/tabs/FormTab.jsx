@@ -34,27 +34,29 @@ function timeSlotIcon(key) {
 // traduction de la clé de ligne (les jours sont en français en interne).
 function renderStatBars(t, id, title, rows, icon, rowIcon, rowLabel) {
   return (
-    <CollapsibleCard id={id} title={<><Icon icon={icon} size={16} /> {title}</>}>
+    <CollapsibleCard id={id} title={<><Icon icon={icon} size={16} /> {title}</>} className="gs-card">
       {rows.length === 0 ? (
         <p>{t('form.noDataYet')}</p>
       ) : (
-        rows.map((row) => (
-          <div key={row.key} className="stat-bar-row">
-            <span className="stat-bar-label">
-              {rowIcon ? <Icon icon={rowIcon(row.key)} size={16} /> : ''} {rowLabel ? rowLabel(row.key) : row.key}
-            </span>
-            <span className="stat-bar-track">
-              <span
-                className={`stat-bar-fill ${row.winrate === null ? '' : row.winrate >= 50 ? 'good' : 'bad'}`}
-                style={{ width: `${row.winrate ?? 4}%` }}
-              />
-            </span>
-            <span className="stat-bar-value">{row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`}</span>
-            <span className="stat-bar-meta">
-              {t('form.gamesCount', { count: row.games })} — K/D/A {row.avgKills.toFixed(1)}/{row.avgDeaths.toFixed(1)}/{row.avgAssists.toFixed(1)}
-            </span>
-          </div>
-        ))
+        <div className="fm-rows">
+          {rows.map((row) => (
+            <div key={row.key} className="fm-row">
+              <span className="fm-row-label">
+                {rowIcon ? <Icon icon={rowIcon(row.key)} size={16} /> : null} {rowLabel ? rowLabel(row.key) : row.key}
+              </span>
+              <span className="fm-row-track" aria-hidden="true">
+                <span
+                  className={`fm-row-fill ${row.winrate === null ? '' : row.winrate >= 50 ? 'good' : 'bad'}`}
+                  style={{ width: `${row.winrate ?? 4}%` }}
+                />
+              </span>
+              <span className="fm-row-value">{row.winrate === null ? '?' : `${row.winrate.toFixed(0)}%`}</span>
+              <span className="fm-row-meta">
+                {t('form.gamesCount', { count: row.games })} — K/D/A {row.avgKills.toFixed(1)}/{row.avgDeaths.toFixed(1)}/{row.avgAssists.toFixed(1)}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
     </CollapsibleCard>
   );
@@ -100,60 +102,64 @@ function FormTab({ settings, matches, loading }) {
   }
 
   const streakTypeLabel = form.streakType ? t(resultLabelKey(form.streakType)) : t('form.noStreak');
+  const kdTrend =
+    form.recentKd !== null && form.overallKd !== null ? (form.recentKd >= form.overallKd ? 'up' : 'down') : '';
   const dayLabel = (key) => (dayLabelKey(key) ? t(dayLabelKey(key)) : key);
 
   return (
     <div>
       <PlatformFilterToggle platforms={platforms} platform={platform} onChange={setPlatform} />
 
-      <CollapsibleCard id="form.recentForm" title={t('form.recentForm')}>
-        <div className="stat-tiles">
-          <div className="stat-tile">
+      <CollapsibleCard id="form.recentForm" title={t('form.recentForm')} className="gs-card">
+        <div className="gs-figures fm-figures fm-figures-3">
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('form.currentStreak', { type: streakTypeLabel })}</span>
             {form.streakType === null ? (
-              <div className="value" style={{ fontSize: '1rem' }}>{t('form.notEnoughData')}</div>
+              <span className="gs-figure-sub">{t('form.notEnoughData')}</span>
             ) : (
-              <div className={`streak-badge ${form.streakType === 'Victoire' ? 'win' : 'loss'}`}>
-                {form.streakCount} <Icon icon={form.streakType === 'Victoire' ? Flame : TrendingDown} size={16} />
-              </div>
+              <span className={`gs-figure-value ${form.streakType === 'Victoire' ? 'up' : 'down'}`}>
+                {form.streakCount} <Icon icon={form.streakType === 'Victoire' ? Flame : TrendingDown} size={20} />
+              </span>
             )}
-            <div className="label">{t('form.currentStreak', { type: streakTypeLabel })}</div>
           </div>
-          <div className="stat-tile">
-            <div className="value">{form.recentKd === null ? '?' : form.recentKd.toFixed(2)}</div>
-            <div className="label">{t('form.kdRecent', { count: form.recentCount })}</div>
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('form.kdRecent', { count: form.recentCount })}</span>
+            <span className={`gs-figure-value ${kdTrend}`}>{form.recentKd === null ? '?' : form.recentKd.toFixed(2)}</span>
           </div>
-          <div className="stat-tile">
-            <div className="value">{form.overallKd === null ? '?' : form.overallKd.toFixed(2)}</div>
-            <div className="label">{t('form.kdOverall')}</div>
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('form.kdOverall')}</span>
+            <span className="gs-figure-value">{form.overallKd === null ? '?' : form.overallKd.toFixed(2)}</span>
           </div>
         </div>
       </CollapsibleCard>
 
       {(bestTimeSlot || bestDay) && (
-        <CollapsibleCard id="form.bestTimeToPlay" title={t('form.bestTimeToPlay')} className="highlight-card">
-          <div className="stat-tiles">
+        <CollapsibleCard id="form.bestTimeToPlay" title={t('form.bestTimeToPlay')} className="gs-card">
+          <div className="gs-figures fm-figures">
             {bestTimeSlot && (
-              <div className="stat-tile">
-                <div className="value">
-                  <span className="value-icon"><Icon icon={timeSlotIcon(bestTimeSlot.key)} /></span> {bestTimeSlot.key}
-                </div>
-                <div className="label">
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('form.statsByTimeSlot')}</span>
+                <span className="gs-figure-value">
+                  <Icon icon={timeSlotIcon(bestTimeSlot.key)} size={20} /> {bestTimeSlot.key}
+                </span>
+                <span className="gs-figure-sub">
                   {t('form.winratePlays', { percent: bestTimeSlot.winrate.toFixed(0), count: bestTimeSlot.games })}
-                </div>
+                </span>
               </div>
             )}
             {bestDay && (
-              <div className="stat-tile">
-                <div className="value">
-                  <span className="value-icon"><Icon icon={WEEKDAY_ICONS[bestDay.key]} /></span> {dayLabel(bestDay.key)}
-                </div>
-                <div className="label">
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('form.statsByWeekday')}</span>
+                <span className="gs-figure-value">
+                  <Icon icon={WEEKDAY_ICONS[bestDay.key]} size={20} /> {dayLabel(bestDay.key)}
+                </span>
+                <span className="gs-figure-sub">
                   {t('form.winratePlays', { percent: bestDay.winrate.toFixed(0), count: bestDay.games })}
-                </div>
+                </span>
               </div>
             )}
           </div>
-          <p className="label" style={{ marginTop: '0.5rem' }}>
+          <p className="label" style={{ marginTop: '0.7rem' }}>
             {t('form.bestMomentHint')}
           </p>
         </CollapsibleCard>

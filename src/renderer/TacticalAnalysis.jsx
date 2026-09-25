@@ -20,6 +20,21 @@ function clutchColor(winrate) {
   return 'var(--accent)';
 }
 
+function AnalyseRow({ icon, label, percent, meta, tone }) {
+  return (
+    <div className="fm-row">
+      <span className="fm-row-label"><Icon icon={icon} size={16} /> {label}</span>
+      <span className="fm-row-track" aria-hidden="true">
+        <span className={`fm-row-fill ${tone ?? ''}`} style={{ width: `${percent ?? 4}%` }} />
+      </span>
+      <span className="fm-row-value">{percent === null ? '?' : `${percent.toFixed(0)}%`}</span>
+      <span className="fm-row-meta">{meta}</span>
+    </div>
+  );
+}
+
+const winTone = (winrate) => (winrate === null ? '' : winrate >= 50 ? 'good' : 'bad');
+
 function TacticalAnalysis({ settings, matches, loading }) {
   const { t } = useTranslation();
   const { platforms, platform, setPlatform, filteredMatches } = usePlatformFilter(matches);
@@ -37,113 +52,109 @@ function TacticalAnalysis({ settings, matches, loading }) {
     <div>
       <PlatformFilterToggle platforms={platforms} platform={platform} onChange={setPlatform} />
 
-      <CollapsibleCard id="analyse.timing" title={t('analyse.timingTitle', { count: timing.total })}>
+      <CollapsibleCard id="analyse.timing" title={t('analyse.timingTitle', { count: timing.total })} className="gs-card">
         {timing.total === 0 ? (
           <p>{t('analyse.noDataYet')}</p>
         ) : (
-          timing.buckets.map((b) => (
-            <div key={b.id} className="stat-bar-row">
-              <span className="stat-bar-label"><Icon icon={TIMING_ICONS[b.id]} size={16} /> {t(`analyse.timingBuckets.${b.id}`)}</span>
-              <span className="stat-bar-track">
-                <span className="stat-bar-fill" style={{ width: `${b.percent ?? 4}%` }} />
-              </span>
-              <span className="stat-bar-value">{b.percent === null ? '?' : `${b.percent.toFixed(0)}%`}</span>
-              <span className="stat-bar-meta">{t('analyse.deathsCount', { count: b.count })}</span>
-            </div>
-          ))
+          <div className="fm-rows">
+            {timing.buckets.map((b) => (
+              <AnalyseRow
+                key={b.id}
+                icon={TIMING_ICONS[b.id]}
+                label={t(`analyse.timingBuckets.${b.id}`)}
+                percent={b.percent}
+                meta={t('analyse.deathsCount', { count: b.count })}
+              />
+            ))}
+          </div>
         )}
         <p className="label" style={{ marginTop: '0.5rem' }}>{t('analyse.timingHint')}</p>
       </CollapsibleCard>
 
-      <CollapsibleCard id="analyse.distance" title={t('analyse.distanceTitle')}>
+      <CollapsibleCard id="analyse.distance" title={t('analyse.distanceTitle')} className="gs-card">
         {distance.rows.every((r) => r.total === 0) ? (
           <p>{t('analyse.notEnoughData')}</p>
         ) : (
           <>
-            <div className="stat-tiles">
-              <div className="stat-tile">
-                <div className="value">
+            <div className="gs-figures fm-figures fm-figures-3">
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('analyse.avgKillDistance')}</span>
+                <span className="gs-figure-value">
                   {distance.avgKillDistance === null ? '?' : `${distance.avgKillDistance.toFixed(1)}m`}
-                </div>
-                <div className="label">{t('analyse.avgKillDistance')}</div>
+                </span>
               </div>
-              <div className="stat-tile">
-                <div className="value">
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('analyse.avgDeathDistance')}</span>
+                <span className="gs-figure-value">
                   {distance.avgDeathDistance === null ? '?' : `${distance.avgDeathDistance.toFixed(1)}m`}
-                </div>
-                <div className="label">{t('analyse.avgDeathDistance')}</div>
+                </span>
               </div>
-              <div className="stat-tile">
-                <div className="value" style={{ color: distance.dropOff !== null && distance.dropOff > 0 ? 'var(--accent)' : undefined }}>
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('analyse.winrateGap')}</span>
+                <span className={`gs-figure-value ${distance.dropOff === null ? '' : distance.dropOff > 0 ? 'down' : 'up'}`}>
                   {distance.dropOff === null ? '?' : `${distance.dropOff > 0 ? '-' : '+'}${Math.abs(distance.dropOff).toFixed(0)} pts`}
-                </div>
-                <div className="label">{t('analyse.winrateGap')}</div>
+                </span>
               </div>
             </div>
 
-            {distance.rows.map((r) => (
-              <div key={r.id} className="stat-bar-row" style={{ marginTop: '0.75rem' }}>
-                <span className="stat-bar-label"><Icon icon={DISTANCE_ICONS[r.id]} size={16} /> {t(`analyse.distanceBuckets.${r.id}`)}</span>
-                <span className="stat-bar-track">
-                  <span
-                    className={`stat-bar-fill ${r.winrate === null ? '' : r.winrate >= 50 ? 'good' : 'bad'}`}
-                    style={{ width: `${r.winrate ?? 4}%` }}
-                  />
-                </span>
-                <span className="stat-bar-value">{r.winrate === null ? '?' : `${r.winrate.toFixed(0)}%`}</span>
-                <span className="stat-bar-meta">{t('analyse.killsDeathsMeta', { kills: r.kills, deaths: r.deaths })}</span>
-              </div>
-            ))}
+            <div className="fm-rows" style={{ marginTop: '0.6rem' }}>
+              {distance.rows.map((r) => (
+                <AnalyseRow
+                  key={r.id}
+                  icon={DISTANCE_ICONS[r.id]}
+                  label={t(`analyse.distanceBuckets.${r.id}`)}
+                  percent={r.winrate}
+                  tone={winTone(r.winrate)}
+                  meta={t('analyse.killsDeathsMeta', { kills: r.kills, deaths: r.deaths })}
+                />
+              ))}
+            </div>
 
             <p className="label" style={{ marginTop: '0.75rem' }}>{t('analyse.distanceHint')}</p>
           </>
         )}
       </CollapsibleCard>
 
-      <CollapsibleCard id="analyse.clutch" title={t('analyse.clutchTitle')} className="comp-score-card">
+      <CollapsibleCard id="analyse.clutch" title={t('analyse.clutchTitle')} className="gs-card">
         {clutch.attempts === 0 ? (
           <p>{t('analyse.noClutch')}</p>
         ) : (
-          <>
-            <div className="comp-score-main">
-              <div className="comp-score-value" style={{ color: clutchColor(clutch.winrate) }}>
-                {clutch.winrate === null ? '?' : clutch.winrate.toFixed(0)}
-                <span className="comp-score-max">%</span>
-              </div>
-              <div className="label">{t('analyse.clutchWinrate')}</div>
+          <div className="gs-figures fm-figures fm-figures-3">
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('analyse.clutchWinrate')}</span>
+              <span className="gs-figure-value" style={{ color: clutchColor(clutch.winrate) }}>
+                {clutch.winrate === null ? '?' : `${clutch.winrate.toFixed(0)} %`}
+              </span>
             </div>
-            <div className="stat-tiles">
-              <div className="stat-tile">
-                <div className="value">{clutch.attempts}</div>
-                <div className="label">{t('analyse.attempts')}</div>
-              </div>
-              <div className="stat-tile">
-                <div className="value">{clutch.wins}</div>
-                <div className="label">{t('analyse.wins')}</div>
-              </div>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('analyse.attempts')}</span>
+              <span className="gs-figure-value">{clutch.attempts}</span>
             </div>
-          </>
+            <div className="gs-figure">
+              <span className="gs-figure-label">{t('analyse.wins')}</span>
+              <span className="gs-figure-value">{clutch.wins}</span>
+            </div>
+          </div>
         )}
         <p className="label" style={{ marginTop: '0.5rem' }}>{t('analyse.clutchHint')}</p>
       </CollapsibleCard>
 
-      <CollapsibleCard id="analyse.economy" title={t('analyse.economyTitle')}>
+      <CollapsibleCard id="analyse.economy" title={t('analyse.economyTitle')} className="gs-card">
         {economy.every((t2) => t2.rounds === 0) ? (
           <p>{t('analyse.noDataYet')}</p>
         ) : (
-          economy.map((tier) => (
-            <div key={tier.id} className="stat-bar-row">
-              <span className="stat-bar-label"><Icon icon={ECONOMY_ICONS[tier.id]} size={16} /> {t(`common.economyTiers.${tier.id}`)}</span>
-              <span className="stat-bar-track">
-                <span
-                  className={`stat-bar-fill ${tier.winrate === null ? '' : tier.winrate >= 50 ? 'good' : 'bad'}`}
-                  style={{ width: `${tier.winrate ?? 4}%` }}
-                />
-              </span>
-              <span className="stat-bar-value">{tier.winrate === null ? '?' : `${tier.winrate.toFixed(0)}%`}</span>
-              <span className="stat-bar-meta">{t('analyse.roundsMeta', { count: tier.rounds })}</span>
-            </div>
-          ))
+          <div className="fm-rows">
+            {economy.map((tier) => (
+              <AnalyseRow
+                key={tier.id}
+                icon={ECONOMY_ICONS[tier.id]}
+                label={t(`common.economyTiers.${tier.id}`)}
+                percent={tier.winrate}
+                tone={winTone(tier.winrate)}
+                meta={t('analyse.roundsMeta', { count: tier.rounds })}
+              />
+            ))}
+          </div>
         )}
       </CollapsibleCard>
 

@@ -115,18 +115,18 @@ function BuyCalculatorSection() {
       {recommendation && (
         <div className="buy-recommendation">
           {recommendation.weapon || recommendation.shield ? (
-            <div className="stat-tiles">
-              <div className="stat-tile">
-                <div className="value">{recommendation.weapon?.name ?? t('buySim.noWeapon')}</div>
-                <div className="label">{recommendation.weapon ? t('buySim.creditsSuffix', { cost: recommendation.weapon.cost }) : ''}</div>
+            <div className="gs-figures fm-figures fm-figures-3">
+              <div className="gs-figure">
+                <span className="gs-figure-label">{recommendation.weapon ? t('buySim.creditsSuffix', { cost: recommendation.weapon.cost }) : '—'}</span>
+                <span className="gs-figure-value">{recommendation.weapon?.name ?? t('buySim.noWeapon')}</span>
               </div>
-              <div className="stat-tile">
-                <div className="value">{recommendation.shield?.name ?? t('buySim.noShield')}</div>
-                <div className="label">{recommendation.shield ? t('buySim.creditsSuffix', { cost: recommendation.shield.cost }) : ''}</div>
+              <div className="gs-figure">
+                <span className="gs-figure-label">{recommendation.shield ? t('buySim.creditsSuffix', { cost: recommendation.shield.cost }) : '—'}</span>
+                <span className="gs-figure-value">{recommendation.shield?.name ?? t('buySim.noShield')}</span>
               </div>
-              <div className="stat-tile">
-                <div className="value">{recommendation.remaining}</div>
-                <div className="label">{t('buySim.remainingCredits')}</div>
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('buySim.remainingCredits')}</span>
+                <span className="gs-figure-value">{recommendation.remaining}</span>
               </div>
             </div>
           ) : (

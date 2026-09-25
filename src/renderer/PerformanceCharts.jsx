@@ -105,9 +105,9 @@ function PerformanceCharts({ settings, matches, loading }) {
     <div>
       <PlatformFilterToggle platforms={platforms} platform={platform} onChange={setPlatform} />
 
-      <CollapsibleCard id="charts.kpis" title={t('charts.title')}>
+      <CollapsibleCard id="charts.kpis" title={t('charts.title')} className="gs-card">
         <p className="label">{t('charts.description')}</p>
-        <div className="kpi-row">
+        <div className="gs-figures fm-figures fm-figures-4" style={{ marginTop: '0.8rem' }}>
           <KpiTile icon={Gamepad2} label={t('charts.rankedMatches')} value={kpis.games} />
           <KpiTile icon={Trophy} label={t('charts.globalWinrate')} value={kpis.winrate} suffix="%" />
           <KpiTile icon={Swords} label={t('charts.avgKd')} value={kpis.kd} decimals={2} />
@@ -115,7 +115,7 @@ function PerformanceCharts({ settings, matches, loading }) {
         </div>
       </CollapsibleCard>
 
-      <CollapsibleCard id="charts.dayPeriod" title={t('charts.dayPeriodTitle')}>
+      <CollapsibleCard id="charts.dayPeriod" title={t('charts.dayPeriodTitle')} className="gs-card">
         <p className="label">{t('charts.dayPeriodHint')}</p>
         <HeatmapGrid grid={dayPeriodGrid} />
       </CollapsibleCard>
@@ -142,15 +142,15 @@ function PerformanceCharts({ settings, matches, loading }) {
       )}
 
       <div className="chart-grid-2">
-        <CollapsibleCard id="charts.kdTrend" title={t('charts.kdTrendTitle')}>
+        <CollapsibleCard id="charts.kdTrend" title={t('charts.kdTrendTitle')} className="gs-card">
           <LineChart data={trend.kd} color="#ff4655" />
         </CollapsibleCard>
-        <CollapsibleCard id="charts.winrateTrend" title={t('charts.winrateTrendTitle')}>
-          <LineChart data={trend.winrateRolling} color="#3987e5" unit="%" />
+        <CollapsibleCard id="charts.winrateTrend" title={t('charts.winrateTrendTitle')} className="gs-card">
+          <LineChart data={trend.winrateRolling} color="#3ddc84" unit="%" />
         </CollapsibleCard>
       </div>
 
-      <CollapsibleCard id="charts.mapWinrate" title={t('charts.mapWinrateTitle')}>
+      <CollapsibleCard id="charts.mapWinrate" title={t('charts.mapWinrateTitle')} className="gs-card">
         {availableMapModes.length > 1 && (
           <div className="filter-bar">
             <select value={mapModeFilter} onChange={(e) => setMapModeFilter(e.target.value)}>
@@ -164,7 +164,7 @@ function PerformanceCharts({ settings, matches, loading }) {
         <AnimatedBarList rows={mapWinrates} />
       </CollapsibleCard>
 
-      <CollapsibleCard id="charts.roleDistribution" title={t('charts.roleDistributionTitle')}>
+      <CollapsibleCard id="charts.roleDistribution" title={t('charts.roleDistributionTitle')} className="gs-card">
         <RoleStackedBar rows={roleDistribution} />
       </CollapsibleCard>
     </div>

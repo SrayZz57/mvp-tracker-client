@@ -224,7 +224,7 @@ function TeammatesRivals({ settings, matches, loading, myPuuid }) {
     <div>
       <PlatformFilterToggle platforms={platforms} platform={platform} onChange={setPlatform} />
 
-      <CollapsibleCard id="social.synergy" title={t('social.synergyTitle')}>
+      <CollapsibleCard id="social.synergy" title={t('social.synergyTitle')} className="gs-card">
         <p className="label">{t('social.synergyHint')}</p>
         <div className="synergy-graph-wrap">
           <SynergyGraph
@@ -238,51 +238,57 @@ function TeammatesRivals({ settings, matches, loading, myPuuid }) {
       </CollapsibleCard>
 
       <div className="nemesis-columns">
-        <CollapsibleCard id="social.agentNemesis" title={t('social.agentNemesisTitle')}>
+        <CollapsibleCard id="social.agentNemesis" title={t('social.agentNemesisTitle')} className="gs-card">
           <p className="label">{t('social.agentNemesisHint')}</p>
           {nemesis.agents.length === 0 ? (
             <p>{t('social.notEnoughAgentDuels')}</p>
           ) : (
-            nemesis.agents.slice(0, 8).map((n, i) => (
-              <div key={n.agent} className="stat-bar-row rival-row">
-                <RankBadge rank={i} />
-                <span className="stat-bar-label">
-                  {agentIcons.get(n.agent) && <img src={agentIcons.get(n.agent)} alt="" className="stat-bar-icon" />}
-                  {n.agent}
-                </span>
-                <span className="stat-bar-track">
-                  <span
-                    className={`stat-bar-fill ${n.kd >= 1 ? 'good' : 'bad'}`}
-                    style={{ width: `${Math.min(100, (n.kd / 2) * 100)}%` }}
-                  />
-                </span>
-                <span className="stat-bar-value">{n.kd.toFixed(2)}</span>
-                <span className="stat-bar-meta">{t('social.killsDeathsMeta', { kills: n.kills, deaths: n.deaths })}</span>
-              </div>
-            ))
+            <div className="fm-rows">
+              {nemesis.agents.slice(0, 8).map((n, i) => (
+                <div key={n.agent} className="fm-row fm-row-rival">
+                  <span className="fm-row-label">
+                    <RankBadge rank={i} />
+                    {agentIcons.get(n.agent) && <img src={agentIcons.get(n.agent)} alt="" className="stat-bar-icon" />}
+                    {n.agent}
+                  </span>
+                  <span className="fm-row-track" aria-hidden="true">
+                    <span
+                      className={`fm-row-fill ${n.kd >= 1 ? 'good' : 'bad'}`}
+                      style={{ width: `${Math.min(100, (n.kd / 2) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="fm-row-value">{n.kd.toFixed(2)}</span>
+                  <span className="fm-row-meta">{t('social.killsDeathsMeta', { kills: n.kills, deaths: n.deaths })}</span>
+                </div>
+              ))}
+            </div>
           )}
         </CollapsibleCard>
 
-        <CollapsibleCard id="social.playerNemesis" title={t('social.playerNemesisTitle')}>
+        <CollapsibleCard id="social.playerNemesis" title={t('social.playerNemesisTitle')} className="gs-card">
           <p className="label">{t('social.playerNemesisHint')}</p>
           {nemesis.players.length === 0 ? (
             <p>{t('social.notEnoughRepeatOpponents')}</p>
           ) : (
-            nemesis.players.slice(0, 8).map((n, i) => (
-              <div key={n.puuid} className="stat-bar-row rival-row">
-                <RankBadge rank={i} />
-                <span className="rival-avatar">{initials(displayName(t, n, myPuuid))}</span>
-                <span className="stat-bar-label rival-name">{displayName(t, n, myPuuid)}</span>
-                <span className="stat-bar-track">
-                  <span
-                    className={`stat-bar-fill ${n.winrate >= 50 ? 'good' : 'bad'}`}
-                    style={{ width: `${n.winrate}%` }}
-                  />
-                </span>
-                <span className="stat-bar-value">{n.winrate.toFixed(0)}%</span>
-                <span className="stat-bar-meta">{t('social.crossedMatches', { count: n.games })}</span>
-              </div>
-            ))
+            <div className="fm-rows">
+              {nemesis.players.slice(0, 8).map((n, i) => (
+                <div key={n.puuid} className="fm-row fm-row-rival">
+                  <span className="fm-row-label">
+                    <RankBadge rank={i} />
+                    <span className="rival-avatar">{initials(displayName(t, n, myPuuid))}</span>
+                    <span className="rival-name">{displayName(t, n, myPuuid)}</span>
+                  </span>
+                  <span className="fm-row-track" aria-hidden="true">
+                    <span
+                      className={`fm-row-fill ${n.winrate >= 50 ? 'good' : 'bad'}`}
+                      style={{ width: `${n.winrate}%` }}
+                    />
+                  </span>
+                  <span className="fm-row-value">{n.winrate.toFixed(0)}%</span>
+                  <span className="fm-row-meta">{t('social.crossedMatches', { count: n.games })}</span>
+                </div>
+              ))}
+            </div>
           )}
         </CollapsibleCard>
       </div>

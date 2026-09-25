@@ -157,7 +157,7 @@ function Heatmap({ settings, matches }) {
     <div>
       <PlatformFilterToggle platforms={platforms} platform={platform} onChange={setPlatform} />
 
-      <CollapsibleCard id="heatmap" title={t('heatmap.title')}>
+      <CollapsibleCard id="heatmap" title={t('heatmap.title')} className="gs-card">
         <p className="label">{t('heatmap.description')}</p>
 
         <div className="filter-bar">

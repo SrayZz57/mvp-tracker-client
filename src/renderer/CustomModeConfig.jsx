@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Star, Play, Copy, Check, ClipboardPaste } from 'lucide-react';
 import Icon from './Icon.jsx';
-import { DEFAULT_CONFIG, MODES } from './AimTrainerGame.jsx';
+import { DEFAULT_CONFIG, GENERIC_MODE_IDS, MODES } from './aimTrainerModes.js';
 
 // Code d'export/import d'un preset perso — juste les réglages qui comptent
 // (pas l'id ni le favori, propres à l'appareil), encodés en base64 avec un
@@ -369,7 +369,7 @@ function CustomModeConfig({ onClose, onSaved, onLaunch }) {
             <label className="aim-config-block">
               <span className="label">{t('aimTrainer.customBase')}</span>
               <select className="custom-config-select" value={baseMode} onChange={(e) => applyBase(e.target.value)}>
-                {Object.entries(MODES).map(([id, mode]) => (
+                {Object.entries(MODES).filter(([id]) => GENERIC_MODE_IDS.includes(id)).map(([id, mode]) => (
                   <option key={id} value={id}>
                     {t(mode.labelKey)}
                   </option>

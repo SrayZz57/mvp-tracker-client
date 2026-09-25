@@ -172,21 +172,21 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
       </div>
 
       <div className="account-summary-tiles">
-        <div className="card account-tile">
-          <span className="account-tile-label">{t('account.rankedTracked')}</span>
-          <span className="account-tile-value">{totalGames}</span>
+        <div className="gs-figure">
+          <span className="gs-figure-label">{t('account.rankedTracked')}</span>
+          <span className="gs-figure-value">{totalGames}</span>
         </div>
-        <div className="card account-tile">
-          <span className="account-tile-label">{t('account.globalWinrate')}</span>
-          <span className="account-tile-value">{winrate !== null ? `${winrate.toFixed(0)}%` : '—'}</span>
+        <div className="gs-figure">
+          <span className="gs-figure-label">{t('account.globalWinrate')}</span>
+          <span className="gs-figure-value">{winrate !== null ? `${winrate.toFixed(0)}%` : '—'}</span>
         </div>
-        <div className="card account-tile">
-          <span className="account-tile-label">{t('account.globalKd')}</span>
-          <span className="account-tile-value">{kd !== null ? kd.toFixed(2) : '—'}</span>
+        <div className="gs-figure">
+          <span className="gs-figure-label">{t('account.globalKd')}</span>
+          <span className="gs-figure-value">{kd !== null ? kd.toFixed(2) : '—'}</span>
         </div>
       </div>
 
-      <CollapsibleCard id="account.playerProfile" title={t('account.playerProfileTitle')}>
+      <CollapsibleCard id="account.playerProfile" title={t('account.playerProfileTitle')} className="gs-card">
         <p className="label">{t('account.playerProfileHint')}</p>
 
         <h4 className="account-subsection-title">{t('account.yourRole')}</h4>
@@ -242,7 +242,7 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
         )}
       </CollapsibleCard>
 
-      <CollapsibleCard id="account.contact" title={t('account.contactTitle')}>
+      <CollapsibleCard id="account.contact" title={t('account.contactTitle')} className="gs-card">
         <p className="label">{t('account.contactHint')}</p>
         <form className="account-auth-form account-contact-form" onSubmit={handleSendContact}>
           <textarea

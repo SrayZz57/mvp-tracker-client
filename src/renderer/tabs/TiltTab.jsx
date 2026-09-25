@@ -71,7 +71,7 @@ function TiltTab({ settings, matches, loading }) {
         </div>
       </div>
 
-      <CollapsibleCard id="tilt.recentResults" title={t('tilt.recentResults')}>
+      <CollapsibleCard id="tilt.recentResults" title={t('tilt.recentResults')} className="gs-card">
         <div className="streak-dots">
           {recentResults.map((r) => (
             <span
@@ -86,25 +86,25 @@ function TiltTab({ settings, matches, loading }) {
         </p>
       </CollapsibleCard>
 
-      <CollapsibleCard id="tilt.frequency" title={t('tilt.frequencyTitle')}>
+      <CollapsibleCard id="tilt.frequency" title={t('tilt.frequencyTitle')} className="gs-card">
         {frequency.total === 0 ? (
           <p className="label">{t('tilt.notEnoughMatches')}</p>
         ) : (
           <>
-            <div className="stat-tiles">
-              <div className="stat-tile">
-                <div className="value" style={{ color: frequency.percent >= 20 ? 'var(--accent)' : undefined }}>
+            <div className="gs-figures fm-figures fm-figures-3">
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('tilt.tiltedMatchesPercent')}</span>
+                <span className={`gs-figure-value ${frequency.percent >= 20 ? 'down' : ''}`}>
                   <CountUp value={frequency.percent} decimals={1} suffix="%" />
-                </div>
-                <div className="label">{t('tilt.tiltedMatchesPercent')}</div>
+                </span>
               </div>
-              <div className="stat-tile">
-                <div className="value"><CountUp value={frequency.tiltedCount} /></div>
-                <div className="label">{t('tilt.matchesInTiltStreak')}</div>
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('tilt.matchesInTiltStreak')}</span>
+                <span className="gs-figure-value"><CountUp value={frequency.tiltedCount} /></span>
               </div>
-              <div className="stat-tile">
-                <div className="value"><CountUp value={frequency.total} /></div>
-                <div className="label">{t('tilt.totalMatchesAnalyzed')}</div>
+              <div className="gs-figure">
+                <span className="gs-figure-label">{t('tilt.totalMatchesAnalyzed')}</span>
+                <span className="gs-figure-value"><CountUp value={frequency.total} /></span>
               </div>
             </div>
             <p className="label" style={{ marginTop: '0.75rem' }}>
@@ -114,23 +114,23 @@ function TiltTab({ settings, matches, loading }) {
         )}
       </CollapsibleCard>
 
-      <CollapsibleCard id="tilt.whatIsWatched" title={t('tilt.whatIsWatched')}>
-        <div className="stat-tiles">
-          <div className="stat-tile">
-            <div className="value" style={{ color: tilt.lossStreakTilt ? 'var(--accent)' : undefined }}>
+      <CollapsibleCard id="tilt.whatIsWatched" title={t('tilt.whatIsWatched')} className="gs-card">
+        <div className="gs-figures fm-figures fm-figures-3">
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('tilt.lossStreakLabel')}</span>
+            <span className={`gs-figure-value ${tilt.lossStreakTilt ? 'down' : ''}`}>
               {form.streakType === 'Défaite' ? form.streakCount : 0}
-            </div>
-            <div className="label">{t('tilt.lossStreakLabel')}</div>
+            </span>
           </div>
-          <div className="stat-tile">
-            <div className="value" style={{ color: tilt.perfDegradation ? 'var(--accent)' : undefined }}>
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('tilt.last3Kd')}</span>
+            <span className={`gs-figure-value ${tilt.perfDegradation ? 'down' : ''}`}>
               {tilt.last3Kd === null ? '?' : tilt.last3Kd.toFixed(2)}
-            </div>
-            <div className="label">{t('tilt.last3Kd')}</div>
+            </span>
           </div>
-          <div className="stat-tile">
-            <div className="value">{last3KdRatio === null ? '?' : `${(last3KdRatio * 100).toFixed(0)}%`}</div>
-            <div className="label">{t('tilt.ofOverallAverage')}</div>
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('tilt.ofOverallAverage')}</span>
+            <span className="gs-figure-value">{last3KdRatio === null ? '?' : `${(last3KdRatio * 100).toFixed(0)}%`}</span>
           </div>
         </div>
 

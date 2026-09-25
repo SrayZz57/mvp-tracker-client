@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-function sequentialColor(value) {
-  const alpha = 0.35 + (Math.min(100, Math.max(0, value)) / 100) * 0.65;
-  return `rgba(57, 135, 229, ${alpha})`;
-}
-
-// Barres horizontales, teinte séquentielle unique (bleu) dont l'intensité
-// porte la magnitude — cohérent avec le reste de l'appli (.stat-bar-row) mais
-// avec une entrée animée et une couleur dédiée aux graphiques.
+// Barres horizontales au style des cartes Stats (.fm-row), vert au-dessus de
+// 50 % et rouge en dessous, avec une entrée animée.
 function AnimatedBarList({ rows }) {
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
@@ -23,22 +17,22 @@ function AnimatedBarList({ rows }) {
   }
 
   return (
-    <div>
+    <div className="fm-rows">
       {rows.map((row, i) => (
-        <div key={row.key} className="stat-bar-row">
-          <span className="stat-bar-label">{row.key}</span>
-          <span className="stat-bar-track">
+        <div key={row.key} className="fm-row">
+          <span className="fm-row-label">{row.key}</span>
+          <span className="fm-row-track" aria-hidden="true">
             <span
-              className="stat-bar-fill"
+              className={`fm-row-fill ${row.value >= 50 ? 'good' : 'bad'}`}
               style={{
                 width: mounted ? `${row.value}%` : '0%',
-                background: sequentialColor(row.value),
+                transition: 'width 0.6s ease',
                 transitionDelay: `${i * 60}ms`,
               }}
             />
           </span>
-          <span className="stat-bar-value">{row.value.toFixed(0)}%</span>
-          {row.meta && <span className="stat-bar-meta">{row.meta}</span>}
+          <span className="fm-row-value">{row.value.toFixed(0)}%</span>
+          <span className="fm-row-meta">{row.meta}</span>
         </div>
       ))}
     </div>

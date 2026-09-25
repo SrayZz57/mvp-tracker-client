@@ -18,14 +18,14 @@ function WeaknessTab({ settings, matches, onNavigate }) {
 
   if (!profile.ready) {
     return (
-      <CollapsibleCard id="profile.weaknessTab" title={t('profile.weakness.title')}>
+      <CollapsibleCard id="profile.weaknessTab" title={t('profile.weakness.title')} className="gs-card">
         <p className="label">{t('profile.notReady', { count: profile.minMatches - profile.matchesAnalyzed })}</p>
       </CollapsibleCard>
     );
   }
 
   return (
-    <CollapsibleCard id="profile.weaknessTab" title={t('profile.weakness.title')}>
+    <CollapsibleCard id="profile.weaknessTab" title={t('profile.weakness.title')} className="gs-card">
       {weaknesses.length === 0 ? (
         <p className="label">{t('profile.weakness.none')}</p>
       ) : (

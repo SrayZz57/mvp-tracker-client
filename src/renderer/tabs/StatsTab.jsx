@@ -18,6 +18,7 @@ import { useMapImages } from '../mapImages.js';
 import { useWeaponIcons } from '../weaponIcons.js';
 import { useRankTiers, usePlayerCardArt, useSeasonNames } from '../rankData.js';
 import PlayerProfileCard from '../PlayerProfileCard.jsx';
+import ProfileHeaderCard from '../ProfileHeaderCard.jsx';
 import RankHistoryCard from '../RankHistoryCard.jsx';
 import GlobalStatsCard from '../GlobalStatsCard.jsx';
 import WeaponStatsCard from '../WeaponStatsCard.jsx';
@@ -28,6 +29,11 @@ import PlatformFilterToggle from '../PlatformFilterToggle.jsx';
 import usePlatformFilter from '../usePlatformFilter.js';
 import CollapsibleCard from '../CollapsibleCard.jsx';
 import RankMomentumCard from '../RankMomentumCard.jsx';
+
+// Carte « Progression » (forme récente vs habituelle : K/D, winrate, précision)
+// masquée à la demande de l'auteur. Le composant reste intact dans
+// RankMomentumCard.jsx : passer ce drapeau à true suffit pour la remettre.
+const SHOW_RANK_MOMENTUM = false;
 import MatchDetailModal from '../MatchDetailModal.jsx';
 import MapDetailModal from '../MapDetailModal.jsx';
 import AgentDetailModal from '../AgentDetailModal.jsx';
@@ -315,59 +321,14 @@ function StatsTab({ settings, matches, rank, loading }) {
         )}
       </div>
 
-      <div
-        className={`card profile-header-card ${currentTier?.color ? 'rank-glow' : ''}`}
-        style={{
-          backgroundImage: playerCardArt.banner ? `url(${playerCardArt.banner})` : undefined,
-          borderColor: currentTier?.color,
-          '--rank-color': currentTier?.color,
-        }}
-      >
-        <div className="profile-header-overlay">
-          {playerCardArt.icon && <img src={playerCardArt.icon} alt="" className="profile-card-icon" />}
-
-          <div className="profile-header-info">
-            <h2>
-              {settings.name}
-              <span className="profile-tag">#{settings.tag}</span>
-            </h2>
-
-            {rank ? (
-              <div className="profile-rank-block">
-                <div className="profile-rank-row">
-                  {currentTier?.icon && (
-                    <img src={currentTier.icon} alt={rank.tierName} className="profile-rank-icon" />
-                  )}
-                  <div className="profile-rank-details">
-                    <span className="profile-rank-name" style={{ color: currentTier?.color }}>
-                      {rank.tierName}
-                    </span>
-                    <div className="profile-rr-track">
-                      <div
-                        className="profile-rr-fill"
-                        style={{ width: `${Math.min(rank.rr, 100)}%`, background: currentTier?.color }}
-                      />
-                    </div>
-                    <span className="label">{rank.rr} RR</span>
-                  </div>
-                </div>
-
-                {rank.peakTierName && (
-                  <div className="profile-peak-badge">
-                    {peakTier?.icon && <img src={peakTier.icon} alt={rank.peakTierName} />}
-                    <span>
-                      {t('stats.peak', { tier: rank.peakTierName })}
-                      {seasonNames.get(rank.peakSeasonUuid) ? ` — ${seasonNames.get(rank.peakSeasonUuid)}` : ''}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="label">{t('nav.rankUnavailable')}</p>
-            )}
-          </div>
-        </div>
-      </div>
+      <ProfileHeaderCard
+        settings={settings}
+        rank={rank}
+        playerCardArt={playerCardArt}
+        currentTier={currentTier}
+        peakTier={peakTier}
+        seasonNames={seasonNames}
+      />
 
       {/* Profil ADN et progression du rang côte à côte : le profil ADN à lui seul
           étirait ses 4 barres sur toute la largeur de la page. */}
@@ -375,7 +336,7 @@ function StatsTab({ settings, matches, rank, loading }) {
         <PlayerProfileCard settings={settings} matches={scopedMatches} />
         <RankHistoryCard />
       </div>
-      <RankMomentumCard settings={settings} matches={scopedMatches} />
+      {SHOW_RANK_MOMENTUM && <RankMomentumCard settings={settings} matches={scopedMatches} />}
 
       <CollapsibleCard id="stats.kdProgression" title={t('stats.kdProgressionTitle', { count: kdProgression.length })}>
         {kdStats && (
@@ -528,18 +489,31 @@ function StatsTab({ settings, matches, rank, loading }) {
                     <div className="match-day-header">{formatMatchDay(i18n.language, gameStart * 1000)}</div>
                   )}
                   <div
-                    className={`match-row ${resultClass} clickable`}
+                    className={`match-row mh-row ${resultClass} clickable`}
                     onClick={() => setSelectedMatch(match)}
                   >
-                    <span className="match-info">
-                      {match.metadata?.mode ?? '?'} — {match.metadata?.map ?? '?'} — {' '}
+                    <span className="mh-map">
+                      <strong>{match.metadata?.map ?? '?'}</strong>
+                      <span>{match.metadata?.mode ?? '?'}</span>
+                    </span>
+                    <span className="mh-agent">
                       {me?.character && agentIcons.get(me.character) && (
                         <img src={agentIcons.get(me.character)} alt="" className="agent-icon" />
                       )}
-                      {me?.character ?? '?'} — {' '}
-                      {me?.stats?.kills ?? '?'}/{me?.stats?.deaths ?? '?'}/{me?.stats?.assists ?? '?'}
-                      {hsPercent !== null &&
-                        t('stats.hitBreakdown', { hs: hsPercent.toFixed(0), bs: bsPercent.toFixed(0), ls: lsPercent.toFixed(0) })}
+                      {me?.character ?? '?'}
+                    </span>
+                    <span className="mh-kda">
+                      <strong>{me?.stats?.kills ?? '?'}/{me?.stats?.deaths ?? '?'}/{me?.stats?.assists ?? '?'}</strong>
+                      <span>K/D/A</span>
+                    </span>
+                    <span className="mh-hits">
+                      {hsPercent !== null && (
+                        <>
+                          <span>{t('stats.head')} <strong>{hsPercent.toFixed(0)}%</strong></span>
+                          <span>{t('stats.body')} <strong>{bsPercent.toFixed(0)}%</strong></span>
+                          <span>{t('stats.legs')} <strong>{lsPercent.toFixed(0)}%</strong></span>
+                        </>
+                      )}
                     </span>
                     <span className={`result-badge ${resultClass}`}>
                       {displayLabel}

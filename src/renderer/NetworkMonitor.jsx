@@ -16,18 +16,18 @@ function NetworkMonitor() {
   const pingClass = status.latestPing === null ? '' : status.latestPing < 60 ? 'good' : status.latestPing < 120 ? 'mid' : 'bad';
 
   return (
-    <CollapsibleCard id="network.status" title={t('network.status')}>
+    <CollapsibleCard id="network.status" title={t('network.status')} className="gs-card">
       <div className={`network-status-banner ${status.valorantRunning ? 'online' : ''}`}>
         <span className="status-dot-lg" />
         {status.valorantRunning ? t('network.detected') : t('network.notDetected')}
       </div>
       {status.valorantRunning && (
-        <div className="stat-tiles">
-          <div className="stat-tile">
-            <div className={`ping-value ${pingClass}`}>
+        <div className="gs-figures fm-figures fm-figures-1">
+          <div className="gs-figure">
+            <span className="gs-figure-label">{t('network.pingGeneral')}</span>
+            <span className={`gs-figure-value ping-value ${pingClass}`}>
               {status.latestPing === null ? '...' : `${status.latestPing} ms`}
-            </div>
-            <div className="label">{t('network.pingGeneral')}</div>
+            </span>
           </div>
         </div>
       )}

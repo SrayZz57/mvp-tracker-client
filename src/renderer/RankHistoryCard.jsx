@@ -7,7 +7,7 @@ import CollapsibleCard from './CollapsibleCard.jsx';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 20;
-const HEIGHT = 280;
+const HEIGHT = 250;
 const PAD = { top: 26, right: 16, bottom: 24, left: 14 };
 // Zone des barres de RR gagné/perdu, sous la courbe.
 const BARS_H = 56;
@@ -211,7 +211,7 @@ function RankHistoryCard() {
 
   if (state.loading) {
     return (
-      <CollapsibleCard id="stats.rankHistory" title={title} className="rank-history-card" headerExtra={refreshButton}>
+      <CollapsibleCard id="stats.rankHistory" title={title} className="gs-card rank-history-card" headerExtra={refreshButton}>
         <p className="label">{t('rankHistory.loading')}</p>
       </CollapsibleCard>
     );
@@ -219,7 +219,7 @@ function RankHistoryCard() {
 
   if (!chart) {
     return (
-      <CollapsibleCard id="stats.rankHistory" title={title} className="rank-history-card" headerExtra={refreshButton}>
+      <CollapsibleCard id="stats.rankHistory" title={title} className="gs-card rank-history-card" headerExtra={refreshButton}>
         <p className="label">{state.error ? t('rankHistory.unavailable') : t('rankHistory.notEnough')}</p>
       </CollapsibleCard>
     );
@@ -230,7 +230,16 @@ function RankHistoryCard() {
   const hoveredPoint = hovered !== null ? points[hovered] : null;
   const current = points[points.length - 1];
   const netChange = entries.reduce((sum, entry) => sum + (entry.change ?? 0), 0);
+  // Une icône de montée/descente de rang posée AU-DESSUS de son point, près du
+  // haut du graphique et du bord droit, recouvrirait le libellé du rang actuel :
+  // dans ce cas, le libellé passe à gauche (là où il n'y a rien en haut).
+  const labelClash = tierChanges.some((p) => p.y - 22 >= 12 && p.y - 22 - 11 < 18 && p.x > PAD.left + innerW - 140);
   const days = Math.max(1, Math.ceil((t1 - t0) / DAY_MS));
+  // Chiffres du bandeau au-dessus du graphique (même langage que « Stats
+  // globales ») : tout vient de la fenêtre déjà affichée, aucun appel de plus.
+  const changes = entries.map((entry) => entry.change).filter((value) => value !== null && value !== undefined);
+  const bestGain = changes.length > 0 ? Math.max(...changes) : null;
+  const worstLoss = changes.length > 0 ? Math.min(...changes) : null;
 
   // Survol sur toute la surface du graphique : on sélectionne la partie la plus
   // proche du curseur au lieu d'exiger de viser un point de 7 pixels.
@@ -245,17 +254,28 @@ function RankHistoryCard() {
     <CollapsibleCard
       id="stats.rankHistory"
       title={title}
-      className="rank-history-card"
-      headerExtra={
-        <>
-          <span className={netChange >= 0 ? 'rank-history-net up' : 'rank-history-net down'}>
-            {netChange >= 0 ? '+' : '−'}
-            {Math.abs(netChange)} RR
-          </span>
-          {refreshButton}
-        </>
-      }
+      className="gs-card rank-history-card"
+      headerExtra={refreshButton}
     >
+      <div className="gs-figures rh-figures">
+        <div className="gs-figure">
+          <span className="gs-figure-label">{t('rankHistory.netRr')}</span>
+          <span className={netChange >= 0 ? 'gs-figure-value up' : 'gs-figure-value down'}>
+            {netChange >= 0 ? '+' : '−'}
+            {Math.abs(netChange)}
+          </span>
+          <span className="gs-figure-sub">{t('rankHistory.netSub', { days })}</span>
+        </div>
+        <div className="gs-figure">
+          <span className="gs-figure-label">{t('rankHistory.bestGain')}</span>
+          <span className="gs-figure-value up">{bestGain !== null && bestGain > 0 ? `+${bestGain}` : '—'}</span>
+          <span className="gs-figure-sub">
+            {worstLoss !== null && worstLoss < 0 ? t('rankHistory.worstLoss', { value: Math.abs(worstLoss) }) : ' '}
+          </span>
+        </div>
+      </div>
+
+      <div className="rh-panel">
       <div className="line-chart-wrap" ref={setWrapEl}>
         <svg viewBox={`0 0 ${width} ${HEIGHT}`} className="rank-history-chart">
           <defs>
@@ -327,7 +347,7 @@ function RankHistoryCard() {
 
           {/* Rang actuel, lisible sans survol ; laisse la place au survol quand il est actif. */}
           {hovered === null && (
-            <text x={PAD.left + innerW} y={14} textAnchor="end" className="rank-history-current" style={{ fill: lineColor }}>
+            <text x={labelClash ? PAD.left + 6 : PAD.left + innerW} y={14} textAnchor={labelClash ? 'start' : 'end'} className="rank-history-current" style={{ fill: lineColor }}>
               {current.tierName} · {current.rr} RR
             </text>
           )}
@@ -388,6 +408,7 @@ function RankHistoryCard() {
             </span>
           </div>
         )}
+      </div>
       </div>
 
       <p className="label rank-history-foot">{t('rankHistory.foot', { count: entries.length, days })}</p>

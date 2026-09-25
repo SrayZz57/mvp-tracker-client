@@ -1,4 +1,4 @@
-import { MODES } from './AimTrainerGame.jsx';
+import { GENERIC_MODE_IDS, MODES } from './aimTrainerModes.js';
 
 // Défi du jour : mêmes réglages pour tout le monde, dérivés uniquement de la
 // date. Aucun aléa réel, donc aucun besoin de synchroniser quoi que ce soit
@@ -17,7 +17,8 @@ const SIZE_TWEAKS = [-0.08, 0, 0.06];
 
 export function buildDailyChallenge(dateKey) {
   const hash = hashDate(dateKey);
-  const modeIds = Object.keys(MODES);
+  // Les modes liés à une arène précise ne sont pas proposés en défi du jour.
+  const modeIds = GENERIC_MODE_IDS;
   const modeId = modeIds[hash % modeIds.length];
   const mode = MODES[modeId];
 

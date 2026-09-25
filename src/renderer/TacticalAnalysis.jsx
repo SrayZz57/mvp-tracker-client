@@ -68,7 +68,6 @@ function TacticalAnalysis({ settings, matches, loading }) {
             ))}
           </div>
         )}
-        <p className="label" style={{ marginTop: '0.5rem' }}>{t('analyse.timingHint')}</p>
       </CollapsibleCard>
 
       <CollapsibleCard id="analyse.distance" title={t('analyse.distanceTitle')} className="gs-card">
@@ -109,8 +108,6 @@ function TacticalAnalysis({ settings, matches, loading }) {
                 />
               ))}
             </div>
-
-            <p className="label" style={{ marginTop: '0.75rem' }}>{t('analyse.distanceHint')}</p>
           </>
         )}
       </CollapsibleCard>

@@ -31,7 +31,6 @@ function PostMortemHistory() {
 
   return (
     <CollapsibleCard id="postmortemHistory" title={t('postmortemHistory.title')}>
-      <p className="label">{t('postmortemHistory.hint')}</p>
       <div className="stat-tiles">
         <div className="stat-tile">
           <div className="value">{overallRate === null ? '?' : `${overallRate.toFixed(0)}%`}</div>

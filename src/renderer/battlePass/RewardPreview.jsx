@@ -22,9 +22,11 @@ export default function RewardPreview({ reward, season, maxLevel, equipped, conf
   // Gants : montrés sur l'arme et le skin actuellement équipés.
   if (isSkin) lastSkin.current = { weapon: reward.weapon, skin: reward.skin, hands: null };
   if (isHands) {
+    // Gants montrés sur l'arme active des modes normaux (jamais Sniper).
+    const gloveWeapon = ['vandal', 'glock'].includes(config.weaponModel) ? config.weaponModel : 'vandal';
     lastSkin.current = {
-      weapon: WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal',
-      skin: config.weaponSkin ?? 'standard',
+      weapon: gloveWeapon,
+      skin: config.weaponSkins?.[gloveWeapon] ?? 'standard',
       hands: reward.key,
     };
   }
@@ -36,7 +38,7 @@ export default function RewardPreview({ reward, season, maxLevel, equipped, conf
   const name = rewardName(reward, t);
   const kind = reward.type; // 'weaponSkin' | 'handSkin' | 'title' | 'card'
   const working = busy.has(reward.id) || busy.has(`equip:${kind}`);
-  const skinEquipped = isSkin && config.weaponModel === reward.weapon && (config.weaponSkin ?? 'standard') === reward.skin;
+  const skinEquipped = isSkin && (config.weaponSkins?.[reward.weapon] ?? 'standard') === reward.skin;
   const handsEquipped = isHands && (config.handSkin ?? 'standard') === reward.key;
   const cosmeticEquipped = !is3d && equipped[`${kind}_id`] === reward.id;
   const shown = lastSkin.current;

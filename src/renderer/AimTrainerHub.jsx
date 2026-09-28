@@ -250,6 +250,16 @@ function loadConfig() {
     // sanitizeControllerConfig. Aucun nouveau système de stockage : ce champ
     // vit dans le même objet `config` que le reste des réglages.
     merged.controller = sanitizeControllerConfig(merged.controller);
+    // Migration depuis l'ancien réglage global (un seul skin équipé, tout
+    // arme confondue) vers un skin par arme : si ce joueur avait déjà équipé
+    // un skin avant cette version, on le retrouve sur la bonne arme plutôt
+    // que de tout remettre à standard.
+    if (raw) {
+      const old = JSON.parse(raw);
+      if (old.weaponModel && old.weaponSkin && old.weaponSkin !== 'standard' && !old.weaponSkins) {
+        merged.weaponSkins = { ...DEFAULT_CONFIG.weaponSkins, [old.weaponModel]: old.weaponSkin };
+      }
+    }
     return merged;
   } catch {
     return { ...DEFAULT_CONFIG };
@@ -783,23 +793,30 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const toggleMute = () => setAudioPrefs((p) => ({ ...p, muted: !p.muted }));
 
   const set = (patch) => setConfig((prev) => ({ ...prev, ...patch }));
-  // Ancien réglage 'default' (arme retirée) ou inconnu : c'est le Vandal.
-  const activeWeapon = WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal';
+  // Arme active pour les modes NON sniper — jamais 'sniper' ici : le Sniper
+  // n'est utilisable qu'en mode sniper (voir launch() plus bas), réglage
+  // 'default'/inconnu lu comme Vandal.
+  const activeWeapon = ['vandal', 'glock'].includes(config.weaponModel) ? config.weaponModel : 'vandal';
   const selectMode = (id) => setConfig((prev) => ({ ...prev, mode: id, ...MODES[id].preset }));
 
   const launch = useCallback(
     (extra = {}) => {
       playConfirmSfx();
       const modeId = extra.mode ?? config.mode;
-      const sniper = MODES[modeId]?.sniper
-        ? { weaponModel: 'sniper', weaponSkin: config.weaponModel === 'sniper' ? config.weaponSkin : 'standard', showWeapon: true }
-        : {};
-      setLaunchConfig({ ...config, ...extra, ...sniper, userId: myId });
+      const isSniperMode = !!MODES[modeId]?.sniper;
+      // L'arme et le skin RÉELLEMENT lancés : le Sniper seulement en mode
+      // sniper, sinon l'arme active (Vandal/Glock) — jamais l'inverse, sinon
+      // un skin Sniper équipé resterait affiché dans un mode normal. Chaque
+      // arme a son propre skin équipé (voir weaponSkins).
+      const weaponModel = isSniperMode ? 'sniper' : activeWeapon;
+      const weaponSkin = config.weaponSkins?.[weaponModel] ?? 'standard';
+      const overrides = { weaponModel, weaponSkin, ...(isSniperMode ? { showWeapon: true } : {}) };
+      setLaunchConfig({ ...config, ...extra, ...overrides, userId: myId });
       // Léger délai pour laisser le bruitage de confirmation se faire
       // entendre et le fondu de sortie du menu s'amorcer avant de basculer.
       setTimeout(() => setPlaying(true), 120);
     },
-    [config, myId],
+    [config, myId, activeWeapon],
   );
 
   // Ouvert depuis un "point à travailler" (voir WeaknessTab → AimTrainerTab) :
@@ -887,12 +904,18 @@ function AimTrainerHub({ config: initialRawConfig }) {
     const bpSettled = ['ready', 'no-season', 'outdated', 'unavailable', 'signed-out'].includes(bp.status);
     const shopSettled = ['ready', 'unavailable', 'signed-out'].includes(shop.status);
     if (!bpSettled || !shopSettled || isAdmin !== false) return;
-    const skin = config.weaponSkin ?? 'standard';
-    if (skin !== 'standard' && isSkinLocked(ownedAll, config.weaponModel, skin, lockScope)) set({ weaponSkin: 'standard' });
+    // Chaque arme a son propre skin équipé désormais : on vérifie les trois.
+    const skins = config.weaponSkins ?? {};
+    const nextSkins = {};
+    Object.keys(WEAPON_MODELS).forEach((weapon) => {
+      const skin = skins[weapon] ?? 'standard';
+      if (skin !== 'standard' && isSkinLocked(ownedAll, weapon, skin, lockScope)) nextSkins[weapon] = 'standard';
+    });
+    if (Object.keys(nextSkins).length > 0) set({ weaponSkins: { ...skins, ...nextSkins } });
     const gloves = config.handSkin ?? 'standard';
     if (gloves !== 'standard' && isHandLocked(ownedAll, gloves, lockScope)) set({ handSkin: 'standard' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bp.status, shop.status, ownedAll, config.weaponModel, config.weaponSkin, config.handSkin, isAdmin]);
+  }, [bp.status, shop.status, ownedAll, config.weaponSkins, config.handSkin, isAdmin]);
 
   const navigate = (next) => {
     playClickSfx();
@@ -1213,7 +1236,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
                 <NavListItem
                   icon={Palette}
                   label={t('aimTrainer.skinSection')}
-                  hint={`${t(WEAPON_MODELS[activeWeapon]?.labelKey)} · ${t(WEAPON_MODELS[activeWeapon]?.skins?.[config.weaponSkin ?? 'standard']?.labelKey ?? 'aimTrainer.skinStandard')}`}
+                  hint={`${t(WEAPON_MODELS[activeWeapon]?.labelKey)} · ${t(WEAPON_MODELS[activeWeapon]?.skins?.[config.weaponSkins?.[activeWeapon] ?? 'standard']?.labelKey ?? 'aimTrainer.skinStandard')}`}
                   active={hoveredNav === 'skin'}
                   onHover={() => setHoveredNav('skin')}
                   onClick={() => setShowSkinPicker(true)}
@@ -1523,7 +1546,14 @@ function AimTrainerHub({ config: initialRawConfig }) {
                 previews={SKIN_PREVIEWS}
                 config={config}
                 profile={{ name: displayName, avatar: avatarArt.icon }}
-                onEquipSkin={(weapon, skin) => set({ weaponModel: weapon, weaponSkin: skin })}
+                onEquipSkin={(weapon, skin) =>
+                  set({
+                    weaponSkins: { ...(config.weaponSkins ?? {}), [weapon]: skin },
+                    // Le Sniper ne devient jamais l'arme "active" des modes
+                    // normaux (voir launch()) — seuls Vandal/Glock le sont.
+                    ...(weapon !== 'sniper' ? { weaponModel: weapon } : {}),
+                  })
+                }
                 onEquipHands={(key) => set({ handSkin: key })}
               />
             </Suspense>
@@ -1664,7 +1694,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
 
         {screen === 'shop' && (
           <Suspense fallback={null}>
-            <ShopScreen t={t} shop={shop} previews={SKIN_PREVIEWS} weapon={activeWeapon} weaponSkin={config.weaponSkin} />
+            <ShopScreen t={t} shop={shop} previews={SKIN_PREVIEWS} weapon={activeWeapon} weaponSkin={config.weaponSkins?.[activeWeapon] ?? 'standard'} />
           </Suspense>
         )}
 

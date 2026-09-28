@@ -56,8 +56,10 @@ export default function LockerScreen({ t, bp, owned: ownedAll, shopActive = fals
   const busy = bp.busy ?? new Set();
 
   const previewRarity = useMemo(() => cards.find((c) => c.id === equippedCard)?.rarity ?? 'base', [cards, equippedCard]);
-  const weapon = WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal';
-  const skin = config.weaponSkin ?? 'standard';
+  // Arme active des modes normaux uniquement (jamais Sniper, réservé aux
+  // modes sniper — voir AimTrainerHub.launch()) : c'est elle que cette vignette montre.
+  const weapon = ['vandal', 'glock'].includes(config.weaponModel) ? config.weaponModel : 'vandal';
+  const skin = config.weaponSkins?.[weapon] ?? 'standard';
   const skinRarity = SKIN_RARITY[skin] ?? 'base';
 
   const toggle = (kind, id, isEquipped) => bp.equip(kind, isEquipped ? null : id);

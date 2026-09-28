@@ -16,13 +16,16 @@ import { SKIN_RARITY } from './skinRarity.js';
 // (aperçu toujours permis, seul « Équiper » est bloqué).
 function SkinViewer({ config, set, previews, onClose, isLocked = () => false }) {
   const { t } = useTranslation();
-  const equippedWeapon = WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal';
-  const [weapon, setWeapon] = useState(equippedWeapon);
+  // Chaque arme a son propre skin équipé (Vandal/Glock/Sniper indépendants) :
+  // pas de notion d'"arme active unique" ici, chaque onglet montre le sien.
+  const initialWeapon = WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal';
+  const [weapon, setWeapon] = useState(initialWeapon);
   const skins = WEAPON_MODELS[weapon]?.skins ?? { standard: { labelKey: 'aimTrainer.skinStandard' } };
-  const [skin, setSkin] = useState(weapon === equippedWeapon ? config.weaponSkin ?? 'standard' : 'standard');
+  const equippedSkinOf = (w) => config.weaponSkins?.[w] ?? 'standard';
+  const [skin, setSkin] = useState(equippedSkinOf(weapon));
   const stageRef = useRef(null);
 
-  const equipped = weapon === equippedWeapon && skin === (config.weaponSkin ?? 'standard');
+  const equipped = skin === equippedSkinOf(weapon);
   const locked = isLocked(weapon, skin);
   const source = locked ? skinLockInfo(weapon, skin) : null;
   const rarity = SKIN_RARITY[skin] ?? 'base';
@@ -34,7 +37,7 @@ function SkinViewer({ config, set, previews, onClose, isLocked = () => false }) 
 
   const chooseWeapon = (id) => {
     setWeapon(id);
-    setSkin(id === equippedWeapon ? config.weaponSkin ?? 'standard' : 'standard');
+    setSkin(equippedSkinOf(id));
   };
 
   return (
@@ -92,7 +95,7 @@ function SkinViewer({ config, set, previews, onClose, isLocked = () => false }) 
           {/* Seulement les skins possédés : ceux à gagner ou à acheter se
               découvrent dans le Battle Pass et la Boutique, pas ici. */}
           {Object.entries(skins).filter(([id]) => !isLocked(weapon, id)).map(([id, s]) => {
-            const isEquipped = weapon === equippedWeapon && id === (config.weaponSkin ?? 'standard');
+            const isEquipped = id === equippedSkinOf(weapon);
             return (
               <button
                 key={id}
@@ -126,7 +129,15 @@ function SkinViewer({ config, set, previews, onClose, isLocked = () => false }) 
           type="button"
           className="skin-viewer-equip"
           disabled={equipped || locked}
-          onClick={() => set({ weaponModel: weapon, weaponSkin: skin, showWeapon: true })}
+          onClick={() =>
+            set({
+              weaponSkins: { ...(config.weaponSkins ?? {}), [weapon]: skin },
+              // Le Sniper ne devient jamais l'arme "active" des modes
+              // normaux (voir AimTrainerHub.launch()) — seuls Vandal/Glock.
+              ...(weapon !== 'sniper' ? { weaponModel: weapon } : {}),
+              showWeapon: true,
+            })
+          }
         >
           {equipped ? t('aimTrainer.skinEquipped') : locked ? t('battlePass.lock.locked') : t('aimTrainer.skinEquip')}
         </button>

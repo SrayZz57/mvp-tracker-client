@@ -615,9 +615,17 @@ export const DEFAULT_CONFIG = {
   showWeapon: true,
   // Une clé de WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
   // Les anciens réglages 'default' sont lus comme 'vandal' (voir AimTrainerGame).
+  // Résolu à chaque lancement par AimTrainerHub.launch() (voir weaponSkins
+  // ci-dessous) : sniper en mode sniper, sinon l'arme active (vandal/glock).
   weaponModel: 'vandal',
-  // Skin de l'arme choisie (voir WEAPON_MODELS[...].skins).
+  // Skin de l'arme RÉELLEMENT lancée cette session (résolu depuis weaponSkins
+  // par launch()) — c'est ce que lit AimTrainerGame, jamais weaponSkins direct.
   weaponSkin: 'standard',
+  // Un skin équipé PAR arme (Vandal, Glock et Sniper sont indépendants —
+  // équiper un skin Sniper ne change pas ce qu'on utilise en Gridshot).
+  // Migration : voir loadConfig() dans AimTrainerHub.jsx pour l'ancien
+  // réglage global weaponModel/weaponSkin d'avant cette version.
+  weaponSkins: { vandal: 'standard', glock: 'standard', sniper: 'standard' },
   // 'day' (défaut, ciel + sol clair) ou 'dark' (suggéré sur Discord — salle
   // fermée, sans ciel bleu ni sol blanc). Version simple validée avec
   // l'utilisateur : teintes assombries + ciel remplacé par une couleur

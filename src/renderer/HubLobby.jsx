@@ -192,8 +192,8 @@ export default function HubLobby({
   friendsCard,
 }) {
   const mode = MODES[activeModeId];
-  const weapon = WEAPON_MODELS[config.weaponModel] ? config.weaponModel : 'vandal';
-  const skin = config.weaponSkin ?? 'standard';
+  const weapon = ['vandal', 'glock'].includes(config.weaponModel) ? config.weaponModel : 'vandal';
+  const skin = config.weaponSkins?.[weapon] ?? 'standard';
   const skinLabel = WEAPON_MODELS[weapon]?.skins?.[skin]?.labelKey ?? 'aimTrainer.skinStandard';
   const skinRarity = SKIN_RARITY[skin] ?? 'base';
   const challengeModeDef = MODES[challenge.mode];

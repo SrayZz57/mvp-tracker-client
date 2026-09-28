@@ -86,6 +86,18 @@ html, body, #root {
   height: 100%;
 }
 
+/* Recentrage optique de quelques icônes (lucide-react) dont le tracé est
+   géométriquement centré dans son viewBox mais dont l'encre (la partie
+   pleine/dense) est concentrée d'un côté — l'oeil les perçoit alors comme
+   décalées dans un bouton carré (mute, déconnexion...), même si la boîte
+   qui les contient est bien centrée. Mesuré par centre de masse des pixels,
+   pas au jugé (~2px sur 24 de décalage vers la gauche pour ces deux-là).
+   N'affecte que la mise en page visuelle (transform), jamais le flux. */
+.lucide-log-out,
+.lucide-volume-x {
+  transform: translateX(1px);
+}
+
 /* Coupe les animations décoratives EN BOUCLE (halos, pulses...) quand la
    fenêtre n'est plus au premier plan OU qu'une partie est en cours (voir
    renderer.jsx) — sinon elles continuent de solliciter la carte graphique
@@ -3587,6 +3599,58 @@ li {
   margin-top: 0.5rem;
 }
 
+.custom-config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.custom-config-header h2 {
+  margin: 0;
+}
+
+/* Assez visible pour qu'on la remarque en ouvrant Personnalisé (demandé),
+   sans reprendre le rouge d'accent réservé aux actions destructrices/actives. */
+.custom-arena-editor-btn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.custom-arena-editor-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+/* Mode Personnalisé : bascule Sphères / Personnages. */
+.custom-kind-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.custom-kind-toggle button {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: var(--surface-alt);
+  box-shadow: none;
+}
+
+.custom-kind-toggle button.active {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.aim-config-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
 .custom-preset-import {
   display: flex;
   flex-direction: column;
@@ -4219,6 +4283,23 @@ li {
   filter: drop-shadow(0 0 10px var(--flash-color));
 }
 
+/* Badge manette connectée pendant une session (voir gamepadBadgeRef dans
+   AimTrainerGame.jsx) — caché par défaut, affiché/masqué par mutation DOM
+   directe au branchement/débranchement, jamais par un re-render React. */
+.aim-gamepad-badge {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(10, 12, 16, 0.6);
+  border: 1px solid rgba(61, 220, 132, 0.35);
+  color: #3ddc84;
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
 .aim-game-hud {
   position: fixed;
   top: 1.75rem;
@@ -4390,6 +4471,36 @@ li {
 
 .aim-game-close:hover {
   color: var(--accent);
+}
+
+/* Pastille "bouton manette à presser" (✕ PS5, A Xbox...) — visible
+   seulement sur le bouton actuellement en focus (D-pad/stick, voir
+   useGamepadMenuNav), pas tout le temps : sinon ça pollue l'écran pour les
+   joueurs souris/clavier avec une manette simplement branchée à côté. */
+.aim-game-gp-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 0.55rem;
+  padding: 0 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s, transform 0.15s;
+  vertical-align: middle;
+}
+
+.aim-game-overlay button:focus-visible .aim-game-gp-hint {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* --- Hub Aim Trainer (menu principal plein écran) ------------------------ */
@@ -14942,3 +15053,622 @@ button.sidebar-section-label {
 .pa-info:focus-visible ~ .pa-info-text {
   display: flex;
 }
+
+/* Fenêtre « Skin » de l'Aim Trainer : choix de l'arme et de son skin. */
+.aim-skin-picker-card {
+  max-width: 860px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+/* --- Vestiaire des skins (Aim Trainer) ----------------------------------------
+   Plein écran, même langage que les blocs de stats : fond sombre, rouge MVP en
+   accent, panneaux à angles coupés, capitales espacées. L'arme en 3D occupe la
+   scène à gauche, la liste des skins le panneau de droite. */
+.skin-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  background:
+    radial-gradient(ellipse 60% 55% at 38% 58%, rgba(255, 70, 85, 0.16), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 30% 40%, #1c2029 0%, #0c0e13 70%);
+  animation: skinViewerIn 0.25s var(--ease-out, ease) both;
+}
+
+.skin-viewer-loading {
+  display: block;
+}
+
+@keyframes skinViewerIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.skin-viewer-stage {
+  position: relative;
+  overflow: hidden;
+  /* Fines lignes de trame, comme un écran de sélection de jeu. */
+  background-image: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 255, 255, 0.018) 22px 23px);
+}
+
+.skin-viewer-canvas {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+}
+
+.skin-viewer-canvas:active {
+  cursor: grabbing;
+}
+
+.skin-viewer-watermark {
+  position: absolute;
+  left: 2.2rem;
+  bottom: 3.6rem;
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 11vw, 10rem);
+  font-weight: 800;
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.skin-viewer-head {
+  position: absolute;
+  top: 2rem;
+  left: 2.2rem;
+  max-width: 520px;
+  pointer-events: none;
+}
+
+.skin-viewer-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.skin-viewer-head h2 {
+  margin: 0.4rem 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.skin-viewer-head h2 span {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.skin-viewer-desc {
+  margin: 0.8rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.skin-rarity {
+  display: inline-block;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  color: #0c0e13;
+  background: var(--rarity, #8b909d);
+}
+
+.skin-rarity-base,
+.skin-card-base {
+  --rarity: #9aa0ab;
+}
+
+.skin-rarity-common,
+.skin-card-common {
+  --rarity: #5fd18a;
+}
+
+.skin-rarity-rare,
+.skin-card-rare {
+  --rarity: #4ea3ff;
+}
+
+.skin-rarity-epic,
+.skin-card-epic {
+  --rarity: #b36bff;
+}
+
+.skin-rarity-legendary,
+.skin-card-legendary {
+  --rarity: #ffc24a;
+}
+
+.skin-rarity-mythic,
+.skin-card-mythic {
+  --rarity: #ff4655;
+}
+
+.skin-viewer-controls {
+  position: absolute;
+  left: 2.2rem;
+  right: 2.2rem;
+  bottom: 1.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.skin-viewer-fire {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+
+.skin-viewer-fire:active {
+  filter: brightness(1.2);
+  transform: translateY(1px);
+}
+
+.skin-viewer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+}
+
+.skin-viewer-icon-btn:hover {
+  border-color: var(--accent);
+}
+
+.skin-viewer-hint {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.skin-viewer-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 1.4rem 1.2rem;
+  background: rgba(14, 16, 22, 0.88);
+  border-left: 1px solid var(--border);
+  box-shadow: -20px 0 40px rgba(0, 0, 0, 0.35);
+}
+
+.skin-viewer-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.skin-viewer-tabs {
+  display: flex;
+  flex: 1;
+  gap: 0.4rem;
+}
+
+.skin-viewer-tabs button {
+  flex: 1;
+  padding: 0.6rem 0.4rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.skin-viewer-tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  background: rgba(255, 70, 85, 0.1);
+}
+
+.skin-viewer-list {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  gap: 0.7rem;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.skin-card {
+  --cut: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem 0.5rem 0.7rem 0.8rem;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: var(--surface-alt);
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  cursor: pointer;
+  transition: filter 0.15s var(--ease-out, ease), transform 0.15s var(--ease-out, ease);
+}
+
+/* Liseré de la couleur de rareté, comme dans les jeux. */
+.skin-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--rarity);
+}
+
+.skin-card:hover {
+  filter: brightness(1.15);
+}
+
+.skin-card.active {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--rarity) 22%, var(--surface-alt)), var(--surface-alt) 70%);
+  outline: 1px solid var(--rarity);
+  outline-offset: -1px;
+}
+
+.skin-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #12151c;
+}
+
+.skin-card-name {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.skin-card-rarity {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rarity);
+}
+
+.skin-card-equipped {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0c0e13;
+  background: #3ddc84;
+}
+
+.skin-viewer-equip {
+  margin-top: 1rem;
+  padding: 0.95rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  cursor: pointer;
+}
+
+.skin-viewer-equip:disabled {
+  color: #0c0e13;
+  background: #3ddc84;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .skin-viewer {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) 45vh;
+  }
+  .skin-viewer-panel {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+
+/* Palier « Ultime » du vestiaire : couleur irisée animée, au-dessus des mythiques. */
+.skin-rarity-ultimate,
+.skin-card-ultimate {
+  --rarity: #ff6ad5;
+}
+
+.skin-rarity-ultimate {
+  background: linear-gradient(90deg, #ff6ad5, #c774ff, #6ad5ff, #6affb0, #ffd26a, #ff6ad5);
+  background-size: 300% 100%;
+  animation: skinUltimateShift 3s linear infinite;
+}
+
+.skin-card-ultimate::before {
+  background: linear-gradient(180deg, #ff6ad5, #c774ff, #6ad5ff, #6affb0, #ffd26a, #ff6ad5);
+  background-size: 100% 300%;
+  animation: skinUltimateShiftV 3s linear infinite;
+}
+
+@keyframes skinUltimateShift {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+@keyframes skinUltimateShiftV {
+  to {
+    background-position: 0 300%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skin-rarity-ultimate,
+  .skin-card-ultimate::before {
+    animation: none;
+  }
+}
+
+/* Palier « Transcendant » : au-dessus d'Ultime. Badge noir et or traversé d'un
+   reflet, carte au liseré tournant et au halo qui respire. */
+.skin-rarity-transcendent,
+.skin-card-transcendent {
+  --rarity: #ffd27a;
+}
+
+.skin-rarity-transcendent {
+  color: #1a1206;
+  background: linear-gradient(110deg, #b8862e 0%, #ffe6a6 22%, #fff8e6 30%, #ffd27a 38%, #a45cff 62%, #3cf2d8 82%, #b8862e 100%);
+  background-size: 250% 100%;
+  box-shadow: 0 0 14px rgba(255, 210, 122, 0.45);
+  animation: skinTranscendentShift 2.6s linear infinite;
+}
+
+.skin-card-transcendent {
+  box-shadow: 0 0 0 1px rgba(255, 210, 122, 0.35), 0 0 18px rgba(164, 92, 255, 0.18);
+  animation: skinTranscendentGlow 3s ease-in-out infinite;
+}
+
+.skin-card-transcendent::before {
+  background: linear-gradient(180deg, #ffe6a6, #a45cff, #3cf2d8, #ffd27a, #ffe6a6);
+  background-size: 100% 300%;
+  animation: skinUltimateShiftV 2s linear infinite;
+}
+
+@keyframes skinTranscendentShift {
+  to {
+    background-position: -250% 0;
+  }
+}
+
+@keyframes skinTranscendentGlow {
+  50% {
+    box-shadow: 0 0 0 1px rgba(255, 210, 122, 0.6), 0 0 26px rgba(164, 92, 255, 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skin-rarity-transcendent,
+  .skin-card-transcendent,
+  .skin-card-transcendent::before {
+    animation: none;
+  }
+}
+
+/* Battle Pass : panneau plus large que les autres écrans du hub, et pastille
+   « récompenses à réclamer » sur l'entrée de menu. */
+.aim-hub-nav-item-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: center;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.aim-game-xp { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 6px 0; color: #ffd166; font-size: 14px; }
+.aim-game-xp strong { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; }
+.skin-viewer-lock { margin: 0 0 8px; text-align: center; font-size: 13px; opacity: 0.75; }
+
+.aim-hub-back,
+.aim-hub-mute-floating {
+  z-index: 5;
+}
+
+/* Titre de joueur (Battle Pass) à côté d'un pseudo. */
+.player-title {
+  margin-left: 0.5rem;
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--hue-gold, #ffc857);
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.player-card-art { position: relative; overflow: hidden; }
+.player-card-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.14) 50%, transparent 65%);
+  background-size: 250% 100%;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .player-card-art::after { animation: playerCardSheen 6s var(--ease-in-out, ease) infinite; }
+}
+@keyframes playerCardSheen {
+  from { background-position: 150% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* Pastille d'un skin de gants (battlePass/GloveSwatch.jsx). */
+.glove-swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--g-accent);
+  background:
+    radial-gradient(circle at 50% 55%, var(--g-glove) 0 34%, transparent 35%),
+    linear-gradient(135deg, var(--g-cloth), color-mix(in srgb, var(--g-cloth) 50%, #000));
+}
+
+.glove-swatch svg {
+  position: relative;
+  color: var(--g-plate);
+  filter: drop-shadow(0 0 4px var(--g-accent));
+}
+
+.glove-swatch::after {
+  content: '';
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: 14%;
+  height: 3px;
+  background: var(--g-accent);
+  box-shadow: 0 0 8px var(--g-accent);
+}
+
+/* --- Modes sniper : lunette de l'Operator, culasse, rappel ------------------------ */
+
+.aim-scope-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  /* Tout est noir sauf le disque de la lunette, légèrement flou au bord. */
+  background: radial-gradient(circle at 50% 50%, transparent 0 min(38vh, 38vw), rgba(0, 0, 0, 0.92) calc(min(38vh, 38vw) + 3px), #000 calc(min(38vh, 38vw) + 40px));
+}
+
+.aim-scope-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(76vh, 76vw);
+  height: min(76vh, 76vw);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+  background:
+    linear-gradient(#0a0a0a, #0a0a0a) center / 100% 2px no-repeat,
+    linear-gradient(#0a0a0a, #0a0a0a) center / 2px 100% no-repeat;
+}
+
+/* Point central rouge pour viser précisément. */
+.aim-scope-reticle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #ff4655;
+  box-shadow: 0 0 6px #ff4655;
+}
+
+.aim-bolt-bar {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 34px);
+  z-index: 6;
+  width: 70px;
+  height: 4px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  animation: aimBoltFade 0.25s ease var(--bolt-ms) forwards;
+}
+
+.aim-bolt-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #ffc857;
+  animation: aimBoltFill var(--bolt-ms) linear forwards;
+}
+
+@keyframes aimBoltFill {
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes aimBoltFade {
+  to {
+    opacity: 0;
+  }
+}
+
+.aim-sniper-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 6;
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+

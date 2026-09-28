@@ -19,17 +19,57 @@ import Icon from './Icon.jsx';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-import floorColorUrl from '../assets/textures/floor-color.jpg';
-import floorNormalUrl from '../assets/textures/floor-normal.jpg';
-import floorRoughnessUrl from '../assets/textures/floor-roughness.jpg';
-import wallColorUrl from '../assets/textures/wall-color.jpg';
-import wallNormalUrl from '../assets/textures/wall-normal.jpg';
-import wallRoughnessUrl from '../assets/textures/wall-roughness.jpg';
+import { buildClassicRoom, CLASSIC_WALL_HALF, CLASSIC_WALL_HEIGHT, loadPbrMaterial, makeSkyTexture, wallColorUrl, wallNormalUrl, wallRoughnessUrl } from './classicArena.js';
+import { useTranslation } from 'react-i18next';
 import { saveScore } from './aimScores.js';
+import { awardXp } from './battlePass/api.js';
 import { buildMonasteryArena } from './aimArenas.js';
+import { buildAscentArena } from './aimArenaAscent.js';
+import { buildRangeArena } from './aimArenaRange.js';
+import { buildCustomArena } from './arenaEditor/buildCustomArena.js';
+import { createArena, loadArenas } from './arenaEditor/arenaStore.js';
+import { createSniperSystem, OPERATOR, SNIPER_BEHAVIORS } from './aimSniper.js';
 import { createAgentSystem, AGENT_FLOOR_Y } from './aimBots.js';
-import { MODES, WEAPON_MODELS, DEFAULT_CONFIG, behaviorKey } from './aimTrainerModes.js';
+import { MODES, WEAPON_MODELS, DEFAULT_CONFIG, behaviorKey, customTuning } from './aimTrainerModes.js';
+import { createVandalViewmodel } from './vandalModel.js';
 import { createGlockViewmodel } from './glockModel.js';
+import { createSniperViewmodel } from './sniperModel.js';
+import { playWeaponShot } from './weaponSounds.js';
+import { InputManager, AIM_MODE } from './input/InputManager.js';
+import { STANDARD_BUTTON_NAMES } from './input/GamepadInput.js';
+import { DEFAULT_CONTROLLER_BINDINGS } from './input/controllerProfiles.js';
+import { useGamepadMenuNav } from './input/useGamepadMenuNav.js';
+import { useConnectedGamepads } from './input/useConnectedGamepads.js';
+import { detectControllerBrand, buttonLabel } from './input/controllerBrand.js';
+import InputDebugOverlay from './input/InputDebugOverlay.jsx';
+
+// Petit badge affichant le bouton manette à presser (✕ en PS5, A en Xbox...)
+// à côté du bouton actuellement en focus, dans les écrans "Prêt ?"/Pause/fin
+// de session — même détection de marque que GamepadDiagram/GamepadRemap.
+function GamepadHint({ brand, hasGamepad, action = 'A' }) {
+  if (!hasGamepad) return null;
+  return (
+    <span className="aim-game-gp-hint" aria-hidden="true">
+      {buttonLabel(brand, action)}
+    </span>
+  );
+}
+
+// R2/L2 sont des axes analogiques (pas dans `buttons[]` côté valeur utile
+// pour un simple appui/relâche générique) — tous les autres boutons
+// remappables passent par leur index dans STANDARD_BUTTON_NAMES. Voir
+// controllerProfiles.js pour la liste des boutons remappables et leurs
+// noms, réutilisés tels quels ici (voir bindings dans le bloc "Manette").
+function gamepadButtonValue(gamepadState, name) {
+  if (name === 'R2') return gamepadState.r2;
+  if (name === 'L2') return gamepadState.l2;
+  const idx = STANDARD_BUTTON_NAMES.indexOf(name);
+  if (idx < 0) return 0;
+  const b = gamepadState.buttons[idx];
+  return b?.value ?? (b?.pressed ? 1 : 0);
+}
+
+const WEAPON_FACTORIES = { vandal: createVandalViewmodel, glock: createGlockViewmodel, sniper: createSniperViewmodel };
 import { isPerfLiteEnabled } from './perfMode.js';
 import CrosshairPreview from './CrosshairPreview.jsx';
 
@@ -49,8 +89,8 @@ const FLOOR_Y = -2.6;
 const TARGET_MIN_CLEARANCE = 0.6; // marge minimale entre une cible et le sol
 // Géométrie de l'arène (construite plus bas) — remontée ici au niveau module
 // pour être réutilisable par le calcul du rectangle du mode Spray ci-dessous.
-const WALL_HEIGHT = 7;
-const WALL_HALF = 24;
+const WALL_HEIGHT = CLASSIC_WALL_HEIGHT;
+const WALL_HALF = CLASSIC_WALL_HALF;
 
 
 // --- Mode Peek -------------------------------------------------------------
@@ -405,7 +445,7 @@ function hideTargetEntry(entry) {
 }
 
 function resetTargetForMode(entry, mode, cfg, now, state) {
-  if (mode.movement === 'agents') {
+  if (mode.movement === 'agents' || mode.movement === 'sniper') {
     hideTargetEntry(entry);
     return;
   }
@@ -446,76 +486,6 @@ function resetTargetForMode(entry, mode, cfg, now, state) {
   entry.poppedAt = now;
 }
 
-// Bruit de valeur lissé, base de toutes les textures procédurales ci-dessous
-// (aucune image externe : l'app doit rester autonome et légère).
-function valueNoise(width, height, cellSize, seed = 1) {
-  const cols = Math.ceil(width / cellSize) + 1;
-  const rows = Math.ceil(height / cellSize) + 1;
-  const grid = [];
-  let state = seed;
-  const rand = () => {
-    state = (state * 1103515245 + 12345) & 0x7fffffff;
-    return state / 0x7fffffff;
-  };
-  for (let r = 0; r < rows; r += 1) {
-    grid.push(Array.from({ length: cols }, rand));
-  }
-  const smooth = (t) => t * t * (3 - 2 * t);
-  return (x, y) => {
-    const gx = x / cellSize;
-    const gy = y / cellSize;
-    const x0 = Math.floor(gx);
-    const y0 = Math.floor(gy);
-    const tx = smooth(gx - x0);
-    const ty = smooth(gy - y0);
-    const v00 = grid[y0 % rows][x0 % cols];
-    const v10 = grid[y0 % rows][(x0 + 1) % cols];
-    const v01 = grid[(y0 + 1) % rows][x0 % cols];
-    const v11 = grid[(y0 + 1) % rows][(x0 + 1) % cols];
-    return (v00 * (1 - tx) + v10 * tx) * (1 - ty) + (v01 * (1 - tx) + v11 * tx) * ty;
-  };
-}
-
-// Textures PBR photographiques (couleur + normales + rugosité), CC0 —
-// provenance dans src/assets/textures/CREDITS.md. Bien plus crédibles que
-// des motifs dessinés au canvas : le relief des normales réagit vraiment à
-// l'éclairage de la scène.
-const textureLoader = new THREE.TextureLoader();
-
-// Images décodées une seule fois par lancement de l'app, puis partagées entre
-// les sessions : sans ce cache, chaque partie redécodait ~3,5 Mo de JPEG. Chaque
-// matériau reçoit sa propre copie (clone) pour régler sa répétition, et c'est
-// cette copie qui est libérée en fin de session, jamais l'image mise en cache.
-const baseTextures = new Map();
-function loadBaseTexture(url) {
-  if (!baseTextures.has(url)) baseTextures.set(url, textureLoader.loadAsync(url));
-  return baseTextures.get(url);
-}
-
-function loadPbrMaterial({ color, normal, roughness }, repeat, extra = {}) {
-  const material = new THREE.MeshStandardMaterial(extra);
-  const assign = (slot, url, isColor) => {
-    loadBaseTexture(url).then((base) => {
-      const texture = base.clone();
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(repeat[0], repeat[1]);
-      texture.anisotropy = 8;
-      if (isColor) texture.colorSpace = THREE.SRGBColorSpace;
-      texture.needsUpdate = true;
-      material[slot] = texture;
-      material.needsUpdate = true;
-    });
-  };
-  assign('map', color, true);
-  assign('normalMap', normal, false);
-  assign('roughnessMap', roughness, false);
-  return material;
-}
-
-// Libère la mémoire graphique d'une scène (géométries, matériaux, textures) :
-// sans ça, chaque session laissait tout en mémoire et l'app s'alourdissait au
-// fil des parties.
 function disposeScene(root) {
   const materials = new Set();
   root.traverse((obj) => {
@@ -533,67 +503,6 @@ function disposeScene(root) {
 
 // Ciel : dégradé du zénith à l'horizon + nuages issus de plusieurs octaves de
 // bruit, appliqué à l'intérieur d'une grande sphère.
-function makeSkyTexture() {
-  const width = 1024;
-  const height = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-
-  const sky = ctx.createLinearGradient(0, 0, 0, height);
-  sky.addColorStop(0, '#1f4a8c');
-  sky.addColorStop(0.45, '#5b9bd8');
-  sky.addColorStop(0.72, '#a8cbe8');
-  sky.addColorStop(1, '#e2d6c4');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, width, height);
-
-  // Halo solaire, cohérent avec la direction de la lumière directionnelle.
-  const sunGlow = ctx.createRadialGradient(width * 0.72, height * 0.26, 0, width * 0.72, height * 0.26, height * 0.55);
-  sunGlow.addColorStop(0, 'rgba(255, 244, 214, 0.95)');
-  sunGlow.addColorStop(0.25, 'rgba(255, 232, 186, 0.35)');
-  sunGlow.addColorStop(1, 'rgba(255, 232, 186, 0)');
-  ctx.fillStyle = sunGlow;
-  ctx.fillRect(0, 0, width, height);
-
-  // Nuages : trois octaves de bruit, seuillées puis adoucies.
-  const octaves = [
-    { noise: valueNoise(width, height, 150, 3), weight: 0.55 },
-    { noise: valueNoise(width, height, 70, 11), weight: 0.3 },
-    { noise: valueNoise(width, height, 32, 29), weight: 0.15 },
-  ];
-  const clouds = ctx.createImageData(width, height);
-  for (let y = 0; y < height; y += 1) {
-    // Les nuages s'estompent vers le zénith et vers l'horizon.
-    const band = Math.sin((y / height) * Math.PI) ** 1.5;
-    for (let x = 0; x < width; x += 1) {
-      let n = 0;
-      octaves.forEach(({ noise, weight }) => {
-        n += noise(x, y) * weight;
-      });
-      const density = Math.max(0, n - 0.5) * 2.4 * band;
-      const alpha = Math.min(1, density) * 235;
-      const i = (y * width + x) * 4;
-      clouds.data[i] = 255;
-      clouds.data[i + 1] = 255;
-      clouds.data[i + 2] = 255;
-      clouds.data[i + 3] = alpha;
-    }
-  }
-  const cloudCanvas = document.createElement('canvas');
-  cloudCanvas.width = width;
-  cloudCanvas.height = height;
-  cloudCanvas.getContext('2d').putImageData(clouds, 0, 0);
-  ctx.filter = 'blur(3px)';
-  ctx.drawImage(cloudCanvas, 0, 0);
-  ctx.filter = 'none';
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
-
 // Texture radiale générée en canvas — sert pour le flash de tir et l'impact
 // de balle, sans dépendre d'une image externe.
 function makeGlowTexture(color) {
@@ -678,6 +587,11 @@ function playGunshot(ctx) {
 
 // Cible touchée : petit "pop" mélodique et bref, distinct du tir — confirme
 // à l'oreille qu'une cible vient de tomber, pas juste qu'un coup est parti.
+// Son de tir de l'arme et du skin choisis ; tir générique sans arme affichée ou pour le Glock.
+function playShot(ctx, config) {
+  if (!config.showWeapon || !playWeaponShot(ctx, config.weaponModel, config.weaponSkin)) playGunshot(ctx);
+}
+
 function playTargetPop(ctx) {
   const now = ctx.currentTime;
   const osc = ctx.createOscillator();
@@ -779,6 +693,13 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   const [step, setStep] = useState(0);
   const activeMode = playlist ? playlist[Math.min(step, playlist.length - 1)] : rawConfig?.mode;
   const activeStepConfig = playlistSteps ? playlistSteps[Math.min(step, playlistSteps.length - 1)] : null;
+  // Sensitivity Finder côté manette (voir SensitivityFinder.jsx) : chaque
+  // étape porte un `controllerSensMult` plutôt qu'un `sens` — on ne touche
+  // QUE le mode BASE (celui que Flick/Gridshot utilisent réellement, voir
+  // AIM_MODE dans controllerProfiles.js), horizontal ET vertical ensemble,
+  // sans rien changer au reste du profil (deadzone, courbe, autres modes...).
+  const controllerFinderMult = activeStepConfig?.controllerSensMult;
+  const baseControllerModeSettings = rawConfig?.controller?.profile?.modes?.BASE;
   const config = {
     ...DEFAULT_CONFIG,
     ...rawConfig,
@@ -796,6 +717,30 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           // pas, donc retombe sur la sensibilité de base (rawConfig.sens).
           sens: activeStepConfig.sens ?? rawConfig?.sens,
           baseMode: activeStepConfig.baseMode ?? null,
+          speed: activeStepConfig.speed ?? 1,
+          ...(controllerFinderMult != null && baseControllerModeSettings
+            ? {
+                controller: {
+                  ...rawConfig.controller,
+                  profile: {
+                    ...rawConfig.controller.profile,
+                    modes: {
+                      ...rawConfig.controller.profile.modes,
+                      BASE: {
+                        ...baseControllerModeSettings,
+                        sensX: baseControllerModeSettings.sensX * controllerFinderMult,
+                        sensY: baseControllerModeSettings.sensY * controllerFinderMult,
+                      },
+                    },
+                  },
+                },
+                // Valeur reportée à onSessionComplete (voir plus bas) pour
+                // que le Sensitivity Finder puisse tracer sa courbe sur LA
+                // BONNE valeur, pas sur la sensibilité souris (inchangée
+                // pendant un run manette).
+                finderSensValue: Math.round(baseControllerModeSettings.sensX * controllerFinderMult * 1000) / 1000,
+              }
+            : {}),
         }
       : {}),
   };
@@ -808,11 +753,28 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   // Three.js plutôt que par React pour rester fluides.
   const flashOverlayRef = useRef(null);
   const flashIndicatorRef = useRef(null);
+  // Nœuds DOM du debugger manette (voir InputDebugOverlay.jsx), remplis par
+  // le composant puis mis à jour par mutation directe dans animate() — pas
+  // de state React par frame (voir le bloc "Manette" plus bas).
+  const gamepadDebugFieldsRef = useRef({});
+  // Badge "manette connectée" en jeu (voir le bloc "Manette" dans animate())
+  // — même principe que le debugger : mutation DOM directe, jamais de
+  // re-render React au branchement/débranchement en cours de partie.
+  const gamepadBadgeRef = useRef(null);
+  // Conteneur des écrans "Prêt ?"/Pause/fin de session — navigation D-pad/
+  // stick gauche entre leurs boutons (voir useGamepadMenuNav), active
+  // seulement hors "running" : pendant la partie, c'est le bloc "Manette"
+  // plus haut dans animate() qui lit la manette (viser, tirer, pause).
+  const overlayRef = useRef(null);
   const [phase, setPhase] = useState('ready'); // ready | running | paused | done
   const [timeLeft, setTimeLeft] = useState(config.duration);
   const [stats, setStats] = useState({ hits: 0, misses: 0, times: [] });
   const [flashStats, setFlashStats] = useState({ dodged: 0, failed: 0 });
   const [locked, setLocked] = useState(false);
+  // Modes sniper : lunette plein écran affichée, et relance de l'animation de
+  // la culasse à chaque tir (la clé change).
+  const [scopedView, setScopedView] = useState(false);
+  const [boltKey, setBoltKey] = useState(0);
   // Diagnostic visible directement dans l'app (pas besoin d'ouvrir la
   // console) : certains testeurs sur Discord ont signalé une sensation de
   // lissage de la souris — utile pour confirmer d'un coup d'œil si l'entrée
@@ -903,12 +865,13 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     // donc le ciel est visible au-dessus des murs. En thème sombre, la
     // couleur de fond de la scène (déjà posée plus haut) suffit à donner une
     // pénombre uniforme au-dessus des murs — pas besoin de cette sphère.
+    let classicSky = null;
     if (!isDark) {
-      const sky = new THREE.Mesh(
+      classicSky = new THREE.Mesh(
         new THREE.SphereGeometry(120, 40, 24),
         new THREE.MeshBasicMaterial({ map: makeSkyTexture(), side: THREE.BackSide, fog: false, depthWrite: false }),
       );
-      scene.add(sky);
+      scene.add(classicSky);
     }
 
     // --- Arène -------------------------------------------------------------
@@ -925,66 +888,39 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
 
     // L'arène dépend du mode (voir MODES[...].arena), plus d'un réglage.
     let arenaInfo = null;
-    if (MODES[behaviorKey(config)]?.arena === 'monastery') {
+    if (config.customArenaId) {
+      // Arène de l'éditeur (voir arenaEditor/) : même salle « classique » et
+      // mêmes coordonnées qu'à la construction (aucun recentrage — sinon tout
+      // ce qui n'est pas construit pile au centre de la salle se retrouve
+      // derrière son vrai mur, qui lui ne bouge pas). Seule la caméra est
+      // placée au point de départ choisi, juste après.
+      buildClassicRoom(arena, { floorY: FLOOR_Y, isDark, wallMat });
+      const stored = loadArenas().find((a) => a.id === config.customArenaId) ?? createArena();
+      arenaInfo = buildCustomArena(arena, stored, { floorY: AGENT_FLOOR_Y, isDark });
+      camera.position.set(arenaInfo.spawn.x, 0, arenaInfo.spawn.z);
+      euler.set(0, arenaInfo.spawn.yaw ?? 0, 0);
+      camera.quaternion.setFromEuler(euler);
+    } else if (MODES[behaviorKey(config)]?.arena === 'monastery') {
       arenaInfo = buildMonasteryArena(arena, { floorY: AGENT_FLOOR_Y, isDark });
+    } else if (MODES[behaviorKey(config)]?.arena === 'ascent') {
+      // Belvédère a son propre ciel (îles flottantes) et un éclairage de plein
+      // jour : pas de ciel classique ni d'accents colorés de la salle.
+      arenaInfo = buildAscentArena(arena, { floorY: AGENT_FLOOR_Y, isDark });
+      if (classicSky) classicSky.visible = false;
+      accentLeft.intensity = 0;
+      accentRight.intensity = 0;
+      scene.fog.density = isDark ? 0.012 : 0.0045;
+    } else if (MODES[behaviorKey(config)]?.arena === 'range') {
+      // Canyon : son propre ciel de coucher de soleil et son éclairage rasant.
+      arenaInfo = buildRangeArena(arena, { floorY: AGENT_FLOOR_Y, isDark });
+      if (classicSky) classicSky.visible = false;
+      accentLeft.intensity = 0;
+      accentRight.intensity = 0;
+      scene.background = new THREE.Color(arenaInfo.fogColor);
+      scene.fog.color.set(arenaInfo.fogColor);
+      scene.fog.density = isDark ? 0.008 : 0.0032;
     } else {
-      const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(70, 70),
-        loadPbrMaterial(
-          { color: floorColorUrl, normal: floorNormalUrl, roughness: floorRoughnessUrl },
-          [18, 18],
-          // `color` multiplie la texture (blanc = inchangé) : simple façon
-          // d'assombrir le sol clair existant en thème sombre sans nouvel asset.
-          { metalness: 0.05, color: isDark ? 0x3a3f4a : 0xffffff },
-        ),
-      );
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = FLOOR_Y;
-      arena.add(floor);
-
-      const grid = new THREE.GridHelper(70, 35, 0xff6b78, 0x7c869c);
-      grid.position.y = FLOOR_Y + 0.01;
-      grid.material.opacity = 0.25;
-      grid.material.transparent = true;
-      arena.add(grid);
-
-      // Murs bas et ouverts sur le ciel (pas de plafond), avec un liseré
-      // lumineux en crête pour délimiter proprement l'aire de jeu.
-      const wallY = FLOOR_Y + WALL_HEIGHT / 2;
-      const wallPlacements = [
-        { pos: [0, wallY, -WALL_HALF], rot: 0 },
-        { pos: [0, wallY, WALL_HALF], rot: Math.PI },
-        { pos: [-WALL_HALF, wallY, 0], rot: Math.PI / 2 },
-        { pos: [WALL_HALF, wallY, 0], rot: -Math.PI / 2 },
-      ];
-      wallPlacements.forEach(({ pos, rot }) => {
-        const wall = new THREE.Mesh(new THREE.PlaneGeometry(WALL_HALF * 2, WALL_HEIGHT), wallMat);
-        wall.position.set(...pos);
-        wall.rotation.y = rot;
-        arena.add(wall);
-
-        const crest = new THREE.Mesh(
-          new THREE.PlaneGeometry(WALL_HALF * 2, 0.22),
-          new THREE.MeshBasicMaterial({ color: 0xff4655, transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
-        );
-        crest.position.set(pos[0], FLOOR_Y + WALL_HEIGHT - 0.15, pos[2]);
-        crest.rotation.y = rot;
-        arena.add(crest);
-      });
-
-      // Bandeaux lumineux verticaux sur le mur du fond : repères de profondeur.
-      [-8, 0, 8].forEach((x, i) => {
-        const strip = new THREE.Mesh(
-          new THREE.PlaneGeometry(0.3, WALL_HEIGHT * 0.8),
-          new THREE.MeshBasicMaterial({
-            color: i === 1 ? 0xff4655 : 0x9fb4ff,
-            transparent: true,
-            opacity: i === 1 ? 0.6 : 0.35,
-          }),
-        );
-        strip.position.set(x, FLOOR_Y + WALL_HEIGHT * 0.45, -WALL_HALF + 0.05);
-        arena.add(strip);
-      });
+      buildClassicRoom(arena, { floorY: FLOOR_Y, isDark, wallMat });
     }
 
     // --- Murs du mode Dodge Flash --------------------------------------------
@@ -1067,7 +1003,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     const randomDrift = (speedRange = DEFAULT_DRIFT_SPEED, lockY = false) =>
       new THREE.Vector3(Math.random() * 2 - 1, lockY ? 0 : (Math.random() * 2 - 1) * 0.5, 0)
         .normalize()
-        .multiplyScalar(speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]));
+        .multiplyScalar((speedRange[0] + Math.random() * (speedRange[1] - speedRange[0])) * customTuning(configRef.current).speed);
 
     // Paramètres de mouvement propres à chaque cible (utilisés seulement par
     // les modes mobiles) : direction de dérive, ou angle et rayon d'orbite.
@@ -1083,7 +1019,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         driftChangeAt: performance.now() + changeMin + Math.random() * (changeMax - changeMin),
         orbitAngle: Math.random() * Math.PI * 2,
         orbitRadius: 2.2 + Math.random() * 2,
-        orbitSpeed: (0.6 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1),
+        orbitSpeed: (0.6 + Math.random() * 0.7) * (Math.random() < 0.5 ? -1 : 1) * customTuning(configRef.current).speed,
       };
     };
 
@@ -1156,7 +1092,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     }
     const targets = allTargets.slice(0, config.targetCount);
     allTargets.slice(config.targetCount).forEach(hideTargetEntry);
-    if (MODES[behaviorKey(config)]?.movement === 'agents') allTargets.forEach(hideTargetEntry);
+    if (['agents', 'sniper'].includes(MODES[behaviorKey(config)]?.movement)) allTargets.forEach(hideTargetEntry);
 
     // Assigne un ordre 1..N mélangé aux cibles du mode Switch, et fait
     // pointer chaque pastille vers la texture correspondante — appelé à la
@@ -1231,7 +1167,44 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       muzzleFlash,
       impactTexture,
       // Agents du mode Headshot (arène Monastère uniquement) — voir aimBots.js.
-      agents: arenaInfo ? createAgentSystem({ scene, arena: arenaInfo, camera }) : null,
+      agents:
+        arenaInfo && MODES[behaviorKey(config)]?.movement === 'agents'
+          ? (() => {
+              const tuning = customTuning(config);
+              return createAgentSystem({
+                scene,
+                arena: arenaInfo,
+                camera,
+                speed: tuning.speed,
+                scale: tuning.agentScale,
+                style: tuning.agentStyle,
+                exactSpawns: !!config.customArenaId,
+              });
+            })()
+          : null,
+      // Modes sniper (arène Canyon) — voir aimSniper.js. Un ennemi qui s'échappe
+      // compte comme un raté ; au mode Vitesse de scope, la lunette se baisse à
+      // chaque apparition.
+      sniper:
+        arenaInfo && MODES[behaviorKey(config)]?.sniper
+          ? createSniperSystem({
+              scene,
+              arena: arenaInfo,
+              camera,
+              behavior: MODES[behaviorKey(config)].sniper.behavior,
+              onEscape: () => setStats((prev) => ({ ...prev, misses: prev.misses + 1 })),
+              onAppear: () => {
+                if (!SNIPER_BEHAVIORS[MODES[behaviorKey(configRef.current)]?.sniper?.behavior]?.forceUnscope) return;
+                stateRef.current.scope.on = false;
+                stateRef.current.scope.t = 0;
+              },
+            })
+          : null,
+      // Lunette : on = demandée, t = avancement 0..1, zoom = zoom appliqué.
+      scope: { on: false, t: 0, zoom: 1 },
+      boltUntil: 0,
+      weaponHolder: null,
+      scopedViewShown: false,
       // Créé ici (pas dans handleClick) pour n'exister qu'une fois par
       // session de jeu ; `resume()` est appelé à chaque tir plutôt qu'ici,
       // pour rester dans le geste utilisateur si le navigateur avait
@@ -1263,26 +1236,43 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // principe que `sparks` pour les impacts de tir.
       flashEffect: null,
       flashBursts: [],
+      // Support manette (voir src/renderer/input/) : additif seulement — ne
+      // remplace jamais la souris, qui reste gérée par handleMouseMove dans
+      // l'effet juste après (voir gamepadFire/gamepadRelease, assignés
+      // là-bas pour rester le même code que le clic souris).
+      inputManager: new InputManager(config.controller?.profile, config.controller?.rotationScale),
+      gamepadFire: null,
+      gamepadRelease: null,
+      gamepadFireWasDown: false,
+      gamepadAdsWasDown: false,
+      gamepadPauseWasDown: false,
+      gamepadBadgeShown: false,
+      resumeSession: null,
     };
 
     // --- Modèle mains + arme (voir src/assets/models/CREDITS.md pour les
     // licences/attributions — CC0 pour le modèle par défaut, CC-BY 4.0 pour
     // les modèles alternatifs de WEAPON_MODELS) ------------------------------
-    if (config.showWeapon && config.weaponModel === 'glock') {
-      // Glock procédural : ses effets (culasse, recul, flash, douille, fumée)
-      // passent par les mêmes points d'entrée que les modèles animés — le tir
-      // appelle fireAction.play() et la boucle appelle mixer.update().
-      const glock = createGlockViewmodel({ renderer, scene });
-      camera.add(glock.holder);
+    const proceduralWeapon = WEAPON_FACTORIES[config.weaponModel] ?? WEAPON_FACTORIES.vandal;
+    if (config.showWeapon && proceduralWeapon) {
+      // Arme modélisée en code : ses effets (culasse, recul, flash, douille,
+      // fumée) passent par les mêmes points d'entrée que les modèles animés —
+      // le tir appelle fireAction.play() et la boucle appelle mixer.update().
+      // En jeu, l'arme est tenue par des mains gantées (pas dans le Vestiaire).
+      const weapon = proceduralWeapon({ renderer, scene, skin: config.weaponSkin, hands: config.handSkin ?? 'standard' });
+      camera.add(weapon.holder);
+      stateRef.current.weaponHolder = weapon.holder;
       camera.updateMatrixWorld(true);
       const muzzleWorld = new THREE.Vector3();
-      glock.muzzle.getWorldPosition(muzzleWorld);
+      weapon.muzzle.getWorldPosition(muzzleWorld);
       muzzleTip.position.copy(camera.worldToLocal(muzzleWorld));
       muzzleFlash.visible = false;
-      stateRef.current.mixer = { update: (seconds) => glock.update(seconds) };
-      stateRef.current.fireAction = { stop: () => {}, play: () => glock.fire() };
-    } else if (config.showWeapon) {
-      const weaponUrl = (WEAPON_MODELS[config.weaponModel] ?? WEAPON_MODELS.vandal).url;
+      stateRef.current.mixer = { update: (seconds) => weapon.update(seconds) };
+      stateRef.current.fireAction = { stop: () => {}, play: () => weapon.fire() };
+      // Skins Transcendants : l'arme fait son apparition au début de la partie.
+      weapon.replayIntro?.();
+    } else if (config.showWeapon && WEAPON_MODELS[config.weaponModel]?.url) {
+      const weaponUrl = WEAPON_MODELS[config.weaponModel].url;
       new GLTFLoader().load(weaponUrl, (gltf) => {
         const model = gltf.scene;
 
@@ -1411,6 +1401,109 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
 
       const mode = MODES[behaviorKey(configRef.current)] ?? MODES.flick;
       const cfg = configRef.current;
+
+      // --- Manette (voir src/renderer/input/) -----------------------------------
+      // Additif uniquement : applique une rotation en plus de la souris, sur
+      // le MÊME euler/caméra — jamais à la place. R2 = tir, L2 = visée
+      // (équivalent clic gauche/droit ; handleClick ne lit que `e?.button`,
+      // voir son affectation à state.gamepadFire dans l'effet des écouteurs
+      // souris juste après celui-ci). Actif aussi EN PAUSE (juste pour
+      // Start/Options, voir plus bas) : viser/tirer restent réservés à
+      // 'running'.
+      if (cfg.controller?.enabled !== false && (phaseRef.current === 'running' || phaseRef.current === 'paused')) {
+        const { camera: gpCamera, euler: gpEuler } = state;
+        // Lus en direct depuis configRef à chaque frame (comme `sens` pour la
+        // souris juste en dessous) : un changement de réglage manette en
+        // cours de partie s'applique tout de suite, pas seulement à la
+        // prochaine session.
+        if (cfg.controller?.profile) state.inputManager.setProfile(cfg.controller.profile);
+        if (cfg.controller?.rotationScale) state.inputManager.setRotationScale(cfg.controller.rotationScale);
+        state.inputManager.setMode(mode.sniper && state.scope?.on ? AIM_MODE.SNIPER : AIM_MODE.BASE);
+        const { connected, gamepadState, result } = state.inputManager.pollGamepadFrame(dt / 1000);
+        const bindings = cfg.controller?.bindings ?? DEFAULT_CONTROLLER_BINDINGS;
+        // Badge "manette connectée" — seulement à la connexion/déconnexion,
+        // pas à chaque frame (voir gamepadBadgeShown).
+        if (connected !== state.gamepadBadgeShown && gamepadBadgeRef.current) {
+          state.gamepadBadgeShown = connected;
+          gamepadBadgeRef.current.style.display = connected ? '' : 'none';
+          if (connected) gamepadBadgeRef.current.textContent = `🎮 ${gamepadState.id}`;
+        }
+        if (connected) {
+          // Pause et reprise, quel que soit l'état — bouton réassignable
+          // (voir GamepadRemap.jsx, défaut Start/Options). En pause, on
+          // relâche le pointeur EXACTEMENT comme Échap (même chemin que
+          // handleLockChange, voir l'effet plus bas) — pas de logique de
+          // pause séparée à maintenir. La pression d'un bouton manette
+          // compte comme une activation utilisateur (voir la spec User
+          // Activation), donc requestPointerLock() peut être rappelé juste
+          // après par resumeSession() sans être bloqué.
+          const pauseDown = gamepadButtonValue(gamepadState, bindings.pause) > 0.5;
+          if (pauseDown && !state.gamepadPauseWasDown) {
+            if (phaseRef.current === 'running') document.exitPointerLock?.();
+            else if (phaseRef.current === 'paused') state.resumeSession?.();
+          }
+          state.gamepadPauseWasDown = pauseDown;
+        }
+        if (connected && gpCamera && phaseRef.current === 'running') {
+          if (result) {
+            gpEuler.y -= result.yaw * DEG_TO_RAD;
+            gpEuler.x -= result.pitch * DEG_TO_RAD;
+            gpEuler.x = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, gpEuler.x));
+            gpCamera.quaternion.setFromEuler(gpEuler);
+          }
+          state.lastGamepadState = gamepadState;
+          state.lastGamepadResult = result;
+
+          // Debugger (voir InputDebugOverlay.jsx) : mutation DOM directe,
+          // jamais de setState ici (une frame = potentiellement 144 fois/s).
+          if (cfg.controller?.debugOverlay) {
+            const f = gamepadDebugFieldsRef.current;
+            if (f.controller) f.controller.textContent = gamepadState.id;
+            if (f.rawX) f.rawX.textContent = gamepadState.rightStick.x.toFixed(3);
+            if (f.rawY) f.rawY.textContent = gamepadState.rightStick.y.toFixed(3);
+            if (f.processedX) f.processedX.textContent = result.debug.curvedX.toFixed(3);
+            if (f.processedY) f.processedY.textContent = result.debug.curvedY.toFixed(3);
+            if (f.sens) f.sens.textContent = `${result.debug.sensX.toFixed(2)} / ${result.debug.sensY.toFixed(2)}`;
+            if (f.curve) f.curve.textContent = result.debug.curve;
+            if (f.mode) f.mode.textContent = result.debug.mode;
+            if (f.deadzone) f.deadzone.textContent = `${cfg.controller.profile.deadzone.inner.toFixed(2)} / ${cfg.controller.profile.deadzone.outer.toFixed(2)}`;
+            if (f.rotationSpeed || f.full360) {
+              const speedPerSec = Math.hypot(result.yaw, result.pitch) / Math.max(1e-6, dt / 1000);
+              if (f.rotationSpeed) f.rotationSpeed.textContent = `${speedPerSec.toFixed(1)}°/s`;
+              // Comparable en direct à un vrai chrono sur console (voir
+              // aimTrainer.controller.calibration.intro) : plus utile pour
+              // caler le ressenti qu'un nombre de degrés/seconde abstrait.
+              if (f.full360) f.full360.textContent = speedPerSec > 1 ? `${(360 / speedPerSec).toFixed(2)}s` : '—';
+            }
+            if (f.stick?.current) {
+              const radius = 23; // rayon utile de .idbg-stick-outer (28px - la moitié du point)
+              f.stick.current.style.transform = `translate(${gamepadState.rightStick.x * radius}px, ${gamepadState.rightStick.y * radius}px)`;
+            }
+          }
+
+          const fireDown = gamepadButtonValue(gamepadState, bindings.fire) > 0.5;
+          if (fireDown && !state.gamepadFireWasDown) {
+            state.gamepadFire?.({ button: 0 });
+            // Petit retour haptique au tir (voir GamepadRumbleManager dans
+            // GamepadInput.js) — ne jette jamais si la manette/le navigateur
+            // ne l'expose pas (ex. DualSense en Bluetooth selon Chromium).
+            if (cfg.controller?.vibration?.enabled) {
+              const amount = cfg.controller.vibration.intensity ?? 1;
+              state.inputManager.rumble({ duration: 60, weakMagnitude: amount * 0.4, strongMagnitude: amount * 0.7 });
+            }
+          } else if (!fireDown && state.gamepadFireWasDown) {
+            state.gamepadRelease?.();
+          }
+          state.gamepadFireWasDown = fireDown;
+
+          const adsDown = gamepadButtonValue(gamepadState, bindings.ads) > 0.5;
+          if (adsDown && !state.gamepadAdsWasDown) state.gamepadFire?.({ button: 2 });
+          state.gamepadAdsWasDown = adsDown;
+        } else if (!connected) {
+          state.lastGamepadState = null;
+          state.lastGamepadResult = null;
+        }
+      }
 
       // Murs Dodge Flash : visibles seulement dans ce mode (voir leur
       // construction plus haut) — un simple set() ne coûte rien même appelé
@@ -1548,9 +1641,33 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       });
 
       state.agents?.update(now, dt, phaseRef.current === 'running');
+      state.sniper?.update(now, dt, phaseRef.current === 'running');
+
+      // Lunette de l'Operator : le zoom réduit le champ de vision (et la
+      // sensibilité, voir handleMouseMove) ; l'arme est masquée une fois la
+      // lunette à l'œil, remplacée par l'overlay plein écran.
+      if (mode.sniper) {
+        const sc = state.scope;
+        const step = dt / OPERATOR.scopeInMs;
+        sc.t = sc.on ? Math.min(1, sc.t + step) : Math.max(0, sc.t - step * 1.6);
+        const eased = sc.t * sc.t * (3 - 2 * sc.t);
+        const zoom = 1 + (OPERATOR.zoom - 1) * eased;
+        if (Math.abs(zoom - sc.zoom) > 1e-4) {
+          sc.zoom = zoom;
+          const baseV = horizontalToVerticalFov(cfg.fov, camera.aspect);
+          camera.fov = (2 * Math.atan(Math.tan((baseV * DEG_TO_RAD) / 2) / zoom)) / DEG_TO_RAD;
+          camera.updateProjectionMatrix();
+        }
+        if (state.weaponHolder) state.weaponHolder.visible = sc.t < 0.5;
+        const full = sc.t > 0.85;
+        if (full !== state.scopedViewShown) {
+          state.scopedViewShown = full;
+          setScopedView(full);
+        }
+      }
 
       state.targets.forEach((entry) => {
-        if (mode.movement === 'agents') return;
+        if (mode.movement === 'agents' || mode.movement === 'sniper') return;
         // Pulsation à l'apparition — rend le spawn lisible.
         const age = now - entry.poppedAt;
         const scale = age < POP_DURATION_MS ? cfg.targetSize * (0.4 + 0.6 * (age / POP_DURATION_MS)) : cfg.targetSize;
@@ -1594,7 +1711,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           // déplacement latéral calée sur la vraie vitesse de course de
           // Valorant (voir PEEK_STRAFE_SPEED).
           const p = entry.peek;
-          const stepDist = PEEK_STRAFE_SPEED * (dt / 1000);
+          const stepDist = PEEK_STRAFE_SPEED * customTuning(cfg).speed * (dt / 1000);
 
           if (p.phase === 'hidden') {
             if (now >= p.hiddenUntil) {
@@ -1778,6 +1895,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // redimensionnement pour que le FOV horizontal reste celui demandé.
       camera.fov = horizontalToVerticalFov(configRef.current.fov, aspect);
       camera.updateProjectionMatrix();
+      if (stateRef.current.scope) stateRef.current.scope.zoom = -1;
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
     window.addEventListener('resize', handleResize);
@@ -1795,6 +1913,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       renderer.forceContextLoss();
       mount.removeChild(renderer.domElement);
       stateRef.current.audioCtx?.close();
+      stateRef.current.inputManager?.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1807,7 +1926,8 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       if (phaseRef.current !== 'running') return;
       const { camera, euler } = stateRef.current;
       if (!camera) return;
-      const sens = configRef.current.sens;
+      const zoom = stateRef.current.scope?.zoom > 1 ? stateRef.current.scope.zoom : 1;
+      const sens = configRef.current.sens / zoom;
       euler.y -= e.movementX * sens * VALORANT_YAW * DEG_TO_RAD;
       euler.x -= e.movementY * sens * VALORANT_YAW * DEG_TO_RAD;
       euler.x = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, euler.x));
@@ -1863,7 +1983,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         state.fireAction.play();
       }
       state.audioCtx.resume();
-      playGunshot(state.audioCtx);
+      playShot(state.audioCtx, configRef.current);
 
       const spark = new THREE.Sprite(
         new THREE.SpriteMaterial({ map: impactTexture, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }),
@@ -1900,11 +2020,71 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     // dans le fichier) tant que le clic est maintenu en mode Spray.
     stateRef.current.fireSprayShot = fireSprayShot;
 
-    const handleClick = () => {
+    const handleClick = (e) => {
       if (phaseRef.current !== 'running') return;
       const state = stateRef.current;
       const { camera } = state;
       if (!camera) return;
+
+      // Modes sniper : clic droit = lunette, clic gauche = tir de l'Operator
+      // (une balle, puis la culasse à réarmer ; sans lunette, le tir part dans
+      // un cône d'imprécision).
+      const sniperMode = MODES[behaviorKey(configRef.current)]?.sniper;
+      if (sniperMode && state.sniper) {
+        const behavior = SNIPER_BEHAVIORS[sniperMode.behavior] ?? {};
+        const now = performance.now();
+        if (e?.button === 2) {
+          if (!behavior.noScope && now >= state.boltUntil) state.scope.on = !state.scope.on;
+          return;
+        }
+        if ((e?.button ?? 0) !== 0 || now < state.boltUntil) return;
+        const { raycaster, center, muzzleTip, scene, impactTexture } = state;
+        raycaster.setFromCamera(center, camera);
+        const spreadDeg = state.scope.t >= 0.999 ? 0 : behavior.hipSpreadDeg ?? OPERATOR.hipSpreadDeg;
+        if (spreadDeg > 0) {
+          // Tirage uniforme dans le cône (pas concentré au centre).
+          const r = Math.tan(Math.sqrt(Math.random()) * spreadDeg * DEG_TO_RAD);
+          const a = Math.random() * Math.PI * 2;
+          const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+          const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+          raycaster.ray.direction.addScaledVector(right, r * Math.cos(a)).addScaledVector(up, r * Math.sin(a)).normalize();
+        }
+        const shot = state.sniper.shoot(raycaster, now);
+        const from = new THREE.Vector3();
+        muzzleTip.getWorldPosition(from);
+        const endPoint = shot.point ?? raycaster.ray.direction.clone().multiplyScalar(120).add(raycaster.ray.origin);
+        const tracer = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([state.scope.t > 0.5 ? raycaster.ray.origin.clone().add(raycaster.ray.direction.clone().multiplyScalar(0.5)) : from, endPoint]),
+          new THREE.LineBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 1 }),
+        );
+        scene.add(tracer);
+        state.tracers.push({ mesh: tracer, createdAt: now });
+        state.flashUntil = now + MUZZLE_FLASH_LIFETIME_MS;
+        state.fireAction?.stop();
+        state.fireAction?.play();
+        state.audioCtx.resume();
+        playShot(state.audioCtx, configRef.current);
+        if (shot.point) {
+          const spark = new THREE.Sprite(
+            new THREE.SpriteMaterial({ map: impactTexture, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }),
+          );
+          spark.position.copy(shot.point);
+          spark.scale.setScalar(0.5);
+          scene.add(spark);
+          state.sparks.push({ mesh: spark, createdAt: now });
+        }
+        // L'Operator se déscope après chaque tir, le temps de réarmer.
+        state.scope.on = false;
+        state.boltUntil = now + OPERATOR.boltMs;
+        setBoltKey((k) => k + 1);
+        if (shot.kind === 'kill') {
+          if (configRef.current.hitSound !== false) playTargetPop(state.audioCtx);
+          setStats((prev) => ({ ...prev, hits: prev.hits + 1, times: [...prev.times, shot.reactionMs] }));
+        } else {
+          setStats((prev) => ({ ...prev, misses: prev.misses + 1 }));
+        }
+        return;
+      }
 
       // Mode Dodge Flash, en plein aveuglement : le tir est ignoré, comme en
       // vrai partie où viser pendant un flash ne sert à rien — voir le
@@ -1963,7 +2143,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           state.fireAction.play();
         }
         state.audioCtx.resume();
-        playGunshot(state.audioCtx);
+        playShot(state.audioCtx, configRef.current);
         if (shot.point) {
           const spark = new THREE.Sprite(
             new THREE.SpriteMaterial({ map: impactTexture, transparent: true, depthTest: false, blending: THREE.AdditiveBlending }),
@@ -2009,7 +2189,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         state.fireAction.play();
       }
       state.audioCtx.resume();
-      playGunshot(state.audioCtx);
+      playShot(state.audioCtx, configRef.current);
 
       const spark = new THREE.Sprite(
         new THREE.SpriteMaterial({
@@ -2101,14 +2281,26 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         state.trackBeam = null;
       }
     };
+    // Rappelées depuis la boucle d'animation (autre effet) pour le tir/la
+    // visée à la manette — voir son bloc "Manette" dans animate(). Ces deux
+    // fonctions ne lisent jamais rien d'autre de l'event que `e?.button`
+    // (handleClick) ou aucun argument (handleRelease), donc les appeler avec
+    // un objet `{ button }` à la place d'un vrai MouseEvent est sans risque.
+    stateRef.current.gamepadFire = handleClick;
+    stateRef.current.gamepadRelease = handleRelease;
 
+    const preventMenu = (e) => {
+      if (phaseRef.current === 'running') e.preventDefault();
+    };
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('mouseup', handleRelease);
+    document.addEventListener('contextmenu', preventMenu);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('mouseup', handleRelease);
+      document.removeEventListener('contextmenu', preventMenu);
     };
   }, []);
 
@@ -2209,6 +2401,8 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
 
   const savedForSessionRef = useRef(false);
   const [saveState, setSaveState] = useState(null); // null | saving | saved | error
+  const [xpAward, setXpAward] = useState(null);
+  const { t: tr } = useTranslation();
 
   // Ne garde actives (animées, touchables) que les N premières cibles du pool :
   // chaque étape d'une playlist de presets a son propre nombre de cibles.
@@ -2237,6 +2431,11 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       stateRef.current.switchNext = 1;
     }
     if (mode.movement === 'agents') stateRef.current.agents?.reset(config.targetCount, now);
+    if (mode.movement === 'sniper') {
+      stateRef.current.sniper?.reset(now);
+      Object.assign(stateRef.current.scope, { on: false, t: 0 });
+      stateRef.current.boltUntil = 0;
+    }
     // Le verrouillage du pointeur doit être demandé de façon synchrone dans la
     // foulée du clic (exigence de sécurité de Chromium) — pas d'await avant.
     // La phase ne passe en "running" qu'une fois le verrouillage confirmé
@@ -2300,6 +2499,11 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     // généralement une fois le cooldown écoulé (une fraction de seconde).
     lockPointer(() => setPhase('running'));
   };
+  // Rappelée depuis la boucle d'animation (bouton Start/Options de la
+  // manette — voir le bloc "Manette" dans animate()) : réaffectée à chaque
+  // rendu, donc toujours la version à jour malgré la fermeture figée au
+  // montage de cet effet-là.
+  stateRef.current.resumeSession = resumeSession;
 
   const total = stats.hits + stats.misses;
   const accuracy = total > 0 ? (stats.hits / total) * 100 : null;
@@ -2327,6 +2531,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     if (phase !== 'done') {
       savedForSessionRef.current = false;
       setSaveState(null);
+      setXpAward(null);
       return;
     }
     if (savedForSessionRef.current || score === null) return;
@@ -2342,7 +2547,10 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       misses: stats.misses,
       avgReaction: avgReaction === null ? null : Math.round(avgReaction),
       dpi: config.dpi,
-      sens: config.sens,
+      // `finderSensValue` (voir le merge de config ci-dessus) prend le pas
+      // pendant un run Sensitivity Finder à la manette : la sensibilité
+      // souris, elle, ne varie pas d'une étape à l'autre dans ce cas.
+      sens: config.finderSensValue ?? config.sens,
     });
 
     // Sensitivity Finder : des runs volontairement désaccordées (sens trop
@@ -2365,9 +2573,21 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       challengeDate: config.challengeDate ?? null,
       dpi: config.dpi,
       sens: config.sens,
-    }).then((result) => setSaveState(result.ok ? 'saved' : 'error'));
+    }).then(async (result) => {
+      setSaveState(result.ok ? 'saved' : 'error');
+      if (!result.ok) return;
+      // Le serveur calcule l'XP à partir des scores enregistrés ; sans battle pass
+      // (migration absente, pas de saison) la réponse est simplement ignorée.
+      const award = await awardXp();
+      if (award?.status === 'ok' && award.xp_gained > 0) setXpAward(award);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, score]);
+
+  const gamepads = useConnectedGamepads();
+  const hasGamepad = gamepads.length > 0;
+  const controllerBrand = detectControllerBrand(gamepads[0]?.id ?? '');
+  useGamepadMenuNav({ containerRef: overlayRef, active: phase !== 'running', onBack: onExit });
 
   return (
     <div className="aim-game">
@@ -2375,7 +2595,11 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
 
       {phase === 'running' && locked && (
         <>
-          {config.crosshairCode ? (
+          {MODES[behaviorKey(config)]?.sniper && scopedView ? (
+            <div className="aim-scope-overlay" aria-hidden="true">
+              <span className="aim-scope-reticle" />
+            </div>
+          ) : config.crosshairCode ? (
             <CrosshairPreview
               code={config.crosshairCode}
               bare
@@ -2385,12 +2609,26 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           ) : (
             <div className="aim-trainer-crosshair" />
           )}
+          {MODES[behaviorKey(config)]?.sniper && (
+            <>
+              {boltKey > 0 && (
+                <div key={boltKey} className="aim-bolt-bar" style={{ '--bolt-ms': `${OPERATOR.boltMs}ms` }} aria-hidden="true">
+                  <span />
+                </div>
+              )}
+              <p className="aim-sniper-hint">
+                {SNIPER_BEHAVIORS[MODES[behaviorKey(config)].sniper.behavior]?.noScope ? tr('aimTrainer.sniperHud.noScopeHint') : tr('aimTrainer.sniperHud.scopeHint')}
+              </p>
+            </>
+          )}
           {MODES[behaviorKey(config)]?.flashDodge && (
             <>
               <div ref={flashIndicatorRef} className="aim-flash-indicator" aria-hidden="true" />
               <div ref={flashOverlayRef} className="aim-flash-overlay" aria-hidden="true" />
             </>
           )}
+          <InputDebugOverlay fieldsRef={gamepadDebugFieldsRef} visible={config.controller?.debugOverlay === true} />
+          <div ref={gamepadBadgeRef} className="aim-gamepad-badge" aria-hidden="true" style={{ display: 'none' }} />
           <div className="aim-game-hud">
             <div className="aim-game-hud-item">
               <span className="aim-game-hud-value">{timeLeft}</span>
@@ -2415,7 +2653,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       )}
 
       {phase !== 'running' && (
-        <div className="aim-game-overlay">
+        <div ref={overlayRef} className="aim-game-overlay">
           <div className="aim-game-panel">
             {phase === 'ready' && (
               <>
@@ -2477,6 +2715,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                 </div>
                 <button className="refresh aim-game-cta" onClick={startSession}>
                   <Icon icon={Play} size={16} /> Démarrer
+                  <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} />
                 </button>
                 <p className="aim-game-tip">Échap pour mettre en pause · la fenêtre se ferme avec le bouton ci-dessous</p>
                 {rawInputActive !== null && (
@@ -2493,6 +2732,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                 <p>Il te reste {timeLeft} secondes.</p>
                 <button className="refresh aim-game-cta" onClick={resumeSession}>
                   <Icon icon={Play} size={16} /> Reprendre
+                  <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} />
                 </button>
                 {/* Demandé sur Discord : pouvoir relancer le même exo sans
                     fermer la fenêtre. Même exclusion que "Recommencer" en fin
@@ -2500,6 +2740,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                 {!config.challengeDate && (
                   <button className="account-forgot-password" onClick={startSession}>
                     <Icon icon={RotateCcw} size={16} /> Recommencer
+                    <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} />
                   </button>
                 )}
               </>
@@ -2571,6 +2812,17 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
 
                 {saveState === 'saving' && <p className="aim-game-tip"><Icon icon={Save} size={16} /> Enregistrement du score…</p>}
                 {saveState === 'saved' && <p className="aim-game-tip"><Icon icon={CheckCircle2} size={16} /> Score enregistré sur ton compte</p>}
+                {xpAward && (
+                  <div className="aim-game-xp" role="status">
+                    <strong><Icon icon={Trophy} size={16} /> {tr('battlePass.result.gain', { xp: xpAward.xp_gained })}</strong>
+                    {xpAward.level_after > xpAward.level_before && (
+                      <span>{tr('battlePass.result.levelUp', { level: xpAward.level_after })}</span>
+                    )}
+                    {(xpAward.challenges ?? []).map((c) => (
+                      <span key={c.id}>{tr('battlePass.result.challengeDone', { xp: c.xp })}</span>
+                    ))}
+                  </div>
+                )}
                 {saveState === 'error' && (
                   <p className="aim-game-tip aim-game-save-error">
                     <Icon icon={AlertTriangle} size={16} /> Score non enregistré — vérifie ta connexion, le détail est dans la console.
@@ -2583,12 +2835,14 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                     <Icon icon={MODES[playlist[step + 1]].icon} style={{ color: MODES[playlist[step + 1]].accent }} />{' '}
                     {playlist[step + 1].charAt(0).toUpperCase() + playlist[step + 1].slice(1)} ({step + 2}/
                     {playlist.length})
+                    <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} />
                   </button>
                 )}
                 {playlistSteps && !isLastStep && (
                   <button className="refresh aim-game-cta" onClick={nextStep}>
                     <Icon icon={Play} size={16} /> Étape suivante — {playlistSteps[step + 1].name} ({step + 2}/
                     {playlistSteps.length})
+                    <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} />
                   </button>
                 )}
                 {/* Défi du jour : un seul essai compte au classement — pas de
@@ -2596,6 +2850,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                 {!config.challengeDate && (
                   <button className="refresh aim-game-cta" onClick={startSession}>
                     <Icon icon={RotateCcw} size={16} /> Recommencer
+                    <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} />
                   </button>
                 )}
               </>
@@ -2604,10 +2859,12 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
             {onExit ? (
               <button className="aim-game-close" onClick={onExit}>
                 Retour au menu
+                <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} action="B" />
               </button>
             ) : (
               <button className="aim-game-close" onClick={() => window.electronAPI.closeAimTrainer()}>
                 Fermer la fenêtre
+                <GamepadHint brand={controllerBrand} hasGamepad={hasGamepad} action="B" />
               </button>
             )}
           </div>

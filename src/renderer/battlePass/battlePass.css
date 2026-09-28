@@ -1,0 +1,983 @@
+/* Battle Pass (Aim Trainer) — écran des récompenses et des défis.
+   Chargé avec l'écran (import dans BattlePassScreen.jsx) : le menu de l'Aim
+   Trainer n'embarque pas ce CSS tant qu'on n'ouvre pas le pass. */
+
+.bp-screen {
+  --bp-line: #2b3040;
+  --r: #9aa0ab;
+  /* Plein écran : le hub laisse la place, seuls Retour et Son flottent par-dessus. */
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: clamp(440px, 33vw, 600px) minmax(0, 1fr);
+  background: var(--bg, #0a0c11);
+}
+
+/* Colonne de gauche : progression + liste ; l'aperçu occupe toute la droite. */
+.bp-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 0;
+  padding: 4.6rem 1.4rem 1.2rem 1.6rem;
+  background: linear-gradient(180deg, rgba(20, 23, 31, 0.96), rgba(12, 14, 19, 0.98));
+  border-right: 1px solid var(--border-strong);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.4);
+}
+
+.bp-left > .bp-challenges {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Écrans d'état (chargement, erreur, pas de saison) : une seule colonne. */
+.bp-screen.bp-screen-single {
+  display: grid;
+  place-items: center;
+}
+
+.bp-screen [data-rarity='common'] { --r: #5fd18a; }
+.bp-screen [data-rarity='rare'] { --r: #4ea3ff; }
+.bp-screen [data-rarity='epic'] { --r: #b36bff; }
+.bp-screen [data-rarity='legendary'] { --r: #ffc24a; }
+.bp-screen [data-rarity='mythic'] { --r: #ff4655; }
+.bp-screen [data-rarity='ultimate'] { --r: #ff6ad5; }
+.bp-screen [data-rarity='transcendent'] { --r: #ffd27a; }
+
+/* --- En-tête ------------------------------------------------------------ */
+
+.bp-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'title badge' 'xp xp';
+  align-items: center;
+  gap: 0.9rem 1rem;
+  padding: 1.1rem 1.3rem;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(255, 70, 85, 0.14), transparent 55%),
+    linear-gradient(180deg, var(--surface-alt), var(--surface));
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+
+.bp-header-title {
+  grid-area: title;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bp-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.bp-header-title h2 {
+  margin: 0;
+  font-family: var(--font-hero);
+  font-size: 2.2rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.bp-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.bp-level-badge {
+  grid-area: badge;
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+}
+
+.bp-level-badge-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1turn), #262b37 0);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 62%);
+  mask: radial-gradient(circle, transparent 60%, #000 62%);
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.bp-level-badge-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.bp-level-badge-inner small {
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bp-level-badge-inner strong {
+  font-family: var(--font-hero);
+  font-size: 2.5rem;
+  letter-spacing: 0.02em;
+}
+
+.bp-header-xp {
+  grid-area: xp;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+
+.bp-header-xp > strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+.bp-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.bp-next em {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: var(--r);
+  box-shadow: 0 0 8px var(--r);
+}
+
+.bp-since {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--good);
+  background: rgba(61, 220, 132, 0.09);
+  border: 1px solid rgba(61, 220, 132, 0.25);
+  border-radius: var(--r-sm);
+}
+
+/* --- Barres de progression ------------------------------------------------ */
+
+.bp-progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #20242e;
+}
+
+.bp-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent));
+  transition: width 0.5s var(--ease-out);
+}
+
+.bp-progress-lg {
+  height: 10px;
+  border-radius: 5px;
+}
+
+/* --- Boutons --------------------------------------------------------------- */
+
+.bp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--surface-hi);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s var(--ease-out);
+}
+
+.bp-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.bp-btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.bp-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bp-btn-primary {
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  border-color: transparent;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.bp-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  transform: translateY(-1px);
+}
+
+.bp-btn-ghost {
+  background: transparent;
+  color: var(--good);
+  border-color: rgba(61, 220, 132, 0.35);
+}
+
+/* --- Onglets ---------------------------------------------------------------- */
+
+.bp-tabs {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.bp-tabs button {
+  position: relative;
+  padding: 0.7rem 1.3rem;
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.bp-tabs button:hover {
+  color: var(--text);
+}
+
+.bp-tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.bp-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.bp-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  vertical-align: middle;
+}
+
+/* --- Liste des niveaux (colonne de gauche) ------------------------------------- */
+
+.bp-list {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.3rem 0.6rem 1rem 0.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.bp-level {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 0.7rem;
+  min-height: 34px;
+}
+
+/* Le rail vertical relie les niveaux ; il est plein jusqu'au niveau atteint. */
+.bp-level::before {
+  content: '';
+  position: absolute;
+  left: 21px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--bp-line);
+}
+
+.bp-level.reached::before {
+  background: var(--accent);
+}
+
+.bp-level-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: start center;
+  padding-top: 4px;
+}
+
+.bp-level-node > span {
+  min-width: 32px;
+  height: 28px;
+  padding: 0 0.3rem;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: var(--surface-alt);
+  border: 2px solid var(--bp-line);
+  border-radius: 8px;
+}
+
+.bp-level.reached .bp-level-node > span {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.bp-level.current .bp-level-node > span {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bp-level.current .bp-level-node > span {
+    animation: bpPulse 2.4s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes bpPulse {
+  50% {
+    box-shadow: 0 0 24px var(--accent-glow);
+  }
+}
+
+.bp-level-rewards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0 0.6rem;
+}
+
+/* --- Ligne de récompense ------------------------------------------------------ */
+
+.bp-reward {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.4rem 0.8rem 0.4rem 0.4rem;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--r) 40%, var(--border));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--r) 14%, transparent), transparent 70%), var(--surface);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: transform 0.15s var(--ease-out), border-color 0.15s;
+}
+
+.bp-reward:hover {
+  transform: translateX(3px);
+}
+
+.bp-reward:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.bp-reward[data-selected='true'] {
+  border-color: var(--r);
+  box-shadow: inset 3px 0 0 var(--r), 0 0 18px color-mix(in srgb, var(--r) 30%, transparent);
+}
+
+.bp-reward[data-state='claimable'] .bp-reward-state {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.bp-reward-thumb {
+  height: 54px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--r);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.bp-reward-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bp-reward-card {
+  width: 100%;
+  height: 100%;
+}
+
+.bp-reward[data-state='locked'] .bp-reward-card {
+  filter: grayscale(0.7) brightness(0.75);
+}
+
+.bp-reward[data-state='locked'] .bp-reward-thumb img {
+  filter: grayscale(0.8) brightness(0.8);
+}
+
+.bp-reward-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.bp-reward-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bp-reward-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bp-reward-rarity {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--r);
+}
+
+.bp-reward-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-radius: 4px;
+}
+
+.bp-reward[data-state='claimed'] .bp-reward-state {
+  color: var(--good);
+}
+
+/* --- Aperçu (à droite, toute la hauteur) ----------------------------------------- */
+
+.bp-preview {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 58%, color-mix(in srgb, var(--r) 22%, transparent), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 40% 35%, #1c2029 0%, #0a0c11 75%);
+  /* Fines lignes de trame, comme l'écran de sélection du Vestiaire. */
+  background-image:
+    repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 255, 255, 0.018) 22px 23px),
+    radial-gradient(ellipse 60% 55% at 50% 58%, color-mix(in srgb, var(--r) 22%, transparent), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 40% 35%, #1c2029 0%, #0a0c11 75%);
+}
+
+.bp-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.bp-stage[hidden] {
+  display: none;
+}
+
+.bp-watermark {
+  left: 2.4rem;
+  bottom: 7.5rem;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--r) 22%, transparent);
+}
+
+.bp-preview-head {
+  position: absolute;
+  top: 4.4rem;
+  left: 2.4rem;
+  max-width: 560px;
+  pointer-events: none;
+}
+
+.bp-preview-head h2 {
+  margin: 0.5rem 0 0.8rem;
+  font-family: var(--font-hero);
+  font-size: 3.4rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.bp-preview-head h2 span {
+  display: block;
+  color: var(--r);
+  text-shadow: 0 0 28px color-mix(in srgb, var(--r) 55%, transparent);
+}
+
+.bp-preview-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 3rem;
+  font-family: var(--font-hero);
+  font-size: clamp(3rem, 6vw, 6rem);
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--r);
+  text-shadow: 0 0 40px color-mix(in srgb, var(--r) 60%, transparent);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bp-preview-title {
+    animation: bpFloat 5s var(--ease-in-out) infinite;
+  }
+}
+
+@keyframes bpFloat {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.bp-preview-foot {
+  position: absolute;
+  left: 2.4rem;
+  right: 2.4rem;
+  bottom: 1.8rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.bp-preview-card-wrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-top: 3rem;
+  pointer-events: none;
+}
+
+/* Halo de la couleur de rareté derrière la carte (clip-path coupe les ombres). */
+.bp-preview-card-wrap::before {
+  content: '';
+  position: absolute;
+  width: min(72%, 860px);
+  aspect-ratio: 452 / 128;
+  margin-top: 3rem;
+  background: var(--r);
+  filter: blur(80px);
+  opacity: 0.38;
+}
+
+/* --- Carte de joueur « en vrai » --------------------------------------------------- */
+
+.pc-frame {
+  --mx: 50%;
+  --my: 50%;
+  --rx: 0deg;
+  --ry: 0deg;
+  position: relative;
+  width: min(72%, 860px);
+  padding: 3px;
+  pointer-events: auto;
+  background: linear-gradient(135deg, var(--r), rgba(255, 255, 255, 0.9) 42%, var(--r) 58%, color-mix(in srgb, var(--r) 35%, #000));
+  clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 30px 100%, 0 calc(100% - 30px));
+  transform: perspective(1100px) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.18s ease-out;
+}
+
+.pc-art {
+  width: 100%;
+  aspect-ratio: 452 / 128;
+  clip-path: polygon(0 0, calc(100% - 27px) 0, 100% 27px, 100% 100%, 27px 100%, 0 calc(100% - 27px));
+}
+
+.pc-glare,
+.pc-holo,
+.pc-inner {
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  clip-path: polygon(0 0, calc(100% - 27px) 0, 100% 27px, 100% 100%, 27px 100%, 0 calc(100% - 27px));
+}
+
+.pc-inner {
+  inset: 3px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), inset 0 -60px 60px -30px rgba(0, 0, 0, 0.55);
+}
+
+.pc-glare {
+  opacity: 0;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255, 255, 255, 0.32), transparent 46%);
+  mix-blend-mode: soft-light;
+  transition: opacity 0.2s;
+}
+
+.pc-holo {
+  opacity: 0;
+  background: conic-gradient(from 0deg at var(--mx) var(--my), #ff2fa0, #00e5ff, #ffe14a, #6dff8a, #ff2fa0);
+  mix-blend-mode: color-dodge;
+  transition: opacity 0.25s;
+}
+
+.pc-frame:hover .pc-glare {
+  opacity: 1;
+}
+
+.pc-frame:hover .pc-holo {
+  opacity: 0.22;
+}
+
+.pc-plate {
+  position: absolute;
+  left: 14px;
+  right: 40px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.5rem;
+  background: linear-gradient(90deg, rgba(4, 5, 9, 0.86), rgba(4, 5, 9, 0.4));
+  border-left: 3px solid var(--r);
+  backdrop-filter: blur(4px);
+}
+
+.pc-avatar {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-family: var(--font-hero);
+  font-size: 1.4rem;
+  background: #10131a;
+  border: 2px solid var(--r);
+}
+
+.pc-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pc-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.pc-id strong {
+  font-family: var(--font-hero);
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-id em {
+  font-style: normal;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--hue-gold, #ffc857);
+}
+
+.pc-meta {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.pc-meta b {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--r);
+}
+
+.pc-meta i {
+  font-style: normal;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-frame {
+    transform: none;
+    transition: none;
+  }
+}
+
+.bp-preview-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.bp-preview-tools .skin-viewer-hint {
+  margin-left: 0.6rem;
+}
+
+.bp-preview-action {
+  margin-left: auto;
+}
+
+.bp-btn-big {
+  min-width: 240px;
+  padding: 0.95rem 1.8rem;
+  font-size: 0.95rem;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.bp-preview-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.8rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+}
+
+.bp-preview-status.ok {
+  color: var(--good);
+  border-color: rgba(61, 220, 132, 0.35);
+}
+
+
+/* --- Défis ------------------------------------------------------------------------- */
+
+.bp-challenges {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.bp-challenge-group {
+  padding: 1rem 1.1rem 1.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: var(--r-md);
+}
+
+.bp-challenge-group > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.bp-challenge-group h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bp-challenge-group ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bp-challenge {
+  display: grid;
+  grid-template-columns: 70px 1fr auto 74px;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.bp-challenge[data-done='true'] {
+  opacity: 0.72;
+  border-color: rgba(61, 220, 132, 0.3);
+}
+
+.bp-challenge-tier {
+  justify-self: start;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0c0e13;
+  background: #9aa0ab;
+  border-radius: 3px;
+}
+
+.bp-challenge[data-tier='easy'] .bp-challenge-tier { background: var(--good); }
+.bp-challenge[data-tier='medium'] .bp-challenge-tier { background: var(--hue-gold); }
+.bp-challenge[data-tier='hard'] .bp-challenge-tier { background: var(--accent); color: #fff; }
+.bp-challenge[data-tier='season'] .bp-challenge-tier { background: var(--hue-purple); }
+
+.bp-challenge-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.bp-challenge-text {
+  font-size: 0.88rem;
+}
+
+.bp-challenge-count {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.bp-challenge-xp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--hue-gold);
+}
+
+.bp-challenge[data-done='true'] .bp-challenge-xp {
+  color: var(--good);
+}
+
+/* --- États vides ----------------------------------------------------------------------- */
+
+.bp-message,
+.bp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 4rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.bp-message h3 {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+
+.bp-message p {
+  max-width: 46ch;
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .bp-screen {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .bp-preview {
+    min-height: 420px;
+  }
+  .bp-challenges {
+    grid-template-columns: 1fr;
+  }
+  .bp-challenge {
+    grid-template-columns: 64px 1fr 80px;
+  }
+  .bp-challenge-count {
+    display: none;
+  }
+}
+
+/* Niveaux « MVP Points » : joyau cyan (couleur de la monnaie en boutique). */
+.bp-reward-points {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #7fe3ff;
+  filter: drop-shadow(0 0 6px rgba(127, 227, 255, 0.7));
+}
+
+.bp-preview-points {
+  color: #7fe3ff;
+  text-shadow: 0 0 30px rgba(127, 227, 255, 0.6);
+}

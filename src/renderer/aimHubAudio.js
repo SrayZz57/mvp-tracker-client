@@ -57,7 +57,9 @@ export function playHoverSfx() {
 }
 
 export function playClickSfx() {
-  beep({ freq: 420, duration: 0.09, type: 'square', gain: 0.05, sweep: 640 });
+  // Onde triangle plutôt que carrée : même idée que la nappe d'ambiance
+  // plus bas (moins d'harmoniques aiguës agressives, plus feutré).
+  beep({ freq: 420, duration: 0.09, type: 'triangle', gain: 0.055, sweep: 640 });
 }
 
 export function playConfirmSfx() {

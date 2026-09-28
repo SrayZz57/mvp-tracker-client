@@ -4,6 +4,7 @@ import { Search, Check, X, MessageCircle } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { supabase } from './supabaseClient.js';
 import { FriendAvatar, friendLabel, PROFILE_FIELDS } from './friendsShared.jsx';
+import { PlayerTitle } from './battlePass/playerCosmetics.jsx';
 import FriendSummaryModal from './FriendSummaryModal.jsx';
 import CollapsibleCard from './CollapsibleCard.jsx';
 
@@ -150,6 +151,7 @@ function FriendsPage({ myId, onlineFriendIds = new Set(), onOpenConversation, ap
           <div className="friend-search-result">
             <FriendAvatar profile={searchResult} size={32} />
             <span>{friendLabel(searchResult)}</span>
+<PlayerTitle userId={searchResult?.id} />
             {requestSent ? (
               <span className="label">{t('friends.requestSent')}</span>
             ) : (
@@ -166,6 +168,7 @@ function FriendsPage({ myId, onlineFriendIds = new Set(), onOpenConversation, ap
               <div key={f.id} className="friend-request-row">
                 <FriendAvatar profile={otherProfile(f)} size={36} />
                 <span>{friendLabel(otherProfile(f))}</span>
+<PlayerTitle userId={otherProfile(f)?.id} />
                 <div className="friend-request-actions">
                   <button onClick={() => respondToRequest(f.id, true)} title={t('friends.accept')}><Icon icon={Check} size={16} /></button>
                   <button onClick={() => respondToRequest(f.id, false)} title={t('friends.decline')}><Icon icon={X} size={16} /></button>
@@ -183,6 +186,7 @@ function FriendsPage({ myId, onlineFriendIds = new Set(), onOpenConversation, ap
               <div key={f.id} className="friend-request-row">
                 <FriendAvatar profile={otherProfile(f)} size={36} />
                 <span>{friendLabel(otherProfile(f))}</span>
+<PlayerTitle userId={otherProfile(f)?.id} />
                 <button onClick={() => cancelRequest(f.id)} title={t('friends.cancel')}><Icon icon={X} size={16} /></button>
               </div>
             ))}
@@ -207,6 +211,7 @@ function FriendsPage({ myId, onlineFriendIds = new Set(), onOpenConversation, ap
                     <FriendAvatar profile={p} size={36} online={onlineFriendIds.has(p.id)} />
                   </button>
                   <span>{friendLabel(p)}</span>
+<PlayerTitle userId={p?.id} />
                   <div className="friend-request-actions friend-request-actions-lg">
                     <button onClick={() => onOpenConversation(p.id)} title={t('friends.sendMessage')}><Icon icon={MessageCircle} size={16} /></button>
                     <button onClick={() => removeFriend(f.id)} title={t('friends.removeFriend')}><Icon icon={X} size={16} /></button>

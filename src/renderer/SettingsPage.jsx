@@ -62,6 +62,7 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
   const [savingRiotId, setSavingRiotId] = useState(false);
   const [riotIdError, setRiotIdError] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [updateCheck, setUpdateCheck] = useState({ loading: false, result: null });
 
   useEffect(() => {
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
@@ -89,6 +90,16 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
     const next = !perfLiteEnabled;
     setPerfLiteEnabled(next);
     setPerfLite(next);
+  };
+
+  const handleCheckForUpdate = async () => {
+    setUpdateCheck({ loading: true, result: null });
+    try {
+      const result = await window.electronAPI.checkForUpdate();
+      setUpdateCheck({ loading: false, result });
+    } catch {
+      setUpdateCheck({ loading: false, result: { status: 'error' } });
+    }
   };
 
   const handleToggleTiltNotifications = () => {
@@ -302,6 +313,31 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
       </CollapsibleCard>
 
       <CollapsibleCard id="settings.app" title={t('account.settingsAppTitle')}>
+        <div className="settings-row">
+          <div className="settings-row-text">
+            <span className="settings-row-label">{t('account.updateLabel')}</span>
+            <p className="settings-row-hint">
+              {updateCheck.result
+                ? t(`account.updateStatus.${updateCheck.result.status}`, {
+                    current: updateCheck.result.current,
+                    version: updateCheck.result.version,
+                  })
+                : t('account.updateHint')}
+            </p>
+            {updateCheck.result?.status === 'available' && (
+              <button
+                type="button"
+                className="account-forgot-password"
+                onClick={() => window.electronAPI.openExternal('https://github.com/SrayZz57/mvp-tracker-client/releases/latest')}
+              >
+                {t('account.updateDownload')}
+              </button>
+            )}
+          </div>
+          <button type="button" className="refresh" onClick={handleCheckForUpdate} disabled={updateCheck.loading}>
+            {updateCheck.loading ? t('account.updateChecking') : t('account.updateCheck')}
+          </button>
+        </div>
         <SettingsToggleRow
           label={t('account.autoLaunchLabel')}
           hint={t('account.autoLaunchHint')}

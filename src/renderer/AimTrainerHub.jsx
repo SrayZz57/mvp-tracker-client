@@ -5,7 +5,7 @@
 // mécanique de jeu elle-même reste entièrement dans AimTrainerGame.jsx,
 // inchangée, simplement montée ici au lieu d'être ouverte dans une nouvelle
 // fenêtre séparée.
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Play,
@@ -17,7 +17,6 @@ import {
   Wrench,
   ListMusic,
   Flame,
-  Snowflake,
   Volume2,
   VolumeX,
   ArrowLeft,
@@ -27,15 +26,104 @@ import {
   UserRound,
   Check,
   Gauge,
+  Trophy,
+  Hammer,
 } from 'lucide-react';
-import { DEFAULT_CONFIG, MODES, WEAPON_MODELS } from './aimTrainerModes.js';
+import useBattlePass from './battlePass/useBattlePass.js';
+import useShop from './shop/useShop.js';
+import WelcomeBonusModal from './shop/WelcomeBonusModal.jsx';
+import ModesScreen from './ModesScreen.jsx';
+import HubLobby from './HubLobby.jsx';
+import StatsScreen from './StatsScreen.jsx';
+import SettingsScreen from './SettingsScreen.jsx';
+import ControllerCalibration from './input/ControllerCalibration.jsx';
+import LockerScreen from './LockerScreen.jsx';
+import LeaderboardScreen from './LeaderboardScreen.jsx';
+import { PlayerTitle } from './battlePass/playerCosmetics.jsx';
+import { isHandLocked, isSkinLocked } from './battlePass/ownership.js';
+import { DEFAULT_CONFIG, MODES, VALORANT_MODE_IDS, WEAPON_MODELS } from './aimTrainerModes.js';
 import SensitivityFinder from './SensitivityFinder.jsx';
 import { analyzeFinderResults } from './sensitivityFit.js';
 import Icon from './Icon.jsx';
-import mvpTrackerLogo from '../assets/logo.png';
+import mvpTrackerLogo from '../assets/logo-text.png';
 import weaponDefaultPreview from '../assets/weapon-default-preview.png';
 import weaponVandalPreview from '../assets/weapon-vandal-preview.png';
 import weaponGlockPreview from '../assets/weapon-glock-preview.png';
+import weaponVandalMagmaPreview from '../assets/weapon-vandal-magma-preview.png';
+import weaponVandalCircuitPreview from '../assets/weapon-vandal-circuit-preview.png';
+import weaponVandalCelestePreview from '../assets/weapon-vandal-celeste-preview.png';
+import weaponVandalJadePreview from '../assets/weapon-vandal-jade-preview.png';
+import weaponVandalClockworkPreview from '../assets/weapon-vandal-clockwork-preview.png';
+import weaponSniperPreview from '../assets/weapon-sniper-preview.png';
+import weaponVandalDunePreview from '../assets/weapon-vandal-dune-preview.png';
+import weaponVandalCobaltPreview from '../assets/weapon-vandal-cobalt-preview.png';
+import weaponVandalTidalPreview from '../assets/weapon-vandal-tidal-preview.png';
+import weaponVandalRedlinePreview from '../assets/weapon-vandal-redline-preview.png';
+import weaponGlockOlivePreview from '../assets/weapon-glock-olive-preview.png';
+import weaponGlockIvoryPreview from '../assets/weapon-glock-ivory-preview.png';
+import weaponGlockSunsetPreview from '../assets/weapon-glock-sunset-preview.png';
+import weaponGlockVoltPreview from '../assets/weapon-glock-volt-preview.png';
+import weaponSniperUrbanPreview from '../assets/weapon-sniper-urban-preview.png';
+import weaponSniperForestPreview from '../assets/weapon-sniper-forest-preview.png';
+import weaponSniperAmethystPreview from '../assets/weapon-sniper-amethyst-preview.png';
+import weaponSniperCryoPreview from '../assets/weapon-sniper-cryo-preview.png';
+import weaponVandalLithospherePreview from '../assets/weapon-vandal-lithosphere-preview.png';
+import weaponVandalSymbiotePreview from '../assets/weapon-vandal-symbiote-preview.png';
+import weaponVandalHeliopausePreview from '../assets/weapon-vandal-heliopause-preview.png';
+import weaponVandalReliquaryPreview from '../assets/weapon-vandal-reliquary-preview.png';
+import weaponVandalNullbytePreview from '../assets/weapon-vandal-nullbyte-preview.png';
+import weaponVandalPatchbayPreview from '../assets/weapon-vandal-patchbay-preview.png';
+import weaponVandalDownforcePreview from '../assets/weapon-vandal-downforce-preview.png';
+import weaponVandalSingularityPreview from '../assets/weapon-vandal-singularity-preview.png';
+import weaponGlockMetamorphPreview from '../assets/weapon-glock-metamorph-preview.png';
+import weaponSniperRiftPreview from '../assets/weapon-sniper-rift-preview.png';
+import weaponVandalOrigamiPreview from '../assets/weapon-vandal-origami-preview.png';
+import weaponVandalHivePreview from '../assets/weapon-vandal-hive-preview.png';
+import weaponVandalVoxelPreview from '../assets/weapon-vandal-voxel-preview.png';
+import weaponVandalMaelstromPreview from '../assets/weapon-vandal-maelstrom-preview.png';
+import weaponVandalSumiPreview from '../assets/weapon-vandal-sumi-preview.png';
+import weaponGlockArcadePreview from '../assets/weapon-glock-arcade-preview.png';
+import weaponGlockHanabiPreview from '../assets/weapon-glock-hanabi-preview.png';
+import weaponGlockMiragePreview from '../assets/weapon-glock-mirage-preview.png';
+import weaponGlockCandyPreview from '../assets/weapon-glock-candy-preview.png';
+import weaponGlockKintsugiPreview from '../assets/weapon-glock-kintsugi-preview.png';
+import weaponSniperLocomotivePreview from '../assets/weapon-sniper-locomotive-preview.png';
+import weaponSniperKaleidoscopePreview from '../assets/weapon-sniper-kaleidoscope-preview.png';
+import weaponSniperMarblePreview from '../assets/weapon-sniper-marble-preview.png';
+import weaponSniperWeaverPreview from '../assets/weapon-sniper-weaver-preview.png';
+import weaponSniperCorsairPreview from '../assets/weapon-sniper-corsair-preview.png';
+import weaponVandalTitanPreview from '../assets/weapon-vandal-titan-preview.png';
+import weaponVandalArcanePreview from '../assets/weapon-vandal-arcane-preview.png';
+import weaponVandalMercuryPreview from '../assets/weapon-vandal-mercury-preview.png';
+import weaponVandalSylvanPreview from '../assets/weapon-vandal-sylvan-preview.png';
+import weaponVandalSpectrePreview from '../assets/weapon-vandal-spectre-preview.png';
+import weaponSniperOrbitalPreview from '../assets/weapon-sniper-orbital-preview.png';
+import weaponSniperOssuaryPreview from '../assets/weapon-sniper-ossuary-preview.png';
+import weaponSniperStainedPreview from '../assets/weapon-sniper-stained-preview.png';
+import weaponSniperAbyssalPreview from '../assets/weapon-sniper-abyssal-preview.png';
+import weaponSniperSupernovaPreview from '../assets/weapon-sniper-supernova-preview.png';
+import weaponGlockChronosPreview from '../assets/weapon-glock-chronos-preview.png';
+import weaponGlockMonarchPreview from '../assets/weapon-glock-monarch-preview.png';
+import weaponGlockScorpionPreview from '../assets/weapon-glock-scorpion-preview.png';
+import weaponGlockQuantumPreview from '../assets/weapon-glock-quantum-preview.png';
+import weaponGlockHarlequinPreview from '../assets/weapon-glock-harlequin-preview.png';
+import weaponVandalAuroraPreview from '../assets/weapon-vandal-aurora-preview.png';
+import weaponVandalSakuraPreview from '../assets/weapon-vandal-sakura-preview.png';
+import weaponVandalRadiationPreview from '../assets/weapon-vandal-radiation-preview.png';
+import weaponVandalPharaohPreview from '../assets/weapon-vandal-pharaoh-preview.png';
+import weaponVandalHologramPreview from '../assets/weapon-vandal-hologram-preview.png';
+import weaponGlockFuturisticPreview from '../assets/weapon-glock-futuristic-preview.png';
+import weaponGlockBananaPreview from '../assets/weapon-glock-banana-preview.png';
+import weaponGlockSynthwavePreview from '../assets/weapon-glock-synthwave-preview.png';
+import weaponGlockKrakenPreview from '../assets/weapon-glock-kraken-preview.png';
+import weaponGlockOniPreview from '../assets/weapon-glock-oni-preview.png';
+import weaponGlockPrismPreview from '../assets/weapon-glock-prism-preview.png';
+import weaponGlockXenoPreview from '../assets/weapon-glock-xeno-preview.png';
+import weaponSniperGlacierPreview from '../assets/weapon-sniper-glacier-preview.png';
+import weaponSniperVoidPreview from '../assets/weapon-sniper-void-preview.png';
+import weaponSniperPhoenixPreview from '../assets/weapon-sniper-phoenix-preview.png';
+import weaponSniperStormPreview from '../assets/weapon-sniper-storm-preview.png';
+import weaponSniperCrownPreview from '../assets/weapon-sniper-crown-preview.png';
 
 // Vignettes des cartes de sélection d'arme (Réglages → Modèle d'arme) —
 // 'default' est géré séparément (toujours présent), le reste couvre les
@@ -43,6 +131,59 @@ import weaponGlockPreview from '../assets/weapon-glock-preview.png';
 const WEAPON_PREVIEWS = {
   vandal: weaponVandalPreview,
   glock: weaponGlockPreview,
+  sniper: weaponSniperPreview,
+};
+
+const SKIN_PREVIEWS = {
+  vandal: { standard: weaponVandalPreview, dune: weaponVandalDunePreview, cobalt: weaponVandalCobaltPreview, tidal: weaponVandalTidalPreview, redline: weaponVandalRedlinePreview, magma: weaponVandalMagmaPreview, circuit: weaponVandalCircuitPreview, celeste: weaponVandalCelestePreview, jade: weaponVandalJadePreview, clockwork: weaponVandalClockworkPreview, aurora: weaponVandalAuroraPreview, sakura: weaponVandalSakuraPreview, radiation: weaponVandalRadiationPreview, pharaoh: weaponVandalPharaohPreview, hologram: weaponVandalHologramPreview, titan: weaponVandalTitanPreview, arcane: weaponVandalArcanePreview, mercury: weaponVandalMercuryPreview, sylvan: weaponVandalSylvanPreview, spectre: weaponVandalSpectrePreview, lithosphere: weaponVandalLithospherePreview, symbiote: weaponVandalSymbiotePreview, heliopause: weaponVandalHeliopausePreview, reliquary: weaponVandalReliquaryPreview, nullbyte: weaponVandalNullbytePreview, patchbay: weaponVandalPatchbayPreview, downforce: weaponVandalDownforcePreview, singularity: weaponVandalSingularityPreview, origami: weaponVandalOrigamiPreview, hive: weaponVandalHivePreview, voxel: weaponVandalVoxelPreview, maelstrom: weaponVandalMaelstromPreview, sumi: weaponVandalSumiPreview },
+  glock: {
+    standard: weaponGlockPreview,
+    olive: weaponGlockOlivePreview,
+    ivory: weaponGlockIvoryPreview,
+    sunset: weaponGlockSunsetPreview,
+    volt: weaponGlockVoltPreview,
+    futuristic: weaponGlockFuturisticPreview,
+    banana: weaponGlockBananaPreview,
+    synthwave: weaponGlockSynthwavePreview,
+    kraken: weaponGlockKrakenPreview,
+    oni: weaponGlockOniPreview,
+    prism: weaponGlockPrismPreview,
+    xeno: weaponGlockXenoPreview,
+    chronos: weaponGlockChronosPreview,
+    monarch: weaponGlockMonarchPreview,
+    scorpion: weaponGlockScorpionPreview,
+    quantum: weaponGlockQuantumPreview,
+    harlequin: weaponGlockHarlequinPreview,
+    metamorph: weaponGlockMetamorphPreview,
+    arcade: weaponGlockArcadePreview,
+    hanabi: weaponGlockHanabiPreview,
+    mirage: weaponGlockMiragePreview,
+    candy: weaponGlockCandyPreview,
+    kintsugi: weaponGlockKintsugiPreview,
+  },
+  sniper: {
+    standard: weaponSniperPreview,
+    urban: weaponSniperUrbanPreview,
+    forest: weaponSniperForestPreview,
+    amethyst: weaponSniperAmethystPreview,
+    cryo: weaponSniperCryoPreview,
+    glacier: weaponSniperGlacierPreview,
+    void: weaponSniperVoidPreview,
+    phoenix: weaponSniperPhoenixPreview,
+    storm: weaponSniperStormPreview,
+    crown: weaponSniperCrownPreview,
+    orbital: weaponSniperOrbitalPreview,
+    ossuary: weaponSniperOssuaryPreview,
+    stained: weaponSniperStainedPreview,
+    abyssal: weaponSniperAbyssalPreview,
+    supernova: weaponSniperSupernovaPreview,
+    rift: weaponSniperRiftPreview,
+    locomotive: weaponSniperLocomotivePreview,
+    kaleidoscope: weaponSniperKaleidoscopePreview,
+    marble: weaponSniperMarblePreview,
+    weaver: weaponSniperWeaverPreview,
+    corsair: weaponSniperCorsairPreview,
+  },
 };
 import { useAgentsData } from './agentIcons.js';
 import { useMapsData } from './mapImages.js';
@@ -57,10 +198,12 @@ import {
   todayKey,
 } from './aimScores.js';
 import { buildDailyChallenge } from './aimChallenge.js';
-import CustomModeConfig from './CustomModeConfig.jsx';
-import PlaylistManager from './PlaylistManager.jsx';
+import CustomModeConfig, { loadPresets, presetValues } from './CustomModeConfig.jsx';
+import { arenaLaunchConfig, loadArenas } from './arenaEditor/arenaStore.js';
+import { AIM_MODE, sanitizeControllerConfig } from './input/controllerProfiles.js';
+import { useGamepadMenuNav } from './input/useGamepadMenuNav.js';
+import PlaylistManager, { loadPlaylists } from './PlaylistManager.jsx';
 import AimLeaderboardRow from './AimLeaderboardRow.jsx';
-import CrosshairPreview from './CrosshairPreview.jsx';
 import { supabase } from './supabaseClient.js';
 import {
   loadHubAudioPrefs,
@@ -77,9 +220,18 @@ import {
 // l'ouverture de l'Aim Trainer n'attend plus ce gros morceau de code.
 const loadGame = () => import('./AimTrainerGame.jsx');
 const AimTrainerGame = lazy(loadGame);
+// Vestiaire 3D : charge three.js seulement à l'ouverture.
+const SkinViewer = lazy(() => import('./SkinViewer.jsx'));
+const BattlePassScreen = lazy(() => import('./battlePass/BattlePassScreen.jsx'));
+const ShopScreen = lazy(() => import('./shop/ShopScreen.jsx'));
+// Éditeur d'arène : three.js et ses poignées, chargés à l'ouverture seulement.
+const ArenaEditor = lazy(() => import('./arenaEditor/ArenaEditor.jsx'));
+
+// Accueil « lobby » (HubLobby.jsx) ou accueil d'origine (plus bas dans ce
+// fichier, conservé tel quel) : passer à false pour revenir à l'ancien.
+const USE_LOBBY = true;
 
 const SETTINGS_STORAGE_KEY = 'mvptracker-aim-trainer-settings';
-const HUB_THEME_STORAGE_KEY = 'mvptracker-aim-hub-theme';
 const TIP_KEYS = ['hubTip1', 'hubTip2', 'hubTip3', 'hubTip4', 'hubTip5', 'hubTip6', 'hubTip7'];
 const TARGET_COLORS = ['#ff4655', '#4ec9f5', '#3ddc84', '#ffc857', '#9b7bff', '#ffffff'];
 const WARMUP_ROUTINE = ['flick', 'tracking', 'micro'];
@@ -87,28 +239,20 @@ const TRACKING_MODE_IDS = ['trackingBeginner', 'trackingIntermediate', 'tracking
 const PATROL_MODE_IDS = ['patrolSlow', 'patrol', 'patrolFast', 'patrolMulti'];
 // Ordre des héros tirés au hasard (heroAgents), aligné sur les entrées du
 // menu d'accueil — sert à savoir quel portrait afficher pour hoveredNav.
-const NAV_KEYS = ['play', 'modes', 'stats', 'settings', 'custom', 'playlists', 'theme'];
+const NAV_KEYS = ['play', 'modes', 'battlepass', 'stats', 'settings', 'skin'];
 
 function loadConfig() {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    return raw ? { ...DEFAULT_CONFIG, ...JSON.parse(raw) } : { ...DEFAULT_CONFIG };
+    const merged = raw ? { ...DEFAULT_CONFIG, ...JSON.parse(raw) } : { ...DEFAULT_CONFIG };
+    // Relecture bornée (valeurs corrompues/hors bornes -> défauts) — mêmes
+    // clés que celles écrites par set({ controller: ... }), voir
+    // sanitizeControllerConfig. Aucun nouveau système de stockage : ce champ
+    // vit dans le même objet `config` que le reste des réglages.
+    merged.controller = sanitizeControllerConfig(merged.controller);
+    return merged;
   } catch {
     return { ...DEFAULT_CONFIG };
-  }
-}
-
-// Préférence de thème du MENU (pas la config de jeu) : agent au hasard
-// (défaut) ou agent fixe choisi une fois pour toutes — persistée pour rester
-// stable d'une ouverture à l'autre.
-function loadHubThemePref() {
-  try {
-    const raw = localStorage.getItem(HUB_THEME_STORAGE_KEY);
-    if (!raw) return { mode: 'random', agentUuid: null };
-    const parsed = JSON.parse(raw);
-    return { mode: parsed.mode === 'fixed' ? 'fixed' : 'random', agentUuid: parsed.agentUuid ?? null };
-  } catch {
-    return { mode: 'random', agentUuid: null };
   }
 }
 
@@ -186,100 +330,6 @@ function ModeGroupPicker({ titleKey, descKey, modeIds, activeModeId, personalBes
 // hasard à chaque ouverture avec des couleurs qui varient (comportement par
 // défaut), soit un agent fixe choisi une fois pour toutes — deux vues :
 // 'choice' (le choix binaire) et 'pick' (la grille d'agents, seulement pour
-// "Agent fixe").
-function HubThemePicker({ pref, agents, onSelectRandom, onSelectFixed, onClose, t }) {
-  const [view, setView] = useState(pref.mode === 'fixed' ? 'pick' : 'choice');
-
-  return (
-    <div className="custom-config-overlay" onClick={onClose}>
-      <div className="custom-config-card tracking-picker-card" onClick={(e) => e.stopPropagation()}>
-        <h2>{t('aimTrainer.hubTheme')}</h2>
-
-        {view === 'choice' ? (
-          <>
-            <p className="label">{t('aimTrainer.themeIntro')}</p>
-            <div className="aim-mode-grid">
-              <button
-                className={pref.mode === 'random' ? 'aim-mode-card active' : 'aim-mode-card'}
-                style={{ '--mode-accent': '#4ec9f5' }}
-                onMouseEnter={playHoverSfx}
-                onClick={() => {
-                  playClickSfx();
-                  onSelectRandom();
-                }}
-              >
-                <span className="aim-mode-glow" aria-hidden="true" />
-                <span className="aim-mode-head">
-                  <span className="aim-mode-icon"><Icon icon={Palette} /></span>
-                  {pref.mode === 'random' && <span className="aim-mode-crown"><Icon icon={Check} size={14} /></span>}
-                </span>
-                <span className="aim-mode-name">{t('aimTrainer.themeRandomTitle')}</span>
-                <span className="aim-mode-desc">{t('aimTrainer.themeRandomDesc')}</span>
-              </button>
-              <button
-                className={pref.mode === 'fixed' ? 'aim-mode-card active' : 'aim-mode-card'}
-                style={{ '--mode-accent': '#ff4655' }}
-                onMouseEnter={playHoverSfx}
-                onClick={() => {
-                  playClickSfx();
-                  setView('pick');
-                }}
-              >
-                <span className="aim-mode-glow" aria-hidden="true" />
-                <span className="aim-mode-head">
-                  <span className="aim-mode-icon"><Icon icon={UserRound} /></span>
-                  {pref.mode === 'fixed' && <span className="aim-mode-crown"><Icon icon={Check} size={14} /></span>}
-                </span>
-                <span className="aim-mode-name">{t('aimTrainer.themeFixedTitle')}</span>
-                <span className="aim-mode-desc">{t('aimTrainer.themeFixedDesc')}</span>
-              </button>
-            </div>
-            <div className="custom-config-actions">
-              <button className="account-forgot-password" onClick={onClose}>
-                {t('aimTrainer.customCancel')}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="label">{t('aimTrainer.themeFixedPickIntro')}</p>
-            <div className="aim-mode-grid">
-              {agents.map((agent) => (
-                <button
-                  key={agent.uuid}
-                  className={pref.agentUuid === agent.uuid ? 'aim-mode-card active' : 'aim-mode-card'}
-                  style={{
-                    '--mode-accent': agent.backgroundGradientColors?.[0]
-                      ? `#${agent.backgroundGradientColors[0].slice(0, 6)}`
-                      : '#8a8f9c',
-                  }}
-                  onMouseEnter={playHoverSfx}
-                  onClick={() => {
-                    playClickSfx();
-                    onSelectFixed(agent.uuid);
-                  }}
-                >
-                  <span className="aim-mode-glow" aria-hidden="true" />
-                  <span className="aim-mode-head">
-                    <span className="aim-mode-icon"><img src={agent.displayIcon} alt="" className="aim-theme-agent-icon" /></span>
-                    {pref.agentUuid === agent.uuid && <span className="aim-mode-crown"><Icon icon={Check} size={14} /></span>}
-                  </span>
-                  <span className="aim-mode-name">{agent.displayName}</span>
-                </button>
-              ))}
-            </div>
-            <div className="custom-config-actions">
-              <button className="account-forgot-password" onClick={() => setView('choice')}>
-                {t('aimTrainer.customCancel')}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // SVG minimal, même logique que ProgressionChart de l'ancien AimTrainer.jsx.
 function ProgressionChart({ scores, accent }) {
   const width = 320;
@@ -309,7 +359,7 @@ function ProgressionChart({ scores, accent }) {
 // compact (pas le gros bandeau précédent) : inspiré du coin haut-droit d'un
 // écran d'accueil de jeu (pseudo + monnaie/rang toujours visibles, jamais
 // envahissants).
-function HubProfileChip({ avatarIcon, name, tag, currentTier, onClick, t }) {
+function HubProfileChip({ userId, avatarIcon, name, tag, currentTier, onClick, t }) {
   return (
     <button className="aim-hub-profile-chip" onClick={onClick}>
       <div className="aim-hub-profile-avatar">
@@ -320,6 +370,7 @@ function HubProfileChip({ avatarIcon, name, tag, currentTier, onClick, t }) {
           {name || t('aimTrainer.hubGuest')}
           {tag && <span className="profile-tag">#{tag}</span>}
         </div>
+        <PlayerTitle userId={userId} />
         {currentTier ? (
           <div className="aim-hub-profile-rank">
             {currentTier.icon && <img src={currentTier.icon} alt="" />}
@@ -338,7 +389,7 @@ function HubProfileChip({ avatarIcon, name, tag, currentTier, onClick, t }) {
 // (voir aim-hub-bg-portrait plus bas), pas de 4 blocs identiques répétés à
 // l'écran : un seul point focal à la fois, comme un vrai menu de jeu
 // (Overwatch, Apex...) où survoler une entrée prévisualise sa scène.
-function NavListItem({ icon, label, hint, active, onHover, onClick }) {
+function NavListItem({ icon, label, hint, active, onHover, onClick, badge = 0 }) {
   return (
     <button
       className={active ? 'aim-hub-nav-item active' : 'aim-hub-nav-item'}
@@ -355,7 +406,10 @@ function NavListItem({ icon, label, hint, active, onHover, onClick }) {
       <span className="aim-hub-nav-item-bar" aria-hidden="true" />
       <span className="aim-hub-nav-item-icon"><Icon icon={icon} size={26} /></span>
       <span className="aim-hub-nav-item-text">
-        <span className="aim-hub-nav-item-label">{label}</span>
+        <span className="aim-hub-nav-item-label">
+          {label}
+          {badge > 0 && <span className="aim-hub-nav-item-badge">{badge}</span>}
+        </span>
         {hint && <span className="aim-hub-nav-item-hint">{hint}</span>}
       </span>
       <span className="aim-hub-nav-item-chevron" aria-hidden="true">
@@ -388,7 +442,7 @@ function HomeChallengeCard({ challenge, dailyBoard, challengeDone, myId, apiKey,
       </button>
       {dailyBoard.length > 0 && (
         <div className="aim-board">
-          {dailyBoard.slice(0, 3).map((row, i) => (
+          {dailyBoard.slice(0, 5).map((row, i) => (
             <AimLeaderboardRow
               key={row.user_id}
               row={row}
@@ -577,12 +631,19 @@ function TipBanner({ t }) {
 }
 
 function AimTrainerHub({ config: initialRawConfig }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const myId = initialRawConfig?.userId ?? null;
   const apiKey = initialRawConfig?.apiKey ?? null;
   const riotName = initialRawConfig?.name ?? null;
   const riotTag = initialRawConfig?.tag ?? null;
   const rankInfo = initialRawConfig?.rank ?? null;
+  const bp = useBattlePass(myId);
+  const shop = useShop(myId);
+  // Fermer sans réclamer (croix) la fait réapparaître à la prochaine entrée
+  // dans l'Aim Trainer : welcomeClaimed (serveur) ne change pas, seul ce flag
+  // local empêche qu'elle reste ouverte pendant la session en cours.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+  const showWelcomeModal = shop.status === 'ready' && !shop.welcomeClaimed && !welcomeDismissed;
   const avatarCardUuid = initialRawConfig?.avatarCardUuid ?? null;
   const displayName = initialRawConfig?.displayName ?? riotName;
 
@@ -596,20 +657,12 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const rankTiers = useRankTiers();
   const avatarArt = usePlayerCardArt(avatarCardUuid);
   const currentTier = rankInfo ? rankTiers.get(rankInfo.tierId) : null;
-  const [hubThemePref, setHubThemePref] = useState(loadHubThemePref);
   const heroAgents = useMemo(() => {
     if (!agents.length) return [];
-    if (hubThemePref.mode === 'fixed') {
-      const fixed = agents.find((a) => a.uuid === hubThemePref.agentUuid);
-      // Agent fixe pas encore choisi (ou plus dans le catalogue) : on retombe
-      // sur le premier agent de la liste plutôt que de casser l'affichage.
-      const picked = fixed ?? agents[0];
-      return NAV_KEYS.map(() => picked);
-    }
     const shuffled = [...agents].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, NAV_KEYS.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agents.length, hubThemePref.mode, hubThemePref.agentUuid]);
+  }, [agents.length]);
   const [screen, setScreen] = useState('menu'); // menu | modes | stats | settings
   // Quel héros (parmi heroAgents) sert de fond à l'accueil : change au survol
   // d'une entrée du menu plutôt que d'afficher les 4 en même temps — un seul
@@ -644,7 +697,12 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const [showPatrolPicker, setShowPatrolPicker] = useState(false);
   const [showCustomConfig, setShowCustomConfig] = useState(false);
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
-  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [modesCategory, setModesCategory] = useState(null); // null = les trois cartes
+  const [showSkinPicker, setShowSkinPicker] = useState(false);
+  // Conteneur pour la navigation au D-pad/stick gauche dans les menus (voir
+  // useGamepadMenuNav) — jamais actif pendant une session (AimTrainerGame
+  // gère alors la manette elle-même : viser, tirer, pause).
+  const hubRootRef = useRef(null);
 
   const [audioPrefs, setAudioPrefs] = useState(loadHubAudioPrefs);
 
@@ -732,7 +790,11 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const launch = useCallback(
     (extra = {}) => {
       playConfirmSfx();
-      setLaunchConfig({ ...config, ...extra, userId: myId });
+      const modeId = extra.mode ?? config.mode;
+      const sniper = MODES[modeId]?.sniper
+        ? { weaponModel: 'sniper', weaponSkin: config.weaponModel === 'sniper' ? config.weaponSkin : 'standard', showWeapon: true }
+        : {};
+      setLaunchConfig({ ...config, ...extra, ...sniper, userId: myId });
       // Léger délai pour laisser le bruitage de confirmation se faire
       // entendre et le fondu de sortie du menu s'amorcer avant de basculer.
       setTimeout(() => setPlaying(true), 120);
@@ -760,7 +822,10 @@ function AimTrainerHub({ config: initialRawConfig }) {
     setLaunchConfig(null);
     setScreen(wasFinderRun ? 'finder-results' : 'menu');
     refresh();
-  }, [refresh, launchConfig, finderResults]);
+    // Le pass d'abord (il attribue l'XP), puis la boutique (qui la convertit).
+    bp.refresh().then(() => shop.refresh());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh, launchConfig, finderResults, bp.refresh, shop.refresh]);
 
   // Ne capture que les étapes d'une session Sensitivity Finder — un run
   // classé normal (ou une routine PlaylistManager classique) n'a pas besoin
@@ -774,13 +839,74 @@ function AimTrainerHub({ config: initialRawConfig }) {
     [launchConfig],
   );
 
+  // Une récompense réclamée dans le pass peut être des MVP Points : la boutique
+  // les crédite (shop_award). On ne relance pas au premier rendu (useShop charge déjà).
+  const claimsSeen = useRef(null);
+  useEffect(() => {
+    const size = bp.ownedRewardIds.size;
+    if (claimsSeen.current !== null && size > claimsSeen.current) shop.refresh();
+    claimsSeen.current = size;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bp.ownedRewardIds]);
+
+  // Tout ce que le joueur possède, gagné (pass) ou acheté (boutique).
+  const ownedAll = useMemo(() => new Set([...bp.ownedRewardIds, ...shop.ownedIds]), [bp.ownedRewardIds, shop.ownedIds]);
+  // Un système absent (migration non appliquée) ou sans compte ne verrouille
+  // rien : ses objets restent libres, comme avant son arrivée.
+  const lockScope = {
+    pass: bp.status !== 'unavailable' && bp.status !== 'signed-out',
+    shop: shop.status !== 'unavailable' && shop.status !== 'signed-out',
+  };
+  // Comptes admin (profiles.role, comme dans App.jsx) : tous les skins et gants
+  // visibles et équipables, pour tester. Le verrou n'est de toute façon que
+  // cosmétique côté client (voir battlePass/ownership.js).
+  // null = pas encore su : on ne déséquipe rien d'ici là (voir l'effet suivant).
+  const [isAdmin, setIsAdmin] = useState(myId ? null : false);
+  useEffect(() => {
+    if (!myId) return undefined;
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', myId)
+      .maybeSingle()
+      .then(
+        ({ data }) => !cancelled && setIsAdmin(data?.role === 'admin'),
+        () => !cancelled && setIsAdmin(false),
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [myId]);
+  const isSkinLockedForMe = (weapon, skin) => isAdmin !== true && isSkinLocked(ownedAll, weapon, skin, lockScope);
+
+  // Un objet verrouillé (cache local d'un autre compte, objet retiré...) ne doit
+  // pas rester équipé. Pas pendant le chargement : un cache encore vide
+  // déséquiperait à tort.
+  useEffect(() => {
+    const bpSettled = ['ready', 'no-season', 'outdated', 'unavailable', 'signed-out'].includes(bp.status);
+    const shopSettled = ['ready', 'unavailable', 'signed-out'].includes(shop.status);
+    if (!bpSettled || !shopSettled || isAdmin !== false) return;
+    const skin = config.weaponSkin ?? 'standard';
+    if (skin !== 'standard' && isSkinLocked(ownedAll, config.weaponModel, skin, lockScope)) set({ weaponSkin: 'standard' });
+    const gloves = config.handSkin ?? 'standard';
+    if (gloves !== 'standard' && isHandLocked(ownedAll, gloves, lockScope)) set({ handSkin: 'standard' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bp.status, shop.status, ownedAll, config.weaponModel, config.weaponSkin, config.handSkin, isAdmin]);
+
   const navigate = (next) => {
     playClickSfx();
+    if (next === 'modes') setModesCategory(null);
     setScreen(next);
   };
 
+  // Dans une catégorie de la page Modes, « Retour » remonte aux trois cartes.
   const goBack = () => {
     playBackSfx();
+    if (screen === 'modes' && modesCategory) {
+      setModesCategory(null);
+      return;
+    }
     setScreen('menu');
   };
 
@@ -793,6 +919,14 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const distance = cm360(config.dpi, config.sens);
   const edpi = config.dpi * config.sens;
   const streak = useMemo(() => computeStreak(history), [history]);
+  const recentModes = useMemo(() => {
+    const seen = [];
+    for (const row of history) {
+      if (MODES[row.mode] && row.mode !== config.mode && !seen.includes(row.mode)) seen.push(row.mode);
+      if (seen.length === 3) break;
+    }
+    return seen;
+  }, [history, config.mode]);
   const challengeDone = dailyBoard.some((row) => row.user_id === myId);
   const activeModeLabel = MODES[config.mode] ? t(MODES[config.mode].labelKey) : t('aimTrainer.customTitle');
   const activeModeAccent = MODES[config.mode]?.accent ?? '#8a8f9c';
@@ -833,10 +967,57 @@ function AimTrainerHub({ config: initialRawConfig }) {
       : Math.min(...progression)
     : null;
   const progressionLast = progression.length ? progression[progression.length - 1] : null;
-  const allModeEntries = useMemo(
-    () => Object.entries(MODES).filter(([id]) => !TRACKING_MODE_IDS.includes(id) && !PATROL_MODE_IDS.includes(id)),
+  // Page Modes : Classique = modes sans arène (Tracking et Patrouille regroupés
+  // dans leurs propres cartes), Valorant = modes liés à une arène.
+  const classicModeEntries = useMemo(
+    () =>
+      Object.entries(MODES).filter(
+        ([id]) => !VALORANT_MODE_IDS.includes(id) && !TRACKING_MODE_IDS.includes(id) && !PATROL_MODE_IDS.includes(id),
+      ),
     [],
   );
+  const valorantModeEntries = useMemo(() => VALORANT_MODE_IDS.map((id) => [id, MODES[id]]), []);
+  // Relu à chaque fermeture des fenêtres qui les modifient.
+  const customPresets = useMemo(() => loadPresets(), [showCustomConfig, showPlaylistManager, modesCategory]);
+  // `screen` en plus : les arènes se créent dans l'éditeur (un écran, pas une
+  // fenêtre), il faut relire au retour vers 'modes' pour voir les changements.
+  const customArenas = useMemo(() => loadArenas(), [showCustomConfig, modesCategory, screen]);
+  // Visuels de la carte « Valorant » : la carte Ascent (arène Belvédère) et Jett.
+  const valorantModeImages = useMemo(
+    () => {
+      const jett = agents.find((a) => a.displayName === 'Jett');
+      const [colorA, colorB] = (jett?.backgroundGradientColors ?? []).map((c) => `#${c.slice(0, 6)}`);
+      return {
+        map: maps.find((m) => m.displayName === 'Ascent')?.splash ?? null,
+        agent: jett?.fullPortrait ?? null,
+        agentBackground: jett?.background ?? null,
+        colorA: colorA ?? '#25607a',
+        colorB: colorB ?? '#0f1923',
+      };
+    },
+    [maps, agents],
+  );
+  const modeCategoryStats = useMemo(() => {
+    const ids = Object.keys(MODES);
+    const records = (list) => list.filter((id) => globalBests[id] !== undefined && personalBests[id] >= globalBests[id]).length;
+    const valorantIds = VALORANT_MODE_IDS;
+    const classicIds = ids.filter((id) => !valorantIds.includes(id));
+    return {
+      classic: [
+        { key: 'modes', value: classicIds.length },
+        { key: 'records', value: records(classicIds), icon: Crown },
+      ],
+      valorant: [
+        { key: 'arenas', value: new Set(valorantIds.map((id) => MODES[id].arena).filter(Boolean)).size },
+        { key: 'modes', value: valorantIds.length },
+        { key: 'records', value: records(valorantIds), icon: Crown },
+      ],
+      custom: [
+        { key: 'presets', value: customPresets.length },
+        { key: 'playlists', value: loadPlaylists().length },
+      ],
+    };
+  }, [personalBests, globalBests, customPresets]);
   const isTrackingActive = TRACKING_MODE_IDS.includes(config.mode);
   const isPatrolActive = PATROL_MODE_IDS.includes(config.mode);
   const recordsCount = useMemo(
@@ -855,6 +1036,23 @@ function AimTrainerHub({ config: initialRawConfig }) {
     return () => cancel(id);
   }, []);
 
+  // Navigation manette (D-pad/stick gauche + A valide, B revient en
+  // arrière) dans tous les menus du hub — jamais pendant une session (voir
+  // `active`, coupé quand `playing`). B ferme la fenêtre modale ouverte la
+  // plus "au-dessus" s'il y en a une, sinon revient à l'accueil.
+  const gamepadBack = () => {
+    if (showSensitivityFinder) return setShowSensitivityFinder(false);
+    if (showTrackingPicker) return setShowTrackingPicker(false);
+    if (showPatrolPicker) return setShowPatrolPicker(false);
+    if (showCustomConfig) return setShowCustomConfig(false);
+    if (showPlaylistManager) return setShowPlaylistManager(false);
+    if (showSkinPicker) return setShowSkinPicker(false);
+    if (screen === 'calibration') return setScreen('settings');
+    if (screen !== 'menu') return setScreen('menu');
+    return undefined;
+  };
+  useGamepadMenuNav({ containerRef: hubRootRef, active: !playing, onBack: gamepadBack });
+
   if (playing && launchConfig) {
     return (
       <Suspense fallback={<div className="aim-game" />}>
@@ -865,10 +1063,22 @@ function AimTrainerHub({ config: initialRawConfig }) {
 
   return (
     <div
+      ref={hubRootRef}
       className={exiting ? 'aim-hub-root aim-hub-exiting' : 'aim-hub-root'}
-      style={hubAccent ? { '--hub-accent': hubAccent } : undefined}
+      style={hubAccent && !USE_LOBBY ? { '--hub-accent': hubAccent } : undefined}
     >
       <div className="aim-hub-fade-veil" aria-hidden="true" />
+
+      {showWelcomeModal && (
+        <WelcomeBonusModal
+          t={t}
+          claiming={shop.claimingWelcome}
+          onClaim={async () => {
+            await shop.claimWelcome();
+          }}
+          onClose={() => setWelcomeDismissed(true)}
+        />
+      )}
 
       {screen !== 'menu' && (
         <>
@@ -882,7 +1092,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
       )}
 
       <div key={screen} className="aim-hub-screen">
-        {screen === 'menu' && (
+        {screen === 'menu' && !USE_LOBBY && (
           <div className="aim-hub-home">
             <MapSlideshow maps={maps} />
 
@@ -925,6 +1135,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
                   <Icon icon={LogOut} size={15} /> {t('aimTrainer.hubExit')}
                 </button>
                 <HubProfileChip
+                  userId={myId}
                   avatarIcon={avatarArt.icon}
                   name={displayName}
                   tag={riotTag}
@@ -964,6 +1175,17 @@ function AimTrainerHub({ config: initialRawConfig }) {
                   onHover={() => setHoveredNav('modes')}
                   onClick={() => navigate('modes')}
                 />
+                {bp.status !== 'unavailable' && (
+                  <NavListItem
+                    icon={Trophy}
+                    label={t('aimTrainer.hubBattlePass')}
+                    hint={bp.levelState ? t('battlePass.nav.hint', { level: bp.levelState.level }) : t('battlePass.nav.hintIdle')}
+                    badge={bp.claimableCount}
+                    active={hoveredNav === 'battlepass'}
+                    onHover={() => setHoveredNav('battlepass')}
+                    onClick={() => navigate('battlepass')}
+                  />
+                )}
                 <NavListItem
                   icon={BarChart3}
                   label={t('aimTrainer.hubStats')}
@@ -981,22 +1203,6 @@ function AimTrainerHub({ config: initialRawConfig }) {
                   onClick={() => navigate('settings')}
                 />
                 <NavListItem
-                  icon={Wrench}
-                  label={t('aimTrainer.customTitle')}
-                  hint={t('aimTrainer.customDesc')}
-                  active={hoveredNav === 'custom'}
-                  onHover={() => setHoveredNav('custom')}
-                  onClick={() => setShowCustomConfig(true)}
-                />
-                <NavListItem
-                  icon={ListMusic}
-                  label={t('aimTrainer.playlistsTitle')}
-                  hint={t('aimTrainer.playlistsIntro')}
-                  active={hoveredNav === 'playlists'}
-                  onHover={() => setHoveredNav('playlists')}
-                  onClick={() => setShowPlaylistManager(true)}
-                />
-                <NavListItem
                   icon={Gauge}
                   label={t('aimTrainer.finderTitle')}
                   hint={t('aimTrainer.finderHint')}
@@ -1006,11 +1212,11 @@ function AimTrainerHub({ config: initialRawConfig }) {
                 />
                 <NavListItem
                   icon={Palette}
-                  label={t('aimTrainer.hubTheme')}
-                  hint={t(hubThemePref.mode === 'fixed' ? 'aimTrainer.themeFixedTitle' : 'aimTrainer.themeRandomTitle')}
-                  active={hoveredNav === 'theme'}
-                  onHover={() => setHoveredNav('theme')}
-                  onClick={() => setShowThemePicker(true)}
+                  label={t('aimTrainer.skinSection')}
+                  hint={`${t(WEAPON_MODELS[activeWeapon]?.labelKey)} · ${t(WEAPON_MODELS[activeWeapon]?.skins?.[config.weaponSkin ?? 'standard']?.labelKey ?? 'aimTrainer.skinStandard')}`}
+                  active={hoveredNav === 'skin'}
+                  onHover={() => setHoveredNav('skin')}
+                  onClick={() => setShowSkinPicker(true)}
                 />
               </nav>
             </div>
@@ -1049,136 +1255,297 @@ function AimTrainerHub({ config: initialRawConfig }) {
           </div>
         )}
 
-        {screen === 'modes' && (
-          <div className="aim-hub-panel">
-            <h2>{t('aimTrainer.modeSection')}</h2>
-            <div className="aim-mode-grid">
-              {allModeEntries.map(([id, mode]) => (
-                <ModeCard
-                  key={id}
-                  id={id}
-                  mode={mode}
-                  active={id === config.mode}
-                  personal={personalBests[id]}
-                  global={globalBests[id]}
-                  onSelect={selectMode}
-                  onLaunch={(modeId) => {
-                    selectMode(modeId);
-                    launch({ mode: modeId, ...MODES[modeId].preset });
-                  }}
-                  t={t}
-                />
-              ))}
-
-              <button
-                className={isTrackingActive ? 'aim-mode-card active' : 'aim-mode-card'}
-                style={{ '--mode-accent': MODES.tracking.accent }}
-                onMouseEnter={playHoverSfx}
-                onClick={() => {
-                  playClickSfx();
-                  setShowTrackingPicker(true);
-                }}
-              >
-                <span className="aim-mode-glow" aria-hidden="true" />
-                <span className="aim-mode-head">
-                  <span className="aim-mode-icon"><Icon icon={MODES.tracking.icon} /></span>
-                </span>
-                <span className="aim-mode-name">{t('aimTrainer.modes.trackingGroup')}</span>
-                <span className="aim-mode-desc">{t('aimTrainer.modes.trackingGroupDesc')}</span>
-              </button>
-
-              <button
-                className={isPatrolActive ? 'aim-mode-card active' : 'aim-mode-card'}
-                style={{ '--mode-accent': MODES.patrol.accent }}
-                onMouseEnter={playHoverSfx}
-                onClick={() => {
-                  playClickSfx();
-                  setShowPatrolPicker(true);
-                }}
-              >
-                <span className="aim-mode-glow" aria-hidden="true" />
-                <span className="aim-mode-head">
-                  <span className="aim-mode-icon"><Icon icon={MODES.patrol.icon} /></span>
-                </span>
-                <span className="aim-mode-name">{t('aimTrainer.modes.patrolGroup')}</span>
-                <span className="aim-mode-desc">{t('aimTrainer.modes.patrolGroupDesc')}</span>
-              </button>
-
-            </div>
-
-            <div className="aim-hub-launch-row">
-              <button className="refresh aim-launch-btn" onMouseEnter={playHoverSfx} onClick={() => launch()}>
-                {t('aimTrainer.launch')}
-              </button>
-              <button className="account-forgot-password" onClick={() => launch({ playlist: WARMUP_ROUTINE })}>
-                {t('aimTrainer.warmupRoutine')}
-              </button>
-            </div>
-          </div>
+        {screen === 'menu' && USE_LOBBY && (
+          <HubLobby
+            t={t}
+            sfx={{ hover: playHoverSfx, click: playClickSfx }}
+            profile={{ userId: myId, name: displayName, tag: riotTag, avatar: avatarArt.icon, tier: currentTier, logo: mvpTrackerLogo }}
+            bp={bp}
+            shopBalance={shop.status === 'ready' ? shop.balance : null}
+            config={config}
+            previews={SKIN_PREVIEWS}
+            activeModeId={config.mode}
+            personalBest={personalBests[config.mode]}
+            globalBest={globalBests[config.mode]}
+            recentModes={recentModes}
+            stats={{ sessions: history.length, streak, records: recordsCount }}
+            muted={audioPrefs.muted}
+            onToggleMute={toggleMute}
+            onExit={requestExit}
+            onPlay={() => launch()}
+            onLaunchMode={(modeId) => {
+              selectMode(modeId);
+              launch({ mode: modeId, ...MODES[modeId].preset });
+            }}
+            onNavigate={navigate}
+            onOpenSkin={() => setShowSkinPicker(true)}
+            onOpenEditor={() => setScreen('editor')}
+            onOpenFinder={() => setShowSensitivityFinder(true)}
+            onWarmup={() => launch({ playlist: WARMUP_ROUTINE })}
+            background={<MapSlideshow maps={maps} />}
+            modeImages={valorantModeImages}
+            challenge={challenge}
+            challengeDone={challengeDone}
+            onPlayChallenge={() =>
+              launch({
+                ...challenge,
+                challengeDate: challenge.dateKey,
+                dpi: config.dpi,
+                sens: config.sens,
+                fov: config.fov,
+              })
+            }
+            challengeBoard={
+              dailyBoard.length > 0 ? (
+                <div className="aim-board">
+                  {dailyBoard.slice(0, 5).map((row, i) => (
+                    <AimLeaderboardRow
+                      key={row.user_id}
+                      row={row}
+                      rank={i + 1}
+                      myId={myId}
+                      apiKey={apiKey}
+                      friendStatus={friendStatusByUser[row.user_id] ?? 'none'}
+                      onAddFriend={addFriendFromLeaderboard}
+                      highlight={row.user_id === myId}
+                    />
+                  ))}
+                </div>
+              ) : null
+            }
+            onOpenModeCategory={(category) => {
+              setModesCategory(category);
+              setScreen('modes');
+            }}
+            friendsCard={
+              <HomeFriendsCard
+                friendsBoard={friendsBoard}
+                myId={myId}
+                apiKey={apiKey}
+                friendStatusByUser={friendStatusByUser}
+                onAddFriend={addFriendFromLeaderboard}
+                t={t}
+              />
+            }
+          />
         )}
 
-        {screen === 'stats' && (
-          <div className="aim-hub-panel">
-            <h2>{t('aimTrainer.hubStats')}</h2>
+        {screen === 'modes' && (
+          <ModesScreen
+            category={modesCategory}
+            stats={modeCategoryStats}
+            images={valorantModeImages}
+            onPick={(category) => {
+              playClickSfx();
+              setModesCategory(category);
+            }}
+            onHover={playHoverSfx}
+            t={t}
+          >
+            {modesCategory === 'classic' && (
+              <>
+              <div className="aim-mode-grid">
+                {classicModeEntries.map(([id, mode]) => (
+                  <ModeCard
+                    key={id}
+                    id={id}
+                    mode={mode}
+                    active={id === config.mode}
+                    personal={personalBests[id]}
+                    global={globalBests[id]}
+                    onSelect={selectMode}
+                    onLaunch={(modeId) => {
+                      selectMode(modeId);
+                      launch({ mode: modeId, ...MODES[modeId].preset });
+                    }}
+                    t={t}
+                  />
+                ))}
 
-            <div className="aim-top-row">
-              <div className="card aim-challenge-card">
-                <span className="aim-challenge-badge">{t('aimTrainer.dailyChallenge')}</span>
-                <h3>
-                  <Icon icon={MODES[challenge.mode].icon} /> {t(MODES[challenge.mode].labelKey)}
-                </h3>
-                <p className="label">
-                  {t('aimTrainer.challengeSetup', {
-                    seconds: challenge.duration,
-                    size: challenge.targetSize.toFixed(2),
-                    count: challenge.targetCount,
-                  })}
-                </p>
                 <button
-                  className="refresh aim-challenge-btn"
-                  onClick={() =>
-                    launch({
-                      ...challenge,
-                      challengeDate: challenge.dateKey,
-                      dpi: config.dpi,
-                      sens: config.sens,
-                      fov: config.fov,
-                    })
-                  }
+                  className={isTrackingActive ? 'aim-mode-card active' : 'aim-mode-card'}
+                  style={{ '--mode-accent': MODES.tracking.accent }}
+                  onMouseEnter={playHoverSfx}
+                  onClick={() => {
+                    playClickSfx();
+                    setShowTrackingPicker(true);
+                  }}
                 >
-                  {challengeDone ? t('aimTrainer.retryChallenge') : t('aimTrainer.playChallenge')}
+                  <span className="aim-mode-glow" aria-hidden="true" />
+                  <span className="aim-mode-head">
+                    <span className="aim-mode-icon"><Icon icon={MODES.tracking.icon} /></span>
+                  </span>
+                  <span className="aim-mode-name">{t('aimTrainer.modes.trackingGroup')}</span>
+                  <span className="aim-mode-desc">{t('aimTrainer.modes.trackingGroupDesc')}</span>
                 </button>
-                {dailyBoard.length > 0 && (
-                  <div className="aim-board">
-                    <h4 className="account-subsection-title">{t('aimTrainer.todayRanking')}</h4>
-                    {dailyBoard.slice(0, 5).map((row, i) => (
-                      <AimLeaderboardRow
-                        key={row.user_id}
-                        row={row}
-                        rank={i + 1}
-                        myId={myId}
-                        apiKey={apiKey}
-                        friendStatus={friendStatusByUser[row.user_id] ?? 'none'}
-                        onAddFriend={addFriendFromLeaderboard}
-                        highlight={row.user_id === myId}
-                      />
+
+                <button
+                  className={isPatrolActive ? 'aim-mode-card active' : 'aim-mode-card'}
+                  style={{ '--mode-accent': MODES.patrol.accent }}
+                  onMouseEnter={playHoverSfx}
+                  onClick={() => {
+                    playClickSfx();
+                    setShowPatrolPicker(true);
+                  }}
+                >
+                  <span className="aim-mode-glow" aria-hidden="true" />
+                  <span className="aim-mode-head">
+                    <span className="aim-mode-icon"><Icon icon={MODES.patrol.icon} /></span>
+                  </span>
+                  <span className="aim-mode-name">{t('aimTrainer.modes.patrolGroup')}</span>
+                  <span className="aim-mode-desc">{t('aimTrainer.modes.patrolGroupDesc')}</span>
+                </button>
+              </div>
+
+              <div className="aim-hub-launch-row">
+                <button className="refresh aim-launch-btn" onMouseEnter={playHoverSfx} onClick={() => launch()}>
+                  {t('aimTrainer.launch')}
+                </button>
+              </div>
+              </>
+            )}
+
+            {modesCategory === 'valorant' && (
+              <>
+              <div className="aim-mode-grid">
+                {valorantModeEntries.map(([id, mode]) => (
+                  <ModeCard
+                    key={id}
+                    id={id}
+                    mode={mode}
+                    active={id === config.mode}
+                    personal={personalBests[id]}
+                    global={globalBests[id]}
+                    onSelect={selectMode}
+                    onLaunch={(modeId) => {
+                      selectMode(modeId);
+                      launch({ mode: modeId, ...MODES[modeId].preset });
+                    }}
+                    t={t}
+                  />
+                ))}
+              </div>
+
+              <div className="aim-hub-launch-row">
+                <button className="refresh aim-launch-btn" onMouseEnter={playHoverSfx} onClick={() => launch()}>
+                  {t('aimTrainer.launch')}
+                </button>
+              </div>
+              </>
+            )}
+
+            {modesCategory === 'custom' && (
+              <>
+                <div className="mc-actions">
+                  <button type="button" className="mc-action" onMouseEnter={playHoverSfx} onClick={() => setShowCustomConfig(true)}>
+                    <span className="mc-icon"><Icon icon={Wrench} size={18} /></span>
+                    <strong>{t('aimTrainer.modesHub.createTitle')}</strong>
+                    <span>{t('aimTrainer.customDesc')}</span>
+                  </button>
+                  <button type="button" className="mc-action" onMouseEnter={playHoverSfx} onClick={() => setShowPlaylistManager(true)}>
+                    <span className="mc-icon"><Icon icon={ListMusic} size={18} /></span>
+                    <strong>{t('aimTrainer.playlistsTitle')}</strong>
+                    <span>{t('aimTrainer.playlistsIntro')}</span>
+                  </button>
+                  <button type="button" className="mc-action" onMouseEnter={playHoverSfx} onClick={() => launch({ playlist: WARMUP_ROUTINE })}>
+                    <span className="mc-icon"><Icon icon={Flame} size={18} /></span>
+                    <strong>{t('aimTrainer.modesHub.warmupTitle')}</strong>
+                    <span>{t('aimTrainer.modesHub.warmupDesc')}</span>
+                  </button>
+                  <button type="button" className="mc-action" onMouseEnter={playHoverSfx} onClick={() => setScreen('editor')}>
+                    <span className="mc-icon"><Icon icon={Hammer} size={18} /></span>
+                    <strong>{t('aimTrainer.modesHub.arenaEditorTitle')}</strong>
+                    <span>{t('aimTrainer.modesHub.arenaEditorDesc')}</span>
+                  </button>
+                </div>
+
+                <h3 className="mc-section-title">{t('aimTrainer.modesHub.presetsTitle')}</h3>
+                {customPresets.length === 0 ? (
+                  <p className="mc-empty">{t('aimTrainer.modesHub.noPresets')}</p>
+                ) : (
+                  <div className="mc-presets">
+                    {customPresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className="mc-preset"
+                        onMouseEnter={playHoverSfx}
+                        onClick={() => launch({ mode: 'custom', ...presetValues(preset) })}
+                      >
+                        <Icon icon={MODES[preset.baseMode]?.icon ?? Wrench} size={18} />
+                        <span>
+                          <strong>{preset.name}</strong>
+                          <small>
+                            {preset.customArenaId
+                              ? (customArenas.find((a) => a.id === preset.customArenaId)?.name ?? t('aimTrainer.arenaDeleted'))
+                              : t(MODES[preset.baseMode]?.labelKey ?? 'aimTrainer.customTitle')}{' '}
+                            · {preset.duration}s
+                          </small>
+                        </span>
+                        <Icon icon={Play} size={16} />
+                      </button>
                     ))}
                   </div>
                 )}
-              </div>
 
-              <div className="card aim-streak-card">
-                <span className="aim-streak-flame"><Icon icon={streak > 0 ? Flame : Snowflake} /></span>
-                <span className="aim-streak-value">{streak}</span>
-                <span className="aim-streak-label">{t('aimTrainer.streakLabel', { count: streak })}</span>
-                <p className="label aim-streak-hint">
-                  {streak > 0 ? t('aimTrainer.streakKeep') : t('aimTrainer.streakStart')}
-                </p>
-              </div>
-            </div>
+                <h3 className="mc-section-title">{t('aimTrainer.modesHub.arenasTitle')}</h3>
+                {customArenas.length === 0 ? (
+                  <p className="mc-empty">{t('aimTrainer.modesHub.noArenas')}</p>
+                ) : (
+                  <div className="mc-presets">
+                    {customArenas.map((arena) => (
+                      <button
+                        key={arena.id}
+                        type="button"
+                        className="mc-preset"
+                        onMouseEnter={playHoverSfx}
+                        onClick={() => launch({ mode: 'custom', ...arenaLaunchConfig(arena) })}
+                      >
+                        <Icon icon={Hammer} size={18} />
+                        <span>
+                          <strong>{arena.name}</strong>
+                          <small>{t('aimTrainer.modesHub.arenaSummary', { count: arena.enemies.length })}</small>
+                        </span>
+                        <Icon icon={Play} size={16} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </ModesScreen>
+        )}
 
-            <div className="aim-bottom-row">
-              <div className="card">
+        {screen === 'battlepass' && (
+          <Suspense fallback={null}>
+              <BattlePassScreen
+                bp={bp}
+                previews={SKIN_PREVIEWS}
+                config={config}
+                profile={{ name: displayName, avatar: avatarArt.icon }}
+                onEquipSkin={(weapon, skin) => set({ weaponModel: weapon, weaponSkin: skin })}
+                onEquipHands={(key) => set({ handSkin: key })}
+              />
+            </Suspense>
+        )}
+
+        {screen === 'stats' && (
+          <StatsScreen
+            t={t}
+            lang={i18n.language}
+            history={history}
+            streak={streak}
+            records={recordsCount}
+            personalBests={personalBests}
+            globalBests={globalBests}
+            progressionMode={progressionMode}
+            onSelectMode={setProgressionMode}
+            onLaunchMode={(modeId) => {
+              selectMode(modeId);
+              launch({ mode: modeId, ...MODES[modeId].preset });
+            }}
+            progressionPanel={
+              <>
                 <div className="aim-progress-header">
                   <h4 className="account-subsection-title">{t('aimTrainer.progressTitle', { mode: progressionModeLabel })}</h4>
                   <select
@@ -1217,9 +1584,35 @@ function AimTrainerHub({ config: initialRawConfig }) {
                     </p>
                   </>
                 )}
-              </div>
-
-              <div className="card">
+              </>
+            }
+            challengeRanking={
+              <>
+                <h4 className="account-subsection-title">
+                  {t('aimTrainer.todayRanking')} · {t(MODES[challenge.mode].labelKey)}
+                </h4>
+                {dailyBoard.length === 0 ? (
+                  <p className="label">{t('aimTrainer.statsPage.noRanking')}</p>
+                ) : (
+                  <div className="aim-board">
+                    {dailyBoard.slice(0, 5).map((row, i) => (
+                      <AimLeaderboardRow
+                        key={row.user_id}
+                        row={row}
+                        rank={i + 1}
+                        myId={myId}
+                        apiKey={apiKey}
+                        friendStatus={friendStatusByUser[row.user_id] ?? 'none'}
+                        onAddFriend={addFriendFromLeaderboard}
+                        highlight={row.user_id === myId}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            }
+            friendsRanking={
+              <>
                 <h4 className="account-subsection-title">{t('aimTrainer.friendsTitle')}</h4>
                 {friendsBoard.length === 0 ? (
                   <p className="label">{t('aimTrainer.friendsEmpty')}</p>
@@ -1239,138 +1632,63 @@ function AimTrainerHub({ config: initialRawConfig }) {
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
+              </>
+            }
+          />
+        )}
+
+        {screen === 'locker' && (
+          <LockerScreen
+            owned={ownedAll}
+            shopActive={lockScope.shop}
+            t={t}
+            bp={bp}
+            profile={{ name: displayName, avatar: avatarArt.icon }}
+            config={config}
+            previews={SKIN_PREVIEWS}
+            onOpenSkins={() => setShowSkinPicker(true)}
+            onEquipHands={(key) => set({ handSkin: key })}
+            isAdmin={isAdmin === true}
+          />
+        )}
+
+        {screen === 'editor' && (
+          <Suspense fallback={null}>
+            <ArenaEditor
+              t={t}
+              settings={{ sens: config.sens, fov: config.fov, theme: config.theme, controller: config.controller }}
+              onPlay={(customArena) => launch({ mode: 'custom', ...arenaLaunchConfig(customArena) })}
+            />
+          </Suspense>
+        )}
+
+        {screen === 'shop' && (
+          <Suspense fallback={null}>
+            <ShopScreen t={t} shop={shop} previews={SKIN_PREVIEWS} weapon={activeWeapon} weaponSkin={config.weaponSkin} />
+          </Suspense>
+        )}
+
+        {screen === 'leaderboard' && (
+          <LeaderboardScreen t={t} myId={myId} apiKey={apiKey} friendStatusByUser={friendStatusByUser} onAddFriend={addFriendFromLeaderboard} />
         )}
 
         {screen === 'settings' && (
-          <div className="aim-hub-panel">
-            <h2>{t('aimTrainer.hubSettings')}</h2>
-            <div className="aim-config-grid">
-              <div className="aim-config-block">
-                <h4 className="account-subsection-title">{t('aimTrainer.sensSection')}</h4>
-                <label className="aim-trainer-setting">
-                  <span className="label">{t('aimTrainer.dpiLabel')}</span>
-                  <input type="number" value={config.dpi} onChange={(e) => set({ dpi: Number(e.target.value) || 0 })} />
-                </label>
-                <label className="aim-trainer-setting">
-                  <span className="label">{t('aimTrainer.sensLabel')}</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={config.sens}
-                    onChange={(e) => set({ sens: Number(e.target.value) || 0 })}
-                  />
-                </label>
-                <p className="label aim-config-readout">
-                  {t('aimTrainer.edpiReadout', {
-                    edpi: edpi.toFixed(0),
-                    cm: distance === null ? '—' : distance.toFixed(1),
-                  })}
-                </p>
-              </div>
+          <SettingsScreen
+            t={t}
+            config={config}
+            set={set}
+            onReset={() => setConfig({ ...DEFAULT_CONFIG })}
+            crosshairs={crosshairs}
+            targetColors={TARGET_COLORS}
+            edpi={edpi}
+            cm360={distance}
+            onOpenFinder={() => setShowSensitivityFinder(true)}
+            onOpenCalibration={() => setScreen('calibration')}
+          />
+        )}
 
-              <div className="aim-config-block">
-                <h4 className="account-subsection-title">{t('aimTrainer.targetsSection')}</h4>
-                <div className="aim-config-colors">
-                  <span className="label">{t('aimTrainer.targetColorLabel')}</span>
-                  <div className="aim-color-swatches">
-                    {TARGET_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        className={color === config.targetColor ? 'aim-color-swatch active' : 'aim-color-swatch'}
-                        style={{ background: color }}
-                        onClick={() => set({ targetColor: color })}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="aim-config-block">
-                <h4 className="account-subsection-title">{t('aimTrainer.displaySection')}</h4>
-                <label className="aim-config-range">
-                  <span className="label">{t('aimTrainer.fovLabel', { fov: config.fov })}</span>
-                  <input
-                    type="range"
-                    min="70"
-                    max="120"
-                    value={config.fov}
-                    onChange={(e) => set({ fov: Number(e.target.value) })}
-                  />
-                </label>
-                <label className="aim-config-check">
-                  <input type="checkbox" checked={config.showWeapon} onChange={(e) => set({ showWeapon: e.target.checked })} />
-                  <span>{t('aimTrainer.showWeaponLabel')}</span>
-                </label>
-                <label className="aim-config-check">
-                  <input
-                    type="checkbox"
-                    checked={config.theme === 'dark'}
-                    onChange={(e) => set({ theme: e.target.checked ? 'dark' : 'day' })}
-                  />
-                  <span>{t('aimTrainer.darkThemeLabel')}</span>
-                </label>
-                <label className="aim-config-check">
-                  <input type="checkbox" checked={config.hitSound} onChange={(e) => set({ hitSound: e.target.checked })} />
-                  <span>{t('aimTrainer.hitSoundLabel')}</span>
-                </label>
-                <button className="account-forgot-password" onClick={() => setConfig({ ...DEFAULT_CONFIG })}>
-                  {t('aimTrainer.resetDefaults')}
-                </button>
-              </div>
-
-              {config.showWeapon && (
-                <div className="aim-config-block">
-                  <h4 className="account-subsection-title">{t('aimTrainer.weaponSection')}</h4>
-                  <div className="aim-weapon-cards">
-                    {Object.entries(WEAPON_MODELS).map(([id, weapon]) => (
-                      <button
-                        type="button"
-                        key={id}
-                        className={activeWeapon === id ? 'aim-weapon-card active' : 'aim-weapon-card'}
-                        onClick={() => set({ weaponModel: id })}
-                      >
-                        <img src={WEAPON_PREVIEWS[id] ?? weaponDefaultPreview} alt="" />
-                        <span>{t(weapon.labelKey)}</span>
-                        {activeWeapon === id && <Icon icon={Check} size={14} className="aim-weapon-card-check" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="aim-config-block">
-                <h4 className="account-subsection-title">{t('aimTrainer.crosshairSection')}</h4>
-                {crosshairs.length === 0 ? (
-                  <p className="label">{t('aimTrainer.crosshairEmpty')}</p>
-                ) : (
-                  <div className="aim-crosshair-picker">
-                    <button
-                      className={config.crosshairCode ? 'aim-crosshair-option' : 'aim-crosshair-option active'}
-                      onClick={() => set({ crosshairCode: null })}
-                      title={t('aimTrainer.crosshairDefault')}
-                    >
-                      <div className="aim-trainer-crosshair-static-preview" />
-                    </button>
-                    {crosshairs.map((ch) => (
-                      <button
-                        key={ch.id}
-                        className={config.crosshairCode === ch.code ? 'aim-crosshair-option active' : 'aim-crosshair-option'}
-                        onClick={() => set({ crosshairCode: ch.code })}
-                        title={ch.name}
-                      >
-                        <CrosshairPreview code={ch.code} bare size={40} />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <p className="label" style={{ marginTop: '0.75rem' }}>{t('aimTrainer.accuracyNote')}</p>
-          </div>
+        {screen === 'calibration' && (
+          <ControllerCalibration t={t} config={config} set={set} onClose={() => setScreen('settings')} />
         )}
 
         {screen === 'finder-results' && (
@@ -1385,7 +1703,13 @@ function AimTrainerHub({ config: initialRawConfig }) {
               // cibles. Régression sur la courbe complète plutôt que "la
               // meilleure des valeurs testées" — le vrai optimum tombe
               // rarement pile sur l'une des sensibilités essayées.
-              const { suggested, indistinct, edge, best, scored } = analyzeFinderResults(finderResults, config.sens);
+              // Manette : le repère "sens actuelle" pour la régression et le
+              // point "meilleur essai le plus proche" doit être la sensibilité
+              // BASE de la manette, pas la sensibilité souris — sinon
+              // bestPoint() comparerait des valeurs de nature différente.
+              const isControllerRun = launchConfig?.finderInputMode === 'controller';
+              const referenceSens = isControllerRun ? config.controller.profile.modes[AIM_MODE.BASE].sensX : config.sens;
+              const { suggested, indistinct, edge, best, scored } = analyzeFinderResults(finderResults, referenceSens);
               const maxEffective = Math.max(1, ...scored.map((r) => r.effective));
               return (
                 <>
@@ -1440,7 +1764,33 @@ function AimTrainerHub({ config: initialRawConfig }) {
                       <button
                         className="refresh aim-game-cta"
                         onClick={() => {
-                          setConfig((prev) => ({ ...prev, sens: suggested }));
+                          if (isControllerRun) {
+                            setConfig((prev) => {
+                              const base = prev.controller.profile.modes[AIM_MODE.BASE];
+                              // Les essais font varier horizontal ET vertical
+                              // par le MÊME multiplicateur (voir
+                              // buildControllerFinderSteps) : on réapplique ce
+                              // même rapport aux deux axes plutôt que d'écraser
+                              // sensY avec la valeur horizontale suggérée, au
+                              // cas où les deux étaient différents au départ.
+                              const ratio = base.sensX > 0 ? suggested / base.sensX : 1;
+                              return {
+                                ...prev,
+                                controller: {
+                                  ...prev.controller,
+                                  profile: {
+                                    ...prev.controller.profile,
+                                    modes: {
+                                      ...prev.controller.profile.modes,
+                                      [AIM_MODE.BASE]: { ...base, sensX: suggested, sensY: Math.round(base.sensY * ratio * 1000) / 1000 },
+                                    },
+                                  },
+                                },
+                              };
+                            });
+                          } else {
+                            setConfig((prev) => ({ ...prev, sens: suggested }));
+                          }
                           setScreen('menu');
                         }}
                       >
@@ -1511,6 +1861,10 @@ function AimTrainerHub({ config: initialRawConfig }) {
             setConfig(loadConfig());
             launch(values);
           }}
+          onOpenEditor={() => {
+            setShowCustomConfig(false);
+            setScreen('editor');
+          }}
         />
       )}
 
@@ -1528,34 +1882,26 @@ function AimTrainerHub({ config: initialRawConfig }) {
         <SensitivityFinder
           dpi={config.dpi}
           sens={config.sens}
+          controller={config.controller}
           onClose={() => setShowSensitivityFinder(false)}
-          onLaunch={(playlistSteps) => {
+          onLaunch={(playlistSteps, inputMode) => {
             setShowSensitivityFinder(false);
             setFinderResults([]);
-            launch({ playlistSteps, practiceMode: true, isFinderRun: true });
+            launch({ playlistSteps, practiceMode: true, isFinderRun: true, finderInputMode: inputMode });
           }}
         />
       )}
 
-      {showThemePicker && (
-        <HubThemePicker
-          pref={hubThemePref}
-          agents={agents}
-          onSelectRandom={() => {
-            const next = { mode: 'random', agentUuid: null };
-            setHubThemePref(next);
-            localStorage.setItem(HUB_THEME_STORAGE_KEY, JSON.stringify(next));
-            setShowThemePicker(false);
-          }}
-          onSelectFixed={(agentUuid) => {
-            const next = { mode: 'fixed', agentUuid };
-            setHubThemePref(next);
-            localStorage.setItem(HUB_THEME_STORAGE_KEY, JSON.stringify(next));
-            setShowThemePicker(false);
-          }}
-          onClose={() => setShowThemePicker(false)}
-          t={t}
-        />
+      {showSkinPicker && (
+        <Suspense fallback={<div className="skin-viewer skin-viewer-loading" />}>
+          <SkinViewer
+            config={config}
+            set={set}
+            previews={SKIN_PREVIEWS}
+            isLocked={isSkinLockedForMe}
+            onClose={() => setShowSkinPicker(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

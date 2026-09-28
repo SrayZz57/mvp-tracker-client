@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gauge } from 'lucide-react';
+import { Gauge, Gamepad2, MousePointer2 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { MODES } from './aimTrainerModes.js';
+import { AIM_MODE } from './input/controllerProfiles.js';
+import { useConnectedGamepads } from './input/useConnectedGamepads.js';
 
 // Modes statiques uniquement (comme les routines PlaylistManager) — le but
 // est de comparer la précision pure à différentes sensibilités, pas de tester
@@ -28,6 +30,28 @@ function buildFinderSteps(baseMode, sens) {
   }));
 }
 
+// Même principe pour la manette : on fait varier la sensibilité BASE (voir
+// AIM_MODE dans controllerProfiles.js — c'est le mode utilisé par Flick et
+// Gridshot, aucun des deux ne scope/vise), horizontale et verticale
+// ensemble, dans les mêmes proportions. `controllerSensMult` est repris par
+// AimTrainerGame.jsx pour ne modifier QUE le mode BASE de la session, sans
+// toucher au reste du profil (deadzone, courbe, autres modes...).
+function buildControllerFinderSteps(baseMode, controllerBaseSens) {
+  const preset = MODES[baseMode].preset;
+  return MULTIPLIERS.map((mult) => ({
+    name: `×${mult}`,
+    duration: FINDER_DURATION,
+    targetSize: preset.targetSize,
+    targetCount: preset.targetCount,
+    spread: preset.spread,
+    controllerSensMult: mult,
+    // Juste pour l'aperçu affiché ci-dessous (voir le rendu plus bas) — la
+    // vraie valeur appliquée est recalculée dans AimTrainerGame.jsx à partir
+    // du profil réel au moment du lancement, pas figée ici.
+    previewSens: Math.round(controllerBaseSens * mult * 1000) / 1000,
+  }));
+}
+
 // Ordre aléatoire des essais (Fisher-Yates) : en partant toujours de la plus
 // basse, l'échauffement, la fatigue et la mémoire musculaire d'un essai à
 // l'autre se répercutaient toujours sur les mêmes sensibilités et faussaient
@@ -42,9 +66,27 @@ function shuffled(items) {
   return result;
 }
 
-function SensitivityFinder({ dpi, sens, onClose, onLaunch }) {
+function SensitivityFinder({ dpi, sens, controller, onClose, onLaunch }) {
   const { t } = useTranslation();
   const [baseMode, setBaseMode] = useState('gridshot');
+  const pads = useConnectedGamepads();
+  const hasGamepad = pads.length > 0;
+  const [inputMode, setInputMode] = useState('mouse');
+  // Si la manette est débranchée entre-temps, retombe sur souris plutôt que
+  // de rester bloqué sur un mode qu'on ne peut plus lancer.
+  const effectiveInputMode = inputMode === 'controller' && !hasGamepad ? 'mouse' : inputMode;
+  const controllerBaseSens = controller?.profile?.modes?.[AIM_MODE.BASE]?.sensX ?? 0;
+
+  const stepsPreview =
+    effectiveInputMode === 'controller'
+      ? buildControllerFinderSteps(baseMode, controllerBaseSens)
+      : buildFinderSteps(baseMode, sens);
+
+  const start = () => {
+    const steps =
+      effectiveInputMode === 'controller' ? buildControllerFinderSteps(baseMode, controllerBaseSens) : buildFinderSteps(baseMode, sens);
+    onLaunch(shuffled(steps), effectiveInputMode);
+  };
 
   return (
     <div className="custom-config-overlay" onClick={onClose}>
@@ -53,7 +95,32 @@ function SensitivityFinder({ dpi, sens, onClose, onLaunch }) {
           <Icon icon={Gauge} size={20} /> {t('aimTrainer.finderTitle')}
         </h2>
         <p className="label">{t('aimTrainer.finderIntro', { count: MULTIPLIERS.length, duration: FINDER_DURATION })}</p>
-        <p className="label">{t('aimTrainer.finderCurrentSens', { sens, dpi })}</p>
+
+        <h4 className="account-subsection-title">{t('aimTrainer.finderInputLabel')}</h4>
+        <div className="account-role-picker">
+          <button
+            className={effectiveInputMode === 'mouse' ? 'account-role-option active' : 'account-role-option'}
+            onClick={() => setInputMode('mouse')}
+          >
+            <Icon icon={MousePointer2} size={16} />
+            <span>{t('aimTrainer.finderInputMouse')}</span>
+          </button>
+          <button
+            className={effectiveInputMode === 'controller' ? 'account-role-option active' : 'account-role-option'}
+            disabled={!hasGamepad}
+            title={hasGamepad ? undefined : t('aimTrainer.controller.noneConnected')}
+            onClick={() => setInputMode('controller')}
+          >
+            <Icon icon={Gamepad2} size={16} />
+            <span>{t('aimTrainer.finderInputController')}</span>
+          </button>
+        </div>
+
+        <p className="label">
+          {effectiveInputMode === 'controller'
+            ? t('aimTrainer.finderCurrentSensController', { sens: controllerBaseSens })
+            : t('aimTrainer.finderCurrentSens', { sens, dpi })}
+        </p>
 
         <h4 className="account-subsection-title">{t('aimTrainer.finderModeLabel')}</h4>
         <div className="account-role-picker">
@@ -71,7 +138,7 @@ function SensitivityFinder({ dpi, sens, onClose, onLaunch }) {
 
         <p className="label aim-game-tip">
           {t('aimTrainer.finderStepsPreview', {
-            steps: MULTIPLIERS.map((m) => Math.round(sens * m * 1000) / 1000).join(' · '),
+            steps: stepsPreview.map((s) => s.previewSens ?? s.sens).join(' · '),
           })}
         </p>
 
@@ -79,7 +146,7 @@ function SensitivityFinder({ dpi, sens, onClose, onLaunch }) {
           <button className="sidebar-signout account-signout" onClick={onClose}>
             {t('detail.close')}
           </button>
-          <button className="refresh aim-game-cta" onClick={() => onLaunch(shuffled(buildFinderSteps(baseMode, sens)))}>
+          <button className="refresh aim-game-cta" onClick={start}>
             {t('aimTrainer.finderStart')}
           </button>
         </div>

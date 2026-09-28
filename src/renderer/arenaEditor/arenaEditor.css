@@ -1,0 +1,480 @@
+/* Éditeur d'arène à la première personne (ArenaEditor.jsx) : la vue 3D prend
+   tout l'écran ; en construction, un HUD façon jeu (viseur, barre d'objets) ;
+   sinon, le menu (arènes, ennemis, commandes). */
+
+.ae-screen {
+  --ae-line: rgba(255, 255, 255, 0.1);
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: #0a0c11;
+}
+
+.ae-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* --- En construction ------------------------------------------------------------ */
+
+.ae-crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.ae-crosshair::before,
+.ae-crosshair::after {
+  content: '';
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.ae-crosshair::before {
+  left: 6px;
+  top: 0;
+  width: 2px;
+  height: 14px;
+}
+
+.ae-crosshair::after {
+  left: 0;
+  top: 6px;
+  width: 14px;
+  height: 2px;
+}
+
+.ae-help,
+.ae-counts {
+  position: fixed;
+  top: 14px;
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.ae-help {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ae-counts {
+  right: 16px;
+}
+
+.ae-hud {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ae-styles-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.4rem;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
+}
+
+.ae-styles-bar small {
+  margin-left: 0.3rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+}
+
+.ae-style-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.ae-style-chip.active {
+  color: #fff;
+  border-color: var(--accent, #ff4655);
+  background: rgba(255, 70, 85, 0.18);
+}
+
+.ae-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.ae-hotbar {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+}
+
+.ae-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.ae-slot small {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ae-slot.active {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ae-slot[data-enemy] {
+  color: #ff5a6a;
+}
+
+.ae-piece-shape {
+  display: block;
+  background: linear-gradient(180deg, #c9b08a, #8a6a42);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 1px;
+}
+
+.ae-slot-name {
+  margin: 0;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+}
+
+/* --- Menu (hors construction) ------------------------------------------------------ */
+
+.ae-menu {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 4.2rem 1rem 1rem;
+  overflow-y: auto;
+  background: rgba(6, 8, 12, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.ae-menu-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(640px, 100%);
+  padding: 1.4rem 1.5rem;
+  background: rgba(16, 18, 25, 0.95);
+  border: 1px solid var(--ae-line);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+
+.ae-menu-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ae-menu-head h2 {
+  margin: 0;
+  font-family: var(--font-hero);
+  font-size: 1.8rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ae-save {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.ae-save-error {
+  color: var(--accent);
+}
+
+.ae-menu-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ae-input {
+  min-width: 220px;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ae-link {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.ae-link:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.ae-link.danger:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.ae-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ae-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--ae-line);
+}
+
+.ae-menu-section h3 {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ae-setting {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.85rem;
+}
+
+.ae-setting .ae-input {
+  min-width: 0;
+}
+
+.ae-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.ae-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.ae-controls li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ae-controls kbd {
+  min-width: 4.8rem;
+  padding: 0.1rem 0.4rem;
+  font-family: inherit;
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--ae-line);
+  border-radius: 5px;
+}
+
+.ae-menu-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--ae-line);
+}
+
+.ae-menu-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ae-build {
+  padding: 0.65rem 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent, #ff4655);
+  border: 0;
+  border-radius: 8px;
+}
+
+.ae-next {
+  font-size: 0.75rem;
+}
+
+/* Le survol global des boutons (index.css) remplace le fond par un dégradé
+   gris : il l'emporte en spécificité, d'où le !important. */
+.ae-screen .ae-build:hover:not(:disabled) {
+  background: #ff5a68 !important;
+}
+
+.ae-screen .ae-link:hover:not(:disabled) {
+  background: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.ae-setting input[type='range'] {
+  accent-color: var(--accent, #ff4655);
+}
+
+.ae-play:disabled {
+  opacity: 0.4;
+  background: var(--accent, #ff4655) !important;
+  cursor: not-allowed;
+}
+
+/* Icône de la pièce Escalier : silhouette en marches montantes plutôt qu'un
+   simple rectangle, sinon indiscernable d'un mur bas à cette taille. */
+.ae-piece-stairs {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  width: 22px;
+  height: 22px;
+}
+
+.ae-piece-stairs span {
+  flex: 1;
+  background: linear-gradient(180deg, #c9b08a, #8a6a42);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+/* Icône de la pièce Porte : rectangle avec une ouverture centrale. */
+.ae-piece-door {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(180deg, #c9b08a, #8a6a42);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.ae-piece-door-gap {
+  height: 70%;
+  background: #12141b;
+}
+
+/* Panneau de l'ennemi visé (voir cycleEnemySetting dans ArenaEditor.jsx). */
+.ae-enemy-panel {
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 70, 85, 0.5);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.ae-enemy-panel strong {
+  color: #ff4655;
+}
+
+.ae-enemy-panel p {
+  margin: 0;
+}
+
+.ae-enemy-panel small {
+  margin-top: 0.2rem;
+  opacity: 0.75;
+}
+
+.ae-selection-hint {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 46px 0 0;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.72rem;
+  color: #ffe066;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.ae-minimap {
+  position: fixed;
+  bottom: 18px;
+  right: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+
+.ae-share-code {
+  width: 100%;
+  min-height: 3.2rem;
+  margin-top: 0.35rem;
+  font-family: monospace;
+  font-size: 0.7rem;
+  resize: vertical;
+}

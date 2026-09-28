@@ -1,0 +1,72 @@
+.gp-diagram {
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  display: block;
+  margin: 0.5rem auto 0.75rem;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+}
+
+.gp-diagram-body {
+  fill: url(#gpBodyGrad);
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 2;
+}
+
+.gp-diagram-stick-well {
+  fill: rgba(0, 0, 0, 0.35);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.gp-diagram-stick-cap {
+  fill: rgba(255, 255, 255, 0.08);
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.gp-diagram-btn circle,
+.gp-diagram-btn rect {
+  transition: filter 0.15s ease;
+}
+
+.gp-diagram-btn:hover circle,
+.gp-diagram-btn:hover rect {
+  filter: brightness(1.25);
+}
+
+.gp-remap {
+  margin: 0.4rem 0 1rem;
+}
+
+.gp-remap-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ap-line, rgba(255, 255, 255, 0.08));
+}
+
+.gp-remap-row:last-of-type {
+  border-bottom: none;
+}
+
+.gp-remap-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text, #fff);
+  font-family: monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.gp-remap-listening {
+  color: #ffe066;
+}

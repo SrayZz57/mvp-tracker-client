@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from './supabaseClient.js';
 import { FriendAvatar, friendLabel, PROFILE_FIELDS } from './friendsShared.jsx';
+import { PlayerTitle } from './battlePass/playerCosmetics.jsx';
 import FriendSummaryCard from './FriendSummaryCard.jsx';
 import { useE2EE } from './E2EEContext.jsx';
 
@@ -236,6 +237,7 @@ function MessagesPage({ myId, onlineFriendIds = new Set(), initialFriendId = nul
                 >
                   <FriendAvatar profile={p} online={onlineFriendIds.has(p.id)} />
                   <span>{friendLabel(p)}</span>
+<PlayerTitle userId={p?.id} />
                   {unreadFrom.has(p.id) && <span className="friend-unread-dot" />}
                 </button>
               );
@@ -255,6 +257,7 @@ function MessagesPage({ myId, onlineFriendIds = new Set(), initialFriendId = nul
               <FriendAvatar profile={selectedProfile} size={34} online={onlineFriendIds.has(selectedProfile.id)} />
               <div className="messages-thread-header-info">
                 <span>{friendLabel(selectedProfile)}</span>
+<PlayerTitle userId={selectedProfile?.id} />
                 <span className="messages-thread-header-status">
                   {onlineFriendIds.has(selectedProfile.id) ? t('messages.online') : t('messages.offline')}
                 </span>

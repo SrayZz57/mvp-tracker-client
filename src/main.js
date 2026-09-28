@@ -292,6 +292,46 @@ autoUpdater.on('update-downloaded', (_event, releaseNotes, releaseName) => {
 });
 
 ipcMain.handle('app-update:get-status', () => pendingUpdate);
+
+// Vérification à la demande (bouton dans Réglages). update-electron-app passe par
+// un service intermédiaire qui garde sa réponse en cache un moment après une
+// publication : on interroge donc AUSSI directement GitHub, pour pouvoir dire
+// qu'une version existe même quand ce service ne l'annonce pas encore.
+const isNewerVersion = (candidate, current) => {
+  const a = candidate.split('.').map(Number);
+  const b = current.split('.').map(Number);
+  for (let i = 0; i < 3; i += 1) {
+    if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0);
+  }
+  return false;
+};
+
+ipcMain.handle('app-update:check', async () => {
+  const current = app.getVersion();
+  if (!app.isPackaged) return { status: 'dev', current };
+  if (pendingUpdate) return { status: 'ready', current, version: pendingUpdate.releaseName };
+
+  let latest = null;
+  try {
+    const response = await fetch('https://api.github.com/repos/SrayZz57/mvp-tracker-client/releases/latest', {
+      headers: { 'User-Agent': 'MVP-Tracker' },
+    });
+    if (response.ok) latest = (await response.json()).tag_name?.replace(/^v/, '') ?? null;
+  } catch {
+    // réseau coupé : traité comme une erreur plus bas
+  }
+
+  // Lance aussi la vérification native : si le service de mise à jour voit déjà la
+  // version, elle se télécharge et le bouton "Redémarrer" apparaît (voir plus haut).
+  try {
+    autoUpdater.checkForUpdates();
+  } catch {
+    // pas de flux de mise à jour configuré (installation atypique)
+  }
+
+  if (!latest) return { status: 'error', current };
+  return isNewerVersion(latest, current) ? { status: 'available', current, version: latest } : { status: 'upToDate', current };
+});
 // `isQuitting` doit passer à true AVANT quitAndInstall() : sinon le handler
 // 'close' de mainWindow (voir plus bas, réduit dans la tray au lieu de
 // fermer) intercepte la fermeture déclenchée par la mise à jour et cache la

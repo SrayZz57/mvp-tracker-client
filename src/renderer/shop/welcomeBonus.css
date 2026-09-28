@@ -1,0 +1,114 @@
+/* Fenêtre de bonus de bienvenue (WelcomeBonusModal.jsx). Indépendant de
+   shop.css : peut s'afficher sur n'importe quel écran du hub, pas seulement
+   la boutique. */
+
+.wb-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1.4rem;
+  background: rgba(4, 5, 8, 0.78);
+  backdrop-filter: blur(6px);
+  animation: wbFade 0.2s ease;
+}
+
+@keyframes wbFade {
+  from {
+    opacity: 0;
+  }
+}
+
+.wb-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  width: min(380px, 100%);
+  padding: 2.2rem 1.8rem 1.8rem;
+  text-align: center;
+  background: linear-gradient(170deg, rgba(127, 227, 255, 0.14), #12141b 60%), #0c0e13;
+  border: 1px solid rgba(127, 227, 255, 0.45);
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+  animation: wbPop 0.25s var(--ease-out, ease);
+}
+
+@keyframes wbPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.wb-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: 1px solid transparent;
+}
+
+.wb-close:hover {
+  color: #fff;
+  border-color: var(--ap-line, rgba(255, 255, 255, 0.08));
+}
+
+.wb-gem {
+  display: grid;
+  place-items: center;
+  color: #7fe3ff;
+  filter: drop-shadow(0 0 20px rgba(127, 227, 255, 0.7));
+}
+
+.wb-card h3 {
+  margin: 0;
+  font-family: var(--font-hero);
+  font-size: 1.7rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.wb-card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.wb-claim {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding: 0.8rem 1.6rem;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(127, 227, 255, 0.4), rgba(127, 227, 255, 0.16));
+  border: 1px solid rgba(127, 227, 255, 0.6);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  transition: filter 0.15s;
+}
+
+.wb-claim:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.wb-claim:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

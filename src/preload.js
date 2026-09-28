@@ -140,6 +140,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('window:match-active-change', listener);
   },
   getUpdateStatus: () => ipcRenderer.invoke('app-update:get-status'),
+  checkForUpdate: () => ipcRenderer.invoke('app-update:check'),
   installUpdate: () => ipcRenderer.invoke('app-update:install'),
   getAutoLaunch: () => ipcRenderer.invoke('app-startup:get'),
   setAutoLaunch: (enabled) => ipcRenderer.invoke('app-startup:set', enabled),

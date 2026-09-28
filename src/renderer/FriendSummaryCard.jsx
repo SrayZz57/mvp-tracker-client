@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { friendLabel } from './friendsShared.jsx';
 import { usePlayerCardArt, useRankTiers } from './rankData.js';
 import { useAgentPortraits, useAgentRoles } from './agentIcons.js';
+import { PlayerTitle, usePlayerCard } from './battlePass/playerCosmetics.jsx';
+import { cardKeyFromId, cardStyle } from './battlePass/playerCards.jsx';
 
 function FriendSummaryCard({ profile, preview, online }) {
   const { t } = useTranslation();
@@ -22,6 +24,7 @@ function FriendSummaryCard({ profile, preview, online }) {
     return map;
   }, [agentRoles]);
 
+  const equippedCard = cardStyle(cardKeyFromId(usePlayerCard(profile.id)));
   const displayedLabel = friendLabel(profile);
   const roleIcon = profile.main_role ? roleIconByName.get(profile.main_role) : null;
   const agentPortrait = profile.main_agent ? agentPortraits.get(profile.main_agent) : null;
@@ -31,7 +34,7 @@ function FriendSummaryCard({ profile, preview, online }) {
       <div
         className={`friend-summary-banner ${tier?.color ? 'rank-glow' : ''}`}
         style={{
-          backgroundImage: avatarArt.banner ? `url(${avatarArt.banner})` : undefined,
+          ...(equippedCard ?? { backgroundImage: avatarArt.banner ? `url(${avatarArt.banner})` : undefined }),
           '--rank-color': tier?.color,
         }}
       >
@@ -48,6 +51,7 @@ function FriendSummaryCard({ profile, preview, online }) {
           </div>
           <div className="friend-summary-identity">
             <span className="friend-summary-name">{displayedLabel}</span>
+            <PlayerTitle userId={profile.id} />
             <span className="friend-summary-tag">{profile.riot_name}#{profile.riot_tag}</span>
           </div>
         </div>

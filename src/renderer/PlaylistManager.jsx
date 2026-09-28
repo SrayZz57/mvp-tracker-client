@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
 import Icon from './Icon.jsx';
-import { loadPresets } from './CustomModeConfig.jsx';
+import { isAgentPreset, loadPresets } from './CustomModeConfig.jsx';
 
 // Playlists = suites de presets personnalisés enchaînés dans la même
 // session (demande de plusieurs testeurs sur Discord, en plus des presets
@@ -11,7 +11,7 @@ import { loadPresets } from './CustomModeConfig.jsx';
 // rester robuste si un preset référencé a été supprimé entre-temps.
 const PLAYLISTS_STORAGE_KEY = 'mvptracker-aim-trainer-playlists';
 
-function loadPlaylists() {
+export function loadPlaylists() {
   try {
     const raw = localStorage.getItem(PLAYLISTS_STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -27,8 +27,12 @@ function savePlaylists(playlists) {
 function PlaylistManager({ onClose, onLaunch }) {
   const { t } = useTranslation();
   // Favoris d'abord — même tri que dans CustomModeConfig.jsx, pour que les
-  // presets qu'on utilise le plus reviennent en premier ici aussi.
-  const presets = [...loadPresets()].sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
+  // presets qu'on utilise le plus reviennent en premier ici aussi. Les presets
+  // à personnages en sont exclus : l'arène d'une session est construite une
+  // seule fois, à la première étape, et ne peut pas changer en cours de route.
+  const presets = [...loadPresets()]
+    .filter((p) => !isAgentPreset(p))
+    .sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
   const [playlists, setPlaylists] = useState(loadPlaylists);
   const [view, setView] = useState('list');
   const [name, setName] = useState('');

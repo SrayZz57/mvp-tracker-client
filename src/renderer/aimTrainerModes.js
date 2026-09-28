@@ -21,23 +21,113 @@ import {
   EyeOff,
   Flame,
   Skull,
+  Scan,
+  Eye,
+  Repeat,
+  Timer,
+  Focus,
 } from 'lucide-react';
-import vandalArmsUrl from '../assets/models/vandal-arms.glb';
 
 // Hitbox commune à tous les agents de Valorant (1,96 m) et rayon de tête des
 // agents du mode Headshot — voir aimBots.js.
 export const AGENT_HEIGHT = 1.96;
 export const AGENT_HEAD_RADIUS = 0.145;
 
-// Arme alternative (CC-BY 4.0, voir src/assets/models/CREDITS.md) — mains +
-// arme avec un vrai jeu d'animations (tir, rechargement, sprint...), choix
-// exposé dans Réglages → Modèle d'arme.
+// Armes du viewmodel, toutes modélisées en code : le modèle 3D lui-même est
+// choisi dans AimTrainerGame.jsx (WEAPON_FACTORIES), pour que le menu n'embarque
+// pas three.js.
 export const WEAPON_MODELS = {
-  vandal: { labelKey: 'aimTrainer.weaponVandal', url: vandalArmsUrl },
-  // Modélisé en code (voir glockModel.js), sans fichier ni licence externe.
+  vandal: {
+    labelKey: 'aimTrainer.weaponVandal',
+    skins: {
+      standard: { labelKey: 'aimTrainer.skinStandard' },
+      dune: { labelKey: 'aimTrainer.skinDune' },
+      cobalt: { labelKey: 'aimTrainer.skinCobalt' },
+      tidal: { labelKey: 'aimTrainer.skinTidal' },
+      redline: { labelKey: 'aimTrainer.skinRedline' },
+      magma: { labelKey: 'aimTrainer.skinMagma' },
+      circuit: { labelKey: 'aimTrainer.skinCircuit' },
+      celeste: { labelKey: 'aimTrainer.skinCeleste' },
+      jade: { labelKey: 'aimTrainer.skinJade' },
+      clockwork: { labelKey: 'aimTrainer.skinClockwork' },
+      aurora: { labelKey: 'aimTrainer.skinAurora' },
+      sakura: { labelKey: 'aimTrainer.skinSakura' },
+      radiation: { labelKey: 'aimTrainer.skinRadiation' },
+      pharaoh: { labelKey: 'aimTrainer.skinPharaoh' },
+      hologram: { labelKey: 'aimTrainer.skinHologram' },
+      titan: { labelKey: 'aimTrainer.skinTitan' },
+      arcane: { labelKey: 'aimTrainer.skinArcane' },
+      mercury: { labelKey: 'aimTrainer.skinMercury' },
+      sylvan: { labelKey: 'aimTrainer.skinSylvan' },
+      spectre: { labelKey: 'aimTrainer.skinSpectre' },
+      lithosphere: { labelKey: 'aimTrainer.skinLithosphere' },
+      symbiote: { labelKey: 'aimTrainer.skinSymbiote' },
+      heliopause: { labelKey: 'aimTrainer.skinHeliopause' },
+      reliquary: { labelKey: 'aimTrainer.skinReliquary' },
+      nullbyte: { labelKey: 'aimTrainer.skinNullbyte' },
+      patchbay: { labelKey: 'aimTrainer.skinPatchbay' },
+      downforce: { labelKey: 'aimTrainer.skinDownforce' },
+      singularity: { labelKey: 'aimTrainer.skinSingularity' },
+      origami: { labelKey: 'aimTrainer.skinOrigami' },
+      hive: { labelKey: 'aimTrainer.skinHive' },
+      voxel: { labelKey: 'aimTrainer.skinVoxel' },
+      maelstrom: { labelKey: 'aimTrainer.skinMaelstrom' },
+      sumi: { labelKey: 'aimTrainer.skinSumi' },
+    },
+  },
   glock: {
     labelKey: 'aimTrainer.weaponGlock',
-    procedural: true,
+    skins: {
+      standard: { labelKey: 'aimTrainer.skinStandard' },
+      olive: { labelKey: 'aimTrainer.skinOlive' },
+      ivory: { labelKey: 'aimTrainer.skinIvory' },
+      sunset: { labelKey: 'aimTrainer.skinSunset' },
+      volt: { labelKey: 'aimTrainer.skinVolt' },
+      futuristic: { labelKey: 'aimTrainer.skinFuturistic' },
+      banana: { labelKey: 'aimTrainer.skinBanana' },
+      synthwave: { labelKey: 'aimTrainer.skinSynthwave' },
+      kraken: { labelKey: 'aimTrainer.skinKraken' },
+      oni: { labelKey: 'aimTrainer.skinOni' },
+      prism: { labelKey: 'aimTrainer.skinPrism' },
+      xeno: { labelKey: 'aimTrainer.skinXeno' },
+      chronos: { labelKey: 'aimTrainer.skinChronos' },
+      monarch: { labelKey: 'aimTrainer.skinMonarch' },
+      scorpion: { labelKey: 'aimTrainer.skinScorpion' },
+      quantum: { labelKey: 'aimTrainer.skinQuantum' },
+      harlequin: { labelKey: 'aimTrainer.skinHarlequin' },
+      metamorph: { labelKey: 'aimTrainer.skinMetamorph' },
+      arcade: { labelKey: 'aimTrainer.skinArcade' },
+      hanabi: { labelKey: 'aimTrainer.skinHanabi' },
+      mirage: { labelKey: 'aimTrainer.skinMirage' },
+      candy: { labelKey: 'aimTrainer.skinCandy' },
+      kintsugi: { labelKey: 'aimTrainer.skinKintsugi' },
+    },
+  },
+  sniper: {
+    labelKey: 'aimTrainer.weaponSniper',
+    skins: {
+      standard: { labelKey: 'aimTrainer.skinStandard' },
+      urban: { labelKey: 'aimTrainer.skinUrban' },
+      forest: { labelKey: 'aimTrainer.skinForest' },
+      amethyst: { labelKey: 'aimTrainer.skinAmethyst' },
+      cryo: { labelKey: 'aimTrainer.skinCryo' },
+      glacier: { labelKey: 'aimTrainer.skinGlacier' },
+      void: { labelKey: 'aimTrainer.skinVoid' },
+      phoenix: { labelKey: 'aimTrainer.skinPhoenix' },
+      storm: { labelKey: 'aimTrainer.skinStorm' },
+      crown: { labelKey: 'aimTrainer.skinCrown' },
+      orbital: { labelKey: 'aimTrainer.skinOrbital' },
+      ossuary: { labelKey: 'aimTrainer.skinOssuary' },
+      stained: { labelKey: 'aimTrainer.skinStained' },
+      abyssal: { labelKey: 'aimTrainer.skinAbyssal' },
+      supernova: { labelKey: 'aimTrainer.skinSupernova' },
+      rift: { labelKey: 'aimTrainer.skinRift' },
+      locomotive: { labelKey: 'aimTrainer.skinLocomotive' },
+      kaleidoscope: { labelKey: 'aimTrainer.skinKaleidoscope' },
+      marble: { labelKey: 'aimTrainer.skinMarble' },
+      weaver: { labelKey: 'aimTrainer.skinWeaver' },
+      corsair: { labelKey: 'aimTrainer.skinCorsair' },
+    },
   },
 };
 
@@ -362,11 +452,99 @@ export const MODES = {
     lifetime: null,
     preset: { targetCount: 2, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
   },
+  // Même duel que headshotDuel, sur la carte Belvédère (site A inspiré
+  // d'Ascent, voir aimArenaAscent.js), en attendant son mode dédié.
+  ascentDuel: {
+    icon: Skull,
+    accent: '#2f9d97',
+    labelKey: 'aimTrainer.modes.ascentDuel',
+    descKey: 'aimTrainer.modes.ascentDuelDesc',
+    movement: 'agents',
+    arena: 'ascent',
+    lifetime: null,
+    preset: { targetCount: 2, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
+  // Modes sniper (arène Canyon, arme imposée : Operator). Lunette au clic droit,
+  // une balle au corps tue, culasse à réarmer entre deux tirs, tir sans lunette
+  // imprécis. Tout le déroulement est dans aimSniper.js (SNIPER_BEHAVIORS).
+  sniperQuickscope: {
+    icon: Scan,
+    accent: '#3fd0c4',
+    labelKey: 'aimTrainer.modes.sniperQuickscope',
+    descKey: 'aimTrainer.modes.sniperQuickscopeDesc',
+    movement: 'sniper',
+    arena: 'range',
+    sniper: { behavior: 'quickscope' },
+    lifetime: null,
+    preset: { targetCount: 1, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
+  sniperNoscope: {
+    icon: Zap,
+    accent: '#ff8a2a',
+    labelKey: 'aimTrainer.modes.sniperNoscope',
+    descKey: 'aimTrainer.modes.sniperNoscopeDesc',
+    movement: 'sniper',
+    arena: 'range',
+    sniper: { behavior: 'noscope' },
+    lifetime: null,
+    preset: { targetCount: 1, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
+  sniperAngleHold: {
+    icon: Eye,
+    accent: '#b36bff',
+    labelKey: 'aimTrainer.modes.sniperAngleHold',
+    descKey: 'aimTrainer.modes.sniperAngleHoldDesc',
+    movement: 'sniper',
+    arena: 'range',
+    sniper: { behavior: 'angleHold' },
+    lifetime: null,
+    preset: { targetCount: 1, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
+  sniperRepeek: {
+    icon: Repeat,
+    accent: '#ff4655',
+    labelKey: 'aimTrainer.modes.sniperRepeek',
+    descKey: 'aimTrainer.modes.sniperRepeekDesc',
+    movement: 'sniper',
+    arena: 'range',
+    sniper: { behavior: 'repeek' },
+    lifetime: null,
+    preset: { targetCount: 1, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
+  sniperBolt: {
+    icon: Timer,
+    accent: '#ffc857',
+    labelKey: 'aimTrainer.modes.sniperBolt',
+    descKey: 'aimTrainer.modes.sniperBoltDesc',
+    movement: 'sniper',
+    arena: 'range',
+    sniper: { behavior: 'bolt' },
+    lifetime: null,
+    preset: { targetCount: 1, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
+  sniperScopeSpeed: {
+    icon: Focus,
+    accent: '#4ec9f5',
+    labelKey: 'aimTrainer.modes.sniperScopeSpeed',
+    descKey: 'aimTrainer.modes.sniperScopeSpeedDesc',
+    movement: 'sniper',
+    arena: 'range',
+    sniper: { behavior: 'scopeSpeed' },
+    lifetime: null,
+    preset: { targetCount: 1, targetSize: AGENT_HEAD_RADIUS, spread: 45, duration: 60 },
+  },
 };
 
 // Modes utilisables partout (routines, modes personnalisés, défi du jour) :
 // ceux liés à une arène précise en sont exclus.
 export const GENERIC_MODE_IDS = Object.keys(MODES).filter((id) => !MODES[id].arena);
+
+// Page Modes, catégorie « Valorant » : les duels en arène, plus les exercices qui
+// reproduisent une situation de jeu de Valorant (esquiver un flash, tenir son
+// recul, viser une cible en strafe, jouer un peek). Ils restent utilisables
+// partout ailleurs (routines, playlists) : ce n'est qu'un classement d'affichage.
+const VALORANT_SITUATION_IDS = ['flashDodge', 'spray', 'strafe', 'peek'];
+export const VALORANT_MODE_IDS = Object.keys(MODES).filter((id) => MODES[id].arena || VALORANT_SITUATION_IDS.includes(id));
 
 // Le mode « Personnalisé » n'a pas de comportement à lui : un preset garde celui
 // de son mode de base (Tracking = cible mobile + clic maintenu, Peek, Orbit...),
@@ -378,6 +556,51 @@ export function behaviorKey(cfg) {
   if (cfg?.mode === 'custom') return MODES[cfg.baseMode] ? cfg.baseMode : 'flick';
   return cfg?.mode;
 }
+
+// Réglages libres du mode Personnalisé : vitesse des cibles/personnages,
+// taille et style de déplacement des personnages. Neutres hors Personnalisé :
+// la config enregistrée garde les valeurs d'une session perso précédente, qui
+// ne doivent jamais s'appliquer à un mode classé.
+export const CUSTOM_LIMITS = {
+  speed: { min: 0.5, max: 2, step: 0.05 },
+  agentScale: { min: 0.6, max: 1.5, step: 0.05 },
+};
+export function customTuning(cfg) {
+  if (cfg?.mode !== 'custom') return { speed: 1, agentScale: 1, agentStyle: 'mixed' };
+  const clamp = (v, { min, max }) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : 1);
+  return {
+    speed: clamp(cfg.speed, CUSTOM_LIMITS.speed),
+    agentScale: clamp(cfg.agentScale, CUSTOM_LIMITS.agentScale),
+    agentStyle: typeof cfg.agentStyle === 'string' ? cfg.agentStyle : 'mixed',
+  };
+}
+
+// Réglages manette : mêmes valeurs par défaut que src/renderer/input/
+// controllerProfiles.js, recopiées comme fallback pur (aucun import three.js
+// dans ce fichier, gardé volontairement léger — voir l'en-tête plus haut).
+// La vraie relecture/bornage passe par sanitizeControllerConfig au chargement
+// (voir AimTrainerHub.jsx loadConfig()).
+const DEFAULT_CONTROLLER = {
+  enabled: true,
+  activeGamepadId: null,
+  profile: {
+    id: 'valorant-console',
+    name: 'VALORANT Console',
+    modes: {
+      BASE: { sensX: 8, sensY: 8, curve: 'standard' },
+      FOCUS: { sensX: 8, sensY: 8, curve: 'standard' },
+      ADS: { sensX: 8, sensY: 8, curve: 'standard' },
+      SNIPER: { sensX: 8, sensY: 8, curve: 'standard' },
+    },
+    deadzone: { inner: 0.1, outer: 1 },
+    invertY: false,
+    dampenShooting: { enabled: false, multiplier: 0.8 },
+  },
+  rotationScale: 45,
+  vibration: { enabled: true, intensity: 1 },
+  bindings: { fire: 'R2', ads: 'L2', pause: 'Start' },
+  debugOverlay: false,
+};
 
 export const DEFAULT_CONFIG = {
   mode: 'flick',
@@ -393,6 +616,8 @@ export const DEFAULT_CONFIG = {
   // Une clé de WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
   // Les anciens réglages 'default' sont lus comme 'vandal' (voir AimTrainerGame).
   weaponModel: 'vandal',
+  // Skin de l'arme choisie (voir WEAPON_MODELS[...].skins).
+  weaponSkin: 'standard',
   // 'day' (défaut, ciel + sol clair) ou 'dark' (suggéré sur Discord — salle
   // fermée, sans ciel bleu ni sol blanc). Version simple validée avec
   // l'utilisateur : teintes assombries + ciel remplacé par une couleur
@@ -404,4 +629,7 @@ export const DEFAULT_CONFIG = {
   // Petit "pop" joué quand une cible est touchée (demandé sur Discord :
   // pouvoir le couper). Le bruit du tir lui-même reste actif.
   hitSound: true,
+  // Support manette (voir src/renderer/input/) : n'affecte jamais la souris
+  // tant qu'aucune manette n'est branchée ou que `enabled` est coupé.
+  controller: DEFAULT_CONTROLLER,
 };

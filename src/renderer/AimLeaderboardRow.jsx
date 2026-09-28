@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FriendAvatar, friendLabel } from './friendsShared.jsx';
+import { PlayerTitle, usePlayerCard } from './battlePass/playerCosmetics.jsx';
+import { cardKeyFromId, cardStyle } from './battlePass/playerCards.jsx';
 import { useRankTiers } from './rankData.js';
 
 const CARD_WIDTH = 220;
@@ -26,6 +28,7 @@ function AimLeaderboardRow({ row, rank, myId, apiKey, friendStatus, onAddFriend,
   const [preview, setPreview] = useState(undefined); // undefined = pas encore chargé, null = échec
 
   const isSelf = row.user_id === myId;
+  const equippedCard = cardStyle(cardKeyFromId(usePlayerCard(row.user_id)));
 
   const handleEnter = () => {
     // Ancrée sur le pseudo lui-même (pas sur toute la largeur de la ligne,
@@ -64,6 +67,7 @@ function AimLeaderboardRow({ row, rank, myId, apiKey, friendStatus, onAddFriend,
       <FriendAvatar profile={row.profiles} size={26} />
       <span className="aim-board-name">
         <span ref={nameRef}>{friendLabel(row.profiles)}</span>
+        <PlayerTitle userId={row.user_id} />
       </span>
       <span className="aim-board-score">{row.score}</span>
 
@@ -71,9 +75,10 @@ function AimLeaderboardRow({ row, rank, myId, apiKey, friendStatus, onAddFriend,
         !isSelf &&
         createPortal(
           <div className="aim-board-hover-card" style={{ top: cardPos.top, left: cardPos.left }}>
-            <div className="aim-board-hover-header">
+            <div className="aim-board-hover-header" style={equippedCard}>
               <FriendAvatar profile={row.profiles} size={36} />
               <span className="aim-board-hover-name">{friendLabel(row.profiles)}</span>
+              <PlayerTitle userId={row.user_id} />
             </div>
 
             <div className="aim-board-hover-stats">

@@ -1,0 +1,1553 @@
+/* Accueil « lobby » de l'Aim Trainer (HubLobby.jsx). Un seul accent : le rouge
+   MVP Tracker. Tout tient dans la fenêtre, sans défilement de page. */
+
+.lb {
+  --lb-red: var(--accent, #ff4655);
+  --lb-panel: rgba(14, 16, 22, 0.78);
+  --lb-line: rgba(255, 255, 255, 0.08);
+  position: relative;
+  display: grid;
+  grid-template-rows: 64px minmax(0, 1fr) auto;
+  height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* --- Fond : les maps en diaporama, très assombries, plus une trame fine ---- */
+
+.lb-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.lb-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 45% 55% at 50% 52%, rgba(255, 70, 85, 0.16), transparent 70%),
+    linear-gradient(90deg, rgba(8, 9, 13, 0.96) 0%, rgba(8, 9, 13, 0.7) 30%, rgba(8, 9, 13, 0.62) 50%, rgba(8, 9, 13, 0.7) 70%, rgba(8, 9, 13, 0.96) 100%),
+    linear-gradient(180deg, rgba(8, 9, 13, 0.85), transparent 20%, transparent 75%, rgba(8, 9, 13, 0.95));
+}
+
+/* --- Barre du haut ----------------------------------------------------------- */
+
+.lb-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.6rem;
+  background: linear-gradient(180deg, rgba(8, 9, 13, 0.92), rgba(8, 9, 13, 0.6));
+  border-bottom: 1px solid var(--lb-line);
+}
+
+.lb-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.lb-brand-logo {
+  height: 28px;
+  width: auto;
+}
+
+.lb-brand b {
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--lb-line);
+  font-family: var(--font-hero);
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lb-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 64px;
+}
+
+.lb-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1.1rem;
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.lb-tab::after {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: 0;
+  height: 3px;
+  background: var(--lb-red);
+  transform: scaleX(0);
+  transition: transform 0.2s var(--ease-out, ease);
+}
+
+.lb-tab:hover {
+  color: var(--text);
+}
+
+.lb-tab:hover::after {
+  transform: scaleX(0.5);
+}
+
+.lb-tab.active {
+  color: var(--text);
+}
+
+.lb-tab.active::after {
+  transform: none;
+  box-shadow: 0 0 12px var(--lb-red);
+}
+
+.lb-tab-badge {
+  min-width: 18px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+  color: #fff;
+  background: var(--lb-red);
+  border-radius: 9px;
+}
+
+.lb-top-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.lb-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--lb-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lb-icon-btn:hover {
+  color: var(--text);
+  border-color: var(--lb-red);
+}
+
+/* Profil : la carte de joueur équipée sert de bannière. */
+.lb-profile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  height: 48px;
+  margin-left: 0.4rem;
+  padding: 0 0.5rem 0 0.35rem;
+  overflow: hidden;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: #151821;
+  background-size: cover;
+  border: 1px solid var(--lb-line);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+
+.lb-profile-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(8, 9, 13, 0.9), rgba(8, 9, 13, 0.55));
+}
+
+.lb-profile > :not(.lb-profile-veil) {
+  position: relative;
+}
+
+.lb-profile-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-weight: 700;
+  background: #0d0f15;
+  border: 1px solid var(--lb-line);
+}
+
+.lb-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lb-profile-id {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.lb-profile-id strong {
+  font-size: 0.86rem;
+}
+
+.lb-profile-id strong small {
+  margin-left: 0.2rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.lb-profile-title {
+  margin-left: 0;
+  font-size: 0.68rem;
+}
+
+.lb-profile-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lb-profile-rank img {
+  width: 14px;
+  height: 14px;
+}
+
+.lb-profile-level {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 36px;
+  margin-left: 0.3rem;
+  font-family: var(--font-hero);
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #fff;
+  background: var(--lb-red);
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
+}
+
+.lb-profile-level small {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* --- Corps ------------------------------------------------------------------- */
+
+.lb-body {
+  display: grid;
+  grid-template-columns: minmax(340px, 400px) minmax(0, 1fr) minmax(320px, 380px);
+  gap: 1.4rem;
+  min-height: 0;
+  padding: 1.4rem 1.6rem 1rem;
+}
+
+.lb-eyebrow {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Colonne de gauche : jouer. */
+.lb-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.lb-mode {
+  --mode-accent: #ff4655;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem 1rem;
+  padding: 1.1rem 1.2rem;
+  background:
+    radial-gradient(ellipse 80% 120% at 0% 0%, color-mix(in srgb, var(--mode-accent) 22%, transparent), transparent 60%),
+    var(--lb-panel);
+  border: 1px solid color-mix(in srgb, var(--mode-accent) 40%, var(--lb-line));
+  border-left: 3px solid var(--mode-accent);
+  backdrop-filter: blur(8px);
+}
+
+.lb-mode-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  color: var(--mode-accent);
+  background: color-mix(in srgb, var(--mode-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mode-accent) 45%, transparent);
+}
+
+.lb-mode-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.lb-mode-text strong {
+  font-family: var(--font-hero);
+  font-size: 1.9rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.lb-mode-text small {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lb-mode-bests {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 1.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--lb-line);
+}
+
+.lb-mode-bests span,
+.lb-stats span {
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-mode-bests b,
+.lb-stats b {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+}
+
+.lb-mode-bests small,
+.lb-stats small {
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lb-gold {
+  color: var(--hue-gold, #ffc857);
+}
+
+.lb-play {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  height: 78px;
+  font: inherit;
+  font-family: var(--font-hero);
+  font-size: 2.3rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #ff5a67, var(--lb-red) 55%, #d7303f);
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  box-shadow: 0 10px 30px rgba(255, 70, 85, 0.35);
+  transition: transform 0.15s var(--ease-out, ease), filter 0.15s;
+}
+
+.lb-play:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.lb-play:active {
+  transform: translateY(1px);
+}
+
+.lb-link {
+  align-self: flex-start;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.lb-link:hover {
+  color: var(--lb-red);
+}
+
+.lb-left > .lb-eyebrow {
+  margin-top: 0.6rem;
+}
+
+.lb-recent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.lb-chip {
+  --mode-accent: #ff4655;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  background: var(--lb-panel);
+  border: 1px solid var(--lb-line);
+  border-left: 2px solid var(--mode-accent);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.lb-chip svg:first-child {
+  color: var(--mode-accent);
+}
+
+.lb-chip svg:last-child {
+  opacity: 0;
+  margin-left: -0.2rem;
+  transition: opacity 0.15s;
+}
+
+.lb-chip:hover {
+  border-color: var(--mode-accent);
+  background: color-mix(in srgb, var(--mode-accent) 12%, var(--lb-panel));
+}
+
+.lb-chip:hover svg:last-child {
+  opacity: 1;
+}
+
+.lb-tools {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.lb-tool {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: var(--lb-panel);
+  border: 1px solid var(--lb-line);
+  transition: border-color 0.15s;
+}
+
+.lb-tool > svg {
+  flex: none;
+  color: var(--lb-red);
+}
+
+.lb-tool span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.lb-tool b {
+  font-size: 0.86rem;
+}
+
+.lb-tool small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.lb-tool:hover {
+  border-color: var(--lb-red);
+}
+
+/* Éditeur d'arène : bloc mis en avant avec un aperçu en jeu, même langage
+   visuel que .lb-tile (coins coupés, dégradé, image en fond). */
+.lb-tool-feature {
+  --cat: #b36bff;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.8rem;
+  flex: 1 1 auto;
+  min-height: 92px;
+  padding: 1rem 1.1rem;
+  overflow: hidden;
+  isolation: isolate;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: #0f1117;
+  border: 1px solid var(--lb-line);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  transition: border-color 0.2s, transform 0.2s var(--ease-out, ease);
+}
+
+.lb-tool-feature:hover {
+  border-color: var(--cat);
+  transform: translateY(-2px);
+}
+
+.lb-tool-feature-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  transition: transform 0.4s var(--ease-out, ease);
+}
+
+.lb-tool-feature:hover .lb-tool-feature-art {
+  transform: scale(1.06);
+}
+
+.lb-tool-feature-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(0deg, rgba(8, 9, 13, 0.98) 15%, rgba(8, 9, 13, 0.75) 45%, rgba(8, 9, 13, 0.2) 65%, rgba(8, 9, 13, 0.55) 100%);
+}
+
+.lb-tool-feature > svg:first-of-type {
+  flex: none;
+  color: var(--cat);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
+}
+
+.lb-tool-feature span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lb-tool-feature b {
+  font-family: var(--font-hero);
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.lb-tool-feature small {
+  font-size: 0.82rem;
+  color: #d6d8de;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+.lb-tool-feature-arrow {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.8rem;
+  color: var(--cat);
+  transition: transform 0.2s var(--ease-out, ease);
+}
+
+.lb-tool-feature:hover .lb-tool-feature-arrow {
+  transform: translateX(4px);
+}
+
+.lb-stats {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: var(--lb-panel);
+  border: 1px solid var(--lb-line);
+  border-top: 2px solid var(--lb-red);
+  transition: border-color 0.15s;
+}
+
+.lb-stats:hover {
+  border-color: var(--lb-red);
+}
+
+.lb-stats b {
+  font-family: var(--font-hero);
+  font-size: 1.8rem;
+  font-weight: 400;
+}
+
+/* Centre : le défi du jour « à la une », puis des tuiles vers le Casier et les
+   catégories de modes. Tout est cliquable, rien n'est décoratif seul. */
+.lb-center {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 210px auto;
+  gap: 0.9rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.lb-feature {
+  --cat: #ff4655;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 0;
+  padding: 2.4rem 2.8rem;
+  overflow: hidden;
+  isolation: isolate;
+  background: #0d0f15;
+  border: 1px solid var(--lb-line);
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+}
+
+.lb-feature[data-cat='valorant'] {
+  --cat: #3fd0c4;
+}
+
+.lb-feature::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 3px;
+  background: var(--cat);
+  box-shadow: 0 0 18px var(--cat);
+}
+
+.lb-feature-art,
+.lb-tile-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+
+.lb-feature-art > *,
+.lb-tile-art > * {
+  position: absolute;
+  inset: 0;
+}
+
+/* La capture du jeu est cadrée sur les cibles, pas sur le ciel. */
+.lb-feature .mc-photo-classic {
+  object-position: 55% 60%;
+  transform: scale(1.45);
+  transform-origin: 62% 72%;
+}
+
+/* Le ciel clair de la capture se fond dans le thème sombre. */
+.lb-feature[data-cat='classic'] .lb-feature-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(12, 14, 20, 0.9), rgba(40, 12, 18, 0.4) 40%, transparent 70%);
+}
+
+.lb-feature-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(8, 9, 13, 0.92) 0%, rgba(8, 9, 13, 0.55) 40%, transparent 72%),
+    linear-gradient(0deg, rgba(8, 9, 13, 0.8), transparent 45%);
+}
+
+.lb-feature-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8rem;
+  max-width: 560px;
+}
+
+.lb-feature-tag,
+.lb-tile-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cat, var(--lb-red));
+}
+
+.lb-feature h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0;
+  font-family: var(--font-hero);
+  font-size: clamp(3.2rem, 5.4vw, 5.6rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.lb-feature h2 svg {
+  flex: none;
+  color: var(--cat);
+}
+
+.lb-feature-body p {
+  margin: 0;
+  font-size: 1.02rem;
+  color: #c9ccd4;
+}
+
+.lb-feature-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  padding: 1rem 2rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  background: var(--lb-red);
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  transition: filter 0.15s, transform 0.15s var(--ease-out, ease);
+}
+
+.lb-feature-cta:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+
+.lb-feature-board {
+  align-self: flex-end;
+  flex: none;
+  width: min(340px, 42%);
+  padding: 0.9rem 1rem;
+  background: rgba(8, 9, 13, 0.72);
+  border: 1px solid var(--lb-line);
+  backdrop-filter: blur(8px);
+}
+
+/* Tuiles sous la une. */
+.lb-tiles {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 0.9rem;
+  min-height: 0;
+}
+
+.lb-tile {
+  --cat: var(--lb-red);
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 1rem 1.1rem;
+  overflow: hidden;
+  isolation: isolate;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: #0f1117;
+  border: 1px solid var(--lb-line);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  transition: border-color 0.2s, transform 0.2s var(--ease-out, ease);
+}
+
+.lb-tile:hover {
+  border-color: var(--cat);
+  transform: translateY(-3px);
+}
+
+.lb-tile[data-cat='valorant'] {
+  --cat: #3fd0c4;
+}
+
+.lb-tile[data-cat='custom'] {
+  --cat: #b36bff;
+}
+
+.lb-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(0deg, rgba(8, 9, 13, 0.95), rgba(8, 9, 13, 0.25) 75%);
+}
+
+.lb-tile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.lb-tile strong {
+  font-family: var(--font-hero);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.lb-tile-arrow {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  color: var(--cat);
+  transition: transform 0.2s var(--ease-out, ease);
+}
+
+.lb-tile:hover .lb-tile-arrow {
+  transform: translateX(4px);
+}
+
+/* Casier : l'aperçu du skin équipé, en grand dans la tuile. */
+.lb-tile-locker {
+  --r: #9aa0ab;
+  background: radial-gradient(ellipse 70% 90% at 70% 40%, color-mix(in srgb, var(--r) 22%, transparent), transparent 70%), #0f1117;
+}
+
+.lb-tile-locker[data-rarity='common'] { --r: #5fd18a; }
+.lb-tile-locker[data-rarity='rare'] { --r: #4ea3ff; }
+.lb-tile-locker[data-rarity='epic'] { --r: #b36bff; }
+.lb-tile-locker[data-rarity='legendary'] { --r: #ffc24a; }
+.lb-tile-locker[data-rarity='mythic'] { --r: #ff4655; }
+.lb-tile-locker[data-rarity='ultimate'] { --r: #ff6ad5; }
+.lb-tile-locker[data-rarity='transcendent'] { --r: #ffd27a; }
+
+.lb-tile-weapon {
+  position: absolute;
+  right: 2%;
+  top: 6%;
+  z-index: -2;
+  width: 62%;
+  height: 88%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+  transition: transform 0.4s var(--ease-out, ease);
+}
+
+.lb-tile-locker:hover .lb-tile-weapon {
+  transform: scale(1.05) rotate(-2deg);
+}
+
+.lb-tile-locker::before {
+  background: linear-gradient(90deg, rgba(8, 9, 13, 0.92), rgba(8, 9, 13, 0.2) 70%);
+}
+
+.lb-tile-locker strong span {
+  color: var(--r);
+}
+
+.lb-tile-locker .skin-rarity {
+  font-size: 0.6rem;
+}
+
+/* Tuiles de catégorie : l'illustration de la page Modes, en petit. */
+.lb-tile-mode .lb-tile-art {
+  transition: transform 0.5s var(--ease-out, ease);
+}
+
+.lb-tile-mode:hover .lb-tile-art {
+  transform: scale(1.06);
+}
+
+.lb-tile-mode .mc-window {
+  top: 6%;
+  left: 18%;
+  width: 64%;
+}
+
+.lb-tile-mode .mc-agent {
+  right: -20%;
+  bottom: -40%;
+  width: 90%;
+}
+
+.lb-tile-mode .mc-hud,
+.lb-tile-mode .mc-reticle,
+.lb-tile-mode .mc-agent-bg,
+.lb-tile-mode .mc-orb {
+  display: none;
+}
+
+.lb-center .lb-tip {
+  position: static;
+}
+
+.lb-tip {
+  margin: 0;
+  font-size: 0.76rem;
+  text-align: center;
+  color: var(--text-muted);
+  animation: lbTip 0.5s var(--ease-out, ease);
+}
+
+.lb-tip b {
+  margin-right: 0.35rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lb-red);
+}
+
+@keyframes lbTip {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Colonne de droite : défis et classements. Les cartes existantes du hub
+   (défi du jour, amis) sont reprises et remises au style du lobby. */
+.lb-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.lb-right .aim-hub-side-card,
+.lb-card {
+  flex: none;
+  padding: 1rem 1.1rem;
+  background: var(--lb-panel);
+  border: 1px solid var(--lb-line);
+  border-top: 2px solid var(--lb-red);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+
+.lb-right .aim-hub-friends-card {
+  flex: none;
+}
+
+.lb-right .aim-hub-side-card-badge,
+.lb-card-title {
+  display: block;
+  padding: 0;
+  margin-bottom: 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border-radius: 0;
+}
+
+.lb-right .aim-hub-challenge-card h3 {
+  margin-top: 0;
+  font-family: var(--font-hero);
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lb-right .aim-hub-side-card-cta {
+  border-radius: 0;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.lb-challenges ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lb-challenges li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3rem 0.8rem;
+  align-items: center;
+}
+
+.lb-challenge-text {
+  font-size: 0.82rem;
+}
+
+.lb-challenge-xp {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--hue-gold, #ffc857);
+}
+
+.lb-challenges li[data-done='true'] .lb-challenge-xp {
+  color: var(--good, #3ddc84);
+}
+
+.lb-challenges li[data-done='true'] .lb-challenge-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.lb-challenge-bar {
+  height: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.lb-challenge-bar span {
+  display: block;
+  height: 100%;
+  background: var(--lb-red);
+}
+
+.lb-challenges li[data-done='true'] .lb-challenge-bar span {
+  background: var(--good, #3ddc84);
+}
+
+.lb-challenges li small {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* --- Bandeau Battle Pass ----------------------------------------------------- */
+
+.lb-bottom {
+  padding: 0 1.6rem 1.2rem;
+}
+
+.lb-bp {
+  --r: #9aa0ab;
+  display: flex;
+  align-items: center;
+  gap: 1.3rem;
+  width: 100%;
+  min-height: 70px;
+  padding: 0.7rem 1rem 0.7rem 1.2rem;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(255, 70, 85, 0.16), var(--lb-panel) 30%);
+  border: 1px solid var(--lb-line);
+  border-left: 3px solid var(--lb-red);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.15s;
+}
+
+.lb-bp:hover {
+  border-color: var(--lb-red);
+}
+
+.lb-bp-label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--lb-red);
+}
+
+.lb-bp-label span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.lb-bp-label b {
+  font-family: var(--font-hero);
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.lb-bp-label small {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lb-bp-level {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  font-family: var(--font-hero);
+  font-size: 1.6rem;
+  color: #fff;
+  background: var(--lb-red);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+
+.lb-bp-progress {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 160px;
+}
+
+.lb-bp-bar {
+  height: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.lb-bp-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #b2202f, var(--lb-red));
+  box-shadow: 0 0 12px rgba(255, 70, 85, 0.6);
+}
+
+.lb-bp-progress small {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.lb-bp-next {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-left: 1.2rem;
+  border-left: 1px solid var(--lb-line);
+}
+
+.lb-bp-next[data-rarity='common'] { --r: #5fd18a; }
+.lb-bp-next[data-rarity='rare'] { --r: #4ea3ff; }
+.lb-bp-next[data-rarity='epic'] { --r: #b36bff; }
+.lb-bp-next[data-rarity='legendary'] { --r: #ffc24a; }
+.lb-bp-next[data-rarity='mythic'] { --r: #ff4655; }
+.lb-bp-next[data-rarity='ultimate'] { --r: #ff6ad5; }
+.lb-bp-next[data-rarity='transcendent'] { --r: #ffd27a; }
+
+.lb-bp-thumb {
+  width: 92px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--r);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid color-mix(in srgb, var(--r) 55%, transparent);
+}
+
+.lb-bp-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lb-thumb-card {
+  width: 100%;
+  height: 100%;
+}
+
+.lb-bp-next > span:last-child {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.lb-bp-next small {
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lb-bp-next b {
+  font-size: 0.9rem;
+  color: var(--r);
+}
+
+.lb-bp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid var(--lb-line);
+}
+
+.lb-bp-cta-claim {
+  color: #fff;
+  background: var(--lb-red);
+  border-color: transparent;
+  box-shadow: 0 0 18px rgba(255, 70, 85, 0.45);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lb-bp-cta-claim {
+    animation: lbPulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes lbPulse {
+  50% {
+    box-shadow: 0 0 30px rgba(255, 70, 85, 0.75);
+  }
+}
+
+/* --- Petites fenêtres ------------------------------------------------------------ */
+
+@media (max-width: 1400px) {
+  .lb-body {
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr) minmax(280px, 320px);
+  }
+  .lb-tab {
+    padding: 0 0.7rem;
+  }
+  .lb-bp-next {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .lb {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .lb-top {
+    grid-template-columns: 1fr auto;
+  }
+  .lb-tabs {
+    display: none;
+  }
+  .lb-body {
+    grid-template-columns: 1fr;
+  }
+  .lb-feature {
+    min-height: 360px;
+  }
+  .lb-tiles {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .lb-tile {
+    min-height: 120px;
+  }
+}
+
+/* Dans la une (bien plus large que les cartes de la page Modes), l'agent est
+   placé en haut à droite, dans l'espace libre au-dessus du classement. */
+.lb-feature .mc-agent {
+  top: -2%;
+  right: 3%;
+  bottom: auto;
+  width: 46%;
+  z-index: 1;
+}
+
+.lb-feature .mc-agent-bg {
+  left: auto;
+  right: 4%;
+}
+
+.lb-feature .mc-hud,
+.lb-feature .mc-reticle {
+  display: none;
+}
+
+.lb-feature .mc-slash {
+  display: none;
+}
+
+/* Tuiles de catégorie : chaque visuel recadré sur son sujet. */
+.lb-tile-mode .mc-agent {
+  top: -6%;
+  right: -4%;
+  bottom: auto;
+  width: 62%;
+}
+
+.lb-tile-mode .mc-slash {
+  display: none;
+}
+
+.lb-tile-mode .mc-window {
+  top: 14%;
+  left: 42%;
+  width: 54%;
+}
+
+.lb-tile-mode::before {
+  background: linear-gradient(90deg, rgba(8, 9, 13, 0.92), rgba(8, 9, 13, 0.35) 55%, transparent);
+}
+
+.lb-tile strong {
+  font-size: 1.9rem;
+}
+
+/* --- Mode sélectionné au centre (la une) --------------------------------------- */
+
+.lb-feature[data-cat='custom'] {
+  --cat: #b36bff;
+}
+
+.lb-feature .lb-feature-tag {
+  color: var(--mode-accent, var(--cat));
+}
+
+.lb-feature-bests {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.4rem;
+}
+
+.lb-feature-bests span {
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-feature-bests b {
+  font-family: var(--font-hero);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.lb-feature-bests small {
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lb-feature-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  margin-top: 1rem;
+}
+
+.lb-feature-actions .lb-play {
+  width: 300px;
+}
+
+.lb-feature-actions .lb-link {
+  align-self: center;
+}
+
+.lb-recent-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(260px, 30%);
+}
+
+.lb-recent-panel .lb-chip {
+  justify-content: flex-start;
+}
+
+.lb-recent-panel .lb-chip svg:last-child {
+  margin-left: auto;
+}
+
+/* Personnalisé : la capture de la fenêtre, à droite de la une. */
+.lb-feature .mc-window {
+  top: 8%;
+  left: auto;
+  right: 6%;
+  width: 34%;
+}
+
+/* --- Défi du jour (colonne de gauche) ------------------------------------------ */
+
+.lb-challenge {
+  --cat: #ff4655;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.2rem 1.2rem 1.1rem;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--lb-panel);
+  border: 1px solid var(--lb-line);
+  border-top: 2px solid var(--cat);
+}
+
+.lb-challenge[data-cat='valorant'] {
+  --cat: #3fd0c4;
+}
+
+.lb-challenge[data-cat='custom'] {
+  --cat: #b36bff;
+}
+
+/* Le visuel de la catégorie en bandeau, très estompé derrière le titre. */
+.lb-challenge-art {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 150px;
+  z-index: -1;
+  opacity: 0.35;
+  mask-image: linear-gradient(180deg, #000, transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+}
+
+.lb-challenge-art > * {
+  position: absolute;
+  inset: 0;
+}
+
+.lb-challenge-art .mc-hud,
+.lb-challenge-art .mc-reticle,
+.lb-challenge-art .mc-slash,
+.lb-challenge-art .mc-agent-bg {
+  display: none;
+}
+
+.lb-challenge-art .mc-agent {
+  top: -10%;
+  right: -10%;
+  bottom: auto;
+  width: 70%;
+}
+
+.lb-challenge h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.1rem 0 0;
+  font-family: var(--font-hero);
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.lb-challenge h3 svg {
+  color: var(--cat);
+}
+
+.lb-challenge p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #c3c7d0;
+}
+
+.lb-challenge-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--cat) 25%, transparent);
+  border: 1px solid var(--cat);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: background 0.15s;
+}
+
+.lb-challenge-cta:hover {
+  background: var(--cat);
+}
+
+.lb-challenge-board {
+  align-self: stretch;
+  margin-top: 0.6rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--lb-line);
+}
+
+/* Solde d'Éclats dans la barre du haut (ouvre la boutique). */
+.lb-currency {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.8rem;
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(127, 227, 255, 0.16), rgba(127, 227, 255, 0.05));
+  border: 1px solid rgba(127, 227, 255, 0.4);
+  border-radius: 6px;
+}
+
+.lb-currency svg {
+  color: #7fe3ff;
+  filter: drop-shadow(0 0 5px #7fe3ff);
+}
+
+.lb-currency:hover {
+  border-color: #7fe3ff;
+}

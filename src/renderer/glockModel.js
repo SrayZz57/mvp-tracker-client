@@ -1,6 +1,16 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { flashTexture as kitFlashTexture, weaponUniforms } from './weaponKit.js';
+import { GLOCK_LEGENDARY_SKINS } from './glockSkins.js';
+import { frameShape, gripShape, traceGrip, GRIP_BOTTOM } from './glockGeometry.js';
+import { glockHands } from './viewmodelHands.js';
+import { GLOCK_MYTHIC_SKINS } from './glockSkinsMythic.js';
+import { GLOCK_TRANSCENDENT_SKINS } from './glockSkinMetamorph.js';
+import { GLOCK_TRANSCENDENT_SET } from './glockSkinsTranscendent.js';
+import { makeBasicSkins } from './basicSkins.js';
+
+const GLOCK_BASIC_SKINS = makeBasicSkins('glock', null);
 
 // Pistole type Glock 17 modélisé entièrement en code (aucun fichier externe,
 // donc aucune licence à gérer). Les pièces principales ne sont pas des blocs :
@@ -328,12 +338,7 @@ function futuristicSlideGlow() {
 // Grille d'hexagones sur la poignée : même tirage pour la couleur, la
 // lumière et le relief, pour que tout reste parfaitement aligné.
 function gripClip(ctx) {
-  ctx.beginPath();
-  ctx.moveTo(62, -40);
-  ctx.quadraticCurveTo(50, -80, 33, -120);
-  ctx.lineTo(-6, -120);
-  ctx.quadraticCurveTo(-11, -80, -4, -40);
-  ctx.closePath();
+  traceGrip(ctx);
   ctx.clip();
 }
 
@@ -371,8 +376,8 @@ function frameDetails(ctx, stroke, width) {
   ctx.stroke();
   // Filet du dos de poignée.
   ctx.beginPath();
-  ctx.moveTo(-6, -36);
-  ctx.quadraticCurveTo(-12, -80, -8, -118);
+  ctx.moveTo(-7, -36);
+  ctx.quadraticCurveTo(-19, -65, -14, -98);
   ctx.stroke();
 }
 
@@ -806,48 +811,6 @@ function slideShape() {
   return s;
 }
 
-// Carcasse : cache-poussière avec rail, pontet évidé, poignée inclinée
-// (~22°), talon évasé et queue de castor sous l'arrière de la culasse.
-function frameShape() {
-  const s = new THREE.Shape();
-  s.moveTo(8, -0.6);
-  s.lineTo(166, -0.6);
-  s.quadraticCurveTo(172, -0.6, 172, -6);
-  s.lineTo(172, -15);
-  s.lineTo(117, -15);
-  // Pontet : face avant presque droite, crochet bas.
-  s.quadraticCurveTo(114, -16, 113.5, -21);
-  s.lineTo(112.5, -41);
-  s.quadraticCurveTo(111.5, -47.5, 104, -47.5);
-  s.lineTo(81, -47.5);
-  s.quadraticCurveTo(72, -47.5, 69.5, -40);
-  s.lineTo(66, -36);
-  // Face avant de la poignée, légèrement galbée.
-  s.quadraticCurveTo(52, -78, 35, -125.5);
-  // Talon évasé (puits de chargeur).
-  s.quadraticCurveTo(34.5, -129.5, 30, -129.5);
-  s.lineTo(-6, -129.5);
-  s.quadraticCurveTo(-11, -129.5, -11, -124);
-  // Dos de poignée avec renflement de paume.
-  s.quadraticCurveTo(-15, -82, -7, -32);
-  // Queue de castor.
-  s.quadraticCurveTo(-5, -20, -13, -14);
-  s.quadraticCurveTo(-16, -10, -9, -7);
-  s.quadraticCurveTo(2, -3, 8, -0.6);
-
-  const hole = new THREE.Path();
-  hole.moveTo(108, -19.5);
-  hole.lineTo(106.5, -39.5);
-  hole.quadraticCurveTo(106, -43.5, 101, -43.5);
-  hole.lineTo(82, -43.5);
-  hole.quadraticCurveTo(76.5, -43.5, 75.5, -38);
-  hole.lineTo(73.5, -25);
-  hole.quadraticCurveTo(73.5, -19.5, 79, -19.5);
-  hole.closePath();
-  s.holes.push(hole);
-  return s;
-}
-
 function triggerShape() {
   const s = new THREE.Shape();
   s.moveTo(89.5, -15);
@@ -909,7 +872,7 @@ function extrudeAlongX(shape, length, bevel) {
   return geometry;
 }
 
-export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
+export function createGlockViewmodel({ renderer, scene, skin = 'standard', hands = false }) {
   const futuristic = skin === 'futuristic';
   const banana = skin === 'banana';
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -940,16 +903,11 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
   const frameBump = bumpTexture('frame', { minX: -16, maxX: 174, minY: -132, maxY: 1 }, 5, (ctx) => {
     // Grain de poignée : points serrés sur la zone de prise en main.
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(62, -40);
-    ctx.quadraticCurveTo(50, -80, 33, -120);
-    ctx.lineTo(-6, -120);
-    ctx.quadraticCurveTo(-11, -80, -4, -40);
-    ctx.closePath();
+    traceGrip(ctx);
     ctx.clip();
     for (let i = 0; i < 9000; i += 1) {
-      const x = -14 + Math.random() * 80;
-      const y = -122 + Math.random() * 84;
+      const x = -20 + Math.random() * 92;
+      const y = -104 + Math.random() * 70;
       ctx.fillStyle = Math.random() < 0.5 ? '#000000' : '#555555';
       ctx.fillRect(x, y, 0.55, 0.55);
     }
@@ -1058,6 +1016,15 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     sightMat = new THREE.MeshStandardMaterial({ color: 0xf4f4ee, roughness: 0.4, emissive: 0x333333 });
     dotMat = sightMat;
   }
+  // Skins légendaires (glockSkins.js) : ils remplacent les matériaux ci-dessus
+  // et ajoutent leurs propres volumes et effets.
+  const uniforms = weaponUniforms();
+  // Les reliefs (stries de la culasse, grain de la poignée) servent aux skins de
+  // base, qui repeignent la finition standard ; les autres les ignorent.
+  const legendary = (GLOCK_BASIC_SKINS[skin] ?? GLOCK_LEGENDARY_SKINS[skin] ?? GLOCK_MYTHIC_SKINS[skin] ?? GLOCK_TRANSCENDENT_SKINS[skin] ?? GLOCK_TRANSCENDENT_SET[skin])?.build(envMap, { uniforms, slideBump, frameBump });
+  if (legendary) {
+    ({ slide: slideMat, slideWall: slideWallMat, frame: frameMat, frameWall: frameWallMat, barrel: barrelMat, steel: steelMat, sight: sightMat, dot: dotMat } = legendary);
+  }
   const blackMat = new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.9 });
   const brassMat = new THREE.MeshStandardMaterial({ ...common, color: 0xd1a54a, metalness: 1, roughness: 0.25 });
   // Néon cyan des bandes lumineuses (couleur modulée par la pulsation).
@@ -1082,9 +1049,12 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     // --- Carcasse ---------------------------------------------------------------
     const frame = new THREE.Mesh(extrude(frameShape(), FRAME_WIDTH - 3, 1.5), [frameMat, frameWallMat]);
     model.add(frame);
-    // Semelle de chargeur, un peu plus large que la poignée.
-    const basePlate = new THREE.Mesh(new RoundedBoxGeometry(49, 5, FRAME_WIDTH + 1, 3, 1.6), frameWallMat);
-    basePlate.position.set(12, -131.5, 0);
+    // Poignée à part : un peu plus large que la carcasse et bien arrondie.
+    const grip = new THREE.Mesh(extrude(gripShape(), 24, 2.5), [frameMat, frameWallMat]);
+    model.add(grip);
+    // Semelle de chargeur, légèrement débordante.
+    const basePlate = new THREE.Mesh(new RoundedBoxGeometry(50, 4.5, 30, 3, 1.6), frameWallMat);
+    basePlate.position.set(12, GRIP_BOTTOM - 1.8, 0);
     model.add(basePlate);
     // Détente courbe avec sa languette de sécurité.
     const trigger = new THREE.Mesh(extrude(triggerShape(), 5, 0.7), frameWallMat);
@@ -1197,6 +1167,18 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     });
   }
 
+  const addPart = (geometry, material, x = 0, y = 0, z = 0, parent = model) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    parent.add(mesh);
+    return mesh;
+  };
+  const skinExtras = legendary?.decorate?.({ model, slide, add: addPart, scene, uniforms, boreY: BORE_Y }) ?? {};
+  if (skinExtras.muzzleX) muzzleAt.x = skinExtras.muzzleX;
+  // Main ajoutée après le skin : les apparitions des skins ne la déplacent pas.
+  const handRig = hands ? glockHands(typeof hands === 'string' ? hands : 'standard') : null;
+  if (handRig) model.add(handRig.group);
+
   const muzzle = new THREE.Object3D();
   muzzle.position.copy(muzzleAt);
   model.add(muzzle);
@@ -1206,11 +1188,11 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
 
   // --- Effets de bouche ---------------------------------------------------------
   const flash = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: flashTexture(futuristic ? 'plasma' : banana ? 'banana' : 'powder'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }),
+    new THREE.SpriteMaterial({ map: legendary ? kitFlashTexture(legendary.flash, 8) : flashTexture(futuristic ? 'plasma' : banana ? 'banana' : 'powder'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }),
   );
   flash.scale.set(95, 95, 1);
   muzzle.add(flash);
-  const flashLight = new THREE.PointLight(futuristic ? 0x5ff0ff : banana ? 0xffdc5a : 0xffb35c, 0, 3, 2);
+  const flashLight = new THREE.PointLight(legendary?.light ?? (futuristic ? 0x5ff0ff : banana ? 0xffdc5a : 0xffb35c), 0, 3, 2);
   muzzle.add(flashLight);
 
   // Échelle en mètres, canon aligné sur -Z de la caméra, flanc droit vers la droite.
@@ -1262,6 +1244,7 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     kickVelocity += 9;
     slideT = 0;
     flare = 1;
+    uniforms.uFlare.value = 1;
     flashUntil = now + 55;
     flash.material.rotation = Math.random() * Math.PI * 2;
     flash.scale.setScalar(80 + Math.random() * 40);
@@ -1269,7 +1252,9 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     // Douille éjectée vers la droite et l'arrière, en rotation.
     ejection.getWorldPosition(tmp);
     let shell;
-    if (banana) {
+    if (legendary?.makeShell) {
+      shell = legendary.makeShell();
+    } else if (banana) {
       shell = buildPeel(bananaParts.geometries, bananaParts.materials);
     } else {
       shell = new THREE.Mesh(shellGeo, futuristic ? cellMat : brassMat);
@@ -1303,12 +1288,14 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     // Petit nuage de fumée à la bouche, qui monte et s'étale.
     muzzle.getWorldPosition(tmp);
     const smoke = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0.5, color: futuristic ? 0xaef9ff : banana ? 0xfff1a8 : 0xffffff }),
+      new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0.5, color: legendary?.smoke ?? (futuristic ? 0xaef9ff : banana ? 0xfff1a8 : 0xffffff) }),
     );
     smoke.position.copy(tmp);
     smoke.scale.setScalar(0.03);
     scene.add(smoke);
     smokes.push({ sprite: smoke, born: now });
+    skinExtras.onFire?.();
+    handRig?.fire();
   };
 
   const update = (rawDt) => {
@@ -1330,6 +1317,11 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     if (slideT < 1) slideT = Math.min(1, slideT + dt / 0.11);
     const back = slideT < 0.3 ? slideT / 0.3 : 1 - (slideT - 0.3) / 0.7;
     slide.position.x = -Math.max(0, back) * 24;
+
+    uniforms.uTime.value = time;
+    uniforms.uFlare.value = Math.max(0, uniforms.uFlare.value - dt * 3.5);
+    skinExtras.update?.(dt, time, uniforms.uFlare.value, { slideBack: -slide.position.x });
+    handRig?.update(dt);
 
     if (glowMaterials.length) {
       flare = Math.max(0, flare - dt * 3.5);
@@ -1384,5 +1376,13 @@ export function createGlockViewmodel({ renderer, scene, skin = 'standard' }) {
     }
   };
 
-  return { holder, muzzle, fire, update };
+  // Skins Transcendants : rejoue leur animation d'apparition (sortie de l'arme) ;
+  // les mains attendent hors champ puis viennent la saisir.
+  const replayIntro = () => {
+    if (!skinExtras.replayIntro) return;
+    skinExtras.replayIntro();
+    handRig?.startIntro(skinExtras.introDuration ?? 1.6);
+  };
+
+  return { holder, muzzle, fire, update, replayIntro };
 }

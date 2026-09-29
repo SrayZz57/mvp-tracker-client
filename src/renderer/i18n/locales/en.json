@@ -188,6 +188,7 @@
       "analyse": "Analysis",
       "social": "Teammates & Rivals",
       "graphiques": "Charts",
+      "myEvolution": "My evolution",
       "myHallOfFame": "My Hall of Fame",
       "myWeakness": "Points to work on",
       "myCollection": "My collection",
@@ -329,6 +330,35 @@
     "deletePublishedAdmin": "Delete this composition (moderation)"
   },
   "social": {
+    "regularsTitle": "Players you often meet",
+    "regularsHint": "Click a player to see your shared history: games together, head to head and performance.",
+    "regularsEmpty": "No player met at least twice yet.",
+    "regularSplit": "{{together}} together · {{against}} head to head",
+    "record": {
+      "open": "Shared history",
+      "quickview": "Account preview",
+      "summary": "{{count}} games in common, from {{from}} to {{to}}",
+      "together": "On your team",
+      "against": "Head to head",
+      "noneTogether": "No games on the same team.",
+      "noneAgainst": "No games on opposing teams.",
+      "games": "Games",
+      "winrate": "Winrate",
+      "kd": "K/D",
+      "hs": "Headshot rate",
+      "adr": "Damage / round",
+      "vsAverage": "Arrows compare with your usual average.",
+      "yourAgents": "Your agents",
+      "theirAgents": "Their agents",
+      "duels": "Direct duels: {{mine}} eliminations from you, {{theirs}} from them.",
+      "lowSample": "Only {{count}} games in common: treat these percentages with caution.",
+      "history": "Shared history",
+      "togetherTag": "Together",
+      "againstTag": "Head to head",
+      "showAll": "Show all {{count}} games",
+      "showLess": "Show less",
+      "disclaimer": "These figures describe your shared games. They vary with groups, player pairings and chance: the goal is to observe data, not to judge a person."
+    },
     "you": "You",
     "notEnoughSynergyData": "Not enough matches with the same teammates yet to build a network.",
     "gamesCount_one": "{{count}} game",
@@ -517,6 +547,104 @@
     "title": "Guided session",
     "description": "Generates a session plan based on your real stats: current time slot, latest strategy saved on your recent map, and your current form/tilt state.",
     "newSession": "New session",
+    "start": "Start the session",
+    "launchWarmup": "Start the warm-up",
+    "templateWarmupReason": "Planned by your “{{name}}” template",
+    "templates": {
+      "title": "Session template",
+      "auto": "Automatic",
+      "autoDesc": "The plan is computed from your stats: time slot, current form and latest map.",
+      "create": "Create a template",
+      "customize": "Customize",
+      "edit": "Edit",
+      "copy": "copy",
+      "summary": "{{warmup}} min warm-up · {{count}} games · break after {{losses}} losses",
+      "ranked": "Ranked grind",
+      "rankedDesc": "Full warm-up, 4 games, strict break",
+      "chill": "Chill session",
+      "chillDesc": "Short warm-up, 2 games, no pressure",
+      "aim": "Aim work",
+      "aimDesc": "Long warm-up, high accuracy goal"
+    },
+    "editor": {
+      "name": "Template name",
+      "namePlaceholder": "E.g. My evening routine",
+      "warmupMinutes": "Warm-up (minutes)",
+      "matchCount": "Number of games",
+      "hsTarget": "Headshot rate goal (%)",
+      "pauseLosses": "Suggested break",
+      "afterLosses": "after {{count}} losses",
+      "targetMap": "Map to review",
+      "mapAuto": "Automatic (last map played)",
+      "exercises": "Warm-up exercises",
+      "exercisesHint": "Aim Trainer modes played in this order. A button in the checklist starts them in one click.",
+      "addExercise": "+ Add an exercise",
+      "valorantTitle": "Warm-up in Valorant",
+      "valorantHint": "These games count as warm-up: tracked automatically, they are not counted in your session games. The range is ticked by hand.",
+      "addValorant": "+ Add a Valorant step",
+      "games": "game(s)",
+      "minutes": "min",
+      "estimate": "≈ {{count}} min of exercises",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove",
+      "save": "Save template",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "valorantModes": {
+      "deathmatch": "Deathmatch",
+      "hurm": "Team Deathmatch",
+      "ggteam": "Escalation",
+      "spikerush": "Spike Rush",
+      "range": "The Range"
+    },
+    "reportWarmup": "Warm-up: {{label}} {{played}}/{{target}}",
+    "vsPreviousTemplate": "Arrows: change vs your last “{{name}}” session",
+    "steps": {
+      "before": {
+        "title": "Before",
+        "text": "Your plan: warm-up, strategy, form and a numeric goal for the session."
+      },
+      "during": {
+        "title": "During",
+        "text": "Live tracking of your games: counter, session stats and advice (take a break after a losing streak)."
+      },
+      "after": {
+        "title": "After",
+        "text": "Your recap, compared with your previous session and kept in the history."
+      }
+    },
+    "liveTitle": "Session in progress",
+    "progress": "Game {{played}} of {{target}}",
+    "tileRecord": "Wins - losses",
+    "tileGames": "Games",
+    "tileWinrate": "Winrate",
+    "tileKd": "K/D",
+    "tileHs": "Headshot rate",
+    "hsTarget": "target {{target}}%",
+    "advice": {
+      "start": "Play your first game: the app tracks the session as soon as your games are synced.",
+      "go": "You're rolling, keep this pace. {{remaining}} more game(s) to reach your goal.",
+      "last": "Last game of your goal: give it everything, then we'll do the recap.",
+      "done": "Goal reached! Good time for a break: end the session to see your recap.",
+      "pause": "{{count}} losses in a row: take ten minutes off before queueing again, tilt costs more than a game."
+    },
+    "refreshHint": "Games show up here after you click “Refresh” (allow a few minutes after a game ends).",
+    "end": "End the session",
+    "close": "Close",
+    "reportEyebrow": "Session finished",
+    "reportTitle": "Session recap",
+    "reportNoGames": "No game detected during this session. If you played, click “Refresh” before ending it.",
+    "reportDuration": "Duration: {{time}}",
+    "vsPrevious": "Arrows: change vs your previous session",
+    "noPrevious": "First recorded session: the next recap will be compared to this one",
+    "objectiveGames": "Games: {{played}} played out of {{target}} planned",
+    "objectiveHs": "Headshot rate: {{value}}% (target {{target}}%)",
+    "objectiveHsNone": "Headshot rate: no data (target {{target}}%)",
+    "historyTitle": "Session history",
+    "historyGames_one": "{{count}} game",
+    "historyGames_other": "{{count}} games",
     "launch": "Launch my session",
     "checklistTitle": "Session checklist",
     "noMatchesYet": "No cached matches yet — click \"Refresh\".",
@@ -527,6 +655,71 @@
     "noStrategyTitle": "No strategy saved on {{map}}",
     "noStrategyDetail": "A chance to create one in the Strategy tab before playing.",
     "tiltedTitle": "Signs of tilt detected recently",
+    "level": {
+      "idle": {
+        "title": "You haven't played recently",
+        "text": "Your last game ended {{ago}} ago: you are already on a break, nothing to suggest for now. The signals below date from your last session."
+      },
+      "calm": {
+        "title": "No worrying signal",
+        "text": "Your recent indicators are within your usual range. Keep it up."
+      },
+      "watch": {
+        "title": "A few signals to watch",
+        "text": "One or two indicators are drifting from your usual range. Nothing serious, but a short break could help you keep your level."
+      },
+      "strong": {
+        "title": "Several signs of a performance drop",
+        "text": "Several indicators are dropping at the same time. Suggestion: take a 10 to 15 minute break before queueing again."
+      }
+    },
+    "litSignals": "Signals involved:",
+    "litSignalsIdle": "Signals from your last session:",
+    "signalsIntroIdle": "Snapshot of your last session, which ended {{ago}} ago: each signal compares your latest games with your usual baseline.",
+    "agoDays_one": "{{count}} day",
+    "agoDays_other": "{{count}} days",
+    "disclaimer": "These signals are statistical indicators computed from your games, not a diagnosis: it is up to you to decide whether a break would help.",
+    "signalsTitle": "Observed signals",
+    "signalsIntro": "Each signal is a measure of your latest games compared with your usual baseline.",
+    "signals": {
+      "lossStreak": {
+        "label": "Losing streak",
+        "hint": "Losses in a row right now"
+      },
+      "kd": {
+        "label": "K/D drop",
+        "hint": "Over your last 3 games"
+      },
+      "firstDeaths": {
+        "label": "First deaths",
+        "hint": "Share of rounds where you die first (last 3 games)"
+      },
+      "hs": {
+        "label": "Headshot rate",
+        "hint": "Over your last 3 games"
+      },
+      "winrate": {
+        "label": "Recent winrate",
+        "hint": "Over your last 5 games"
+      },
+      "session": {
+        "label": "Session length",
+        "hint": "Games played less than 45 min apart"
+      }
+    },
+    "status": {
+      "ok": "Normal",
+      "watch": "Watch",
+      "alert": "Alert",
+      "na": "Inconclusive"
+    },
+    "refUsual": "usually {{value}}",
+    "refThreshold": "alert from {{count}}",
+    "refSession": "{{count}} games in a row",
+    "noSession": "no session in progress",
+    "notEnough": "not enough data",
+    "lowDataNote": "Only {{count}} games analysed: these signals are fragile.",
+    "lowReferenceNote": "* Baseline computed from few games, treat it as a rough guide.",
     "tiltedDetail_one": "Reduced goal for today — take a break after {{count}} match if it doesn't get better.",
     "tiltedDetail_other": "Reduced goal for today — take a break after {{count}} matches if it doesn't get better.",
     "calmTitle": "No sign of tilt",
@@ -1114,6 +1307,22 @@
       "welcomeTitle": "Welcome!",
       "welcomeText": "{{amount}} MVP Points are waiting for you: your one-time welcome bonus.",
       "welcomeClaim": "Claim",
+      "dailyLogin": {
+        "title": "Daily reward",
+        "subtitle": "Log in every day and come collect your MVP Points.",
+        "readyText": "Your reward for today is waiting.",
+        "claimedText": "Collected for today.",
+        "claim": "Collect",
+        "next": "Next reward in {{time}}",
+        "success": "+{{amount}} MVP Points collected!",
+        "already": "Already collected today.",
+        "week": "Last 7 days",
+        "streak": "Streak: {{count}} d",
+        "today": "Today",
+        "cardTitle": "Daily reward",
+        "cardReady": "{{amount}} MVP Points to collect",
+        "cardDone": "Collected — come back tomorrow"
+      },
       "bundleTag": "Welcome pack",
       "bundleName": "Welcome pack",
       "bundleDesc": "Three legendary skins to get you started: one purchase, once.",
@@ -1471,6 +1680,55 @@
     "yourTeam": "your team",
     "myKillsByWeapon": "My kills by weapon this match",
     "noKillsRecorded": "No kill recorded.",
+    "timeline": {
+      "title": "Match timeline",
+      "round": "Round {{number}}",
+      "legendBars": "Bars: score gap",
+      "legendClutch": "Clutch",
+      "legendMulti": "3+ kills",
+      "legendEco": "Eco won against a full buy",
+      "moments": "Key moments ({{count}})",
+      "previousMoment": "Previous key moment",
+      "nextMoment": "Next key moment",
+      "selfKill": "Eliminated themselves",
+      "yourTeam": "Your team",
+      "enemyTeam": "Enemy team",
+      "yourRound": "Your round",
+      "kills": "kills",
+      "damage": "damage",
+      "died": "You died",
+      "survived": "You survived",
+      "noEvents": "No events recorded for this round.",
+      "plant": "{{name}} plants the spike (site {{site}})",
+      "defuse": "{{name}} defuses the spike",
+      "halfTime": "Half-time: {{me}} - {{enemy}}",
+      "sideShort": {
+        "attack": "A",
+        "defense": "D"
+      },
+      "end": {
+        "eliminated": "Elimination",
+        "detonated": "Spike detonated",
+        "defused": "Spike defused",
+        "timer": "Time expired",
+        "surrender": "Surrender"
+      },
+      "buy": {
+        "pistol": "Pistol round",
+        "eco": "Eco",
+        "semi": "Semi-buy",
+        "full": "Full buy"
+      },
+      "moment": {
+        "streakWon": "{{count}}-round win streak (R{{from}} to R{{to}})",
+        "streakLost": "{{count}}-round losing streak (R{{from}} to R{{to}})",
+        "ace": "Ace in round {{round}}",
+        "multi": "{{count}} kills in round {{round}}",
+        "clutchWon": "1v{{versus}} clutch won (round {{round}})",
+        "clutchLost": "1v{{versus}} clutch lost (round {{round}})",
+        "ecoWin": "Eco round won against a full buy (round {{round}})"
+      }
+    },
     "roundByRound": "Round by round",
     "showRounds": "Show all {{count}} rounds",
     "hideRounds": "Hide",
@@ -2233,7 +2491,7 @@
     }
   },
   "goals": {
-    "widgetTitle": "Personal goals",
+    "widgetTitle": "Your Wrapped",
     "panelTitle": "Goals",
     "noActiveGoals": "No active goal — add a suggestion below.",
     "markReached": "Mark reached",
@@ -2257,7 +2515,7 @@
   },
   "weekly": {
     "widgetTitle": "Your week",
-    "notchLabel": "WEEK",
+    "notchLabel": "WRAPPED",
     "title": "LAST WEEK",
     "noMatches": "No matches last week — the wrap-up will fill in starting next Monday.",
     "gamesPlayed": "games played",
@@ -2290,6 +2548,108 @@
       "rankDown": "Small step back this week: from {{previous}} to {{current}}. Nothing irreversible."
     }
   },
+  "wrapped": {
+    "kind": {
+      "week": "Week",
+      "month": "Month",
+      "act": "Act"
+    },
+    "period": {
+      "week": "Week of {{date}}",
+      "actUnknown": "Act"
+    },
+    "gamesShort_one": "{{count}} game",
+    "gamesShort_other": "{{count}} games",
+    "empty": {
+      "week": "No games in this period — the weekly Wrapped fills up as soon as you play.",
+      "month": "No games this month yet.",
+      "act": "No games found for an act."
+    },
+    "winsShort": "W",
+    "lossesShort": "L",
+    "bestAgent": "Favourite agent: {{agent}} ({{count}} games)",
+    "mostPlayedMap": "Most played map: {{map}} ({{count}} games)",
+    "mostKills": "Kill record: {{kills}} ({{agent}}, {{map}})",
+    "winStreak": "Best streak: {{count}} wins in a row",
+    "clutches": "Clutches: {{wins}} won out of {{attempts}}",
+    "playtime": "Play time: {{time}}",
+    "rrGames": "over {{count}} ranked games",
+    "rrPartial": "at least",
+    "compare": {
+      "week": "Arrows: change vs the previous week",
+      "month": "Arrows: change vs the previous month",
+      "act": "Arrows: change vs the previous act"
+    },
+    "noCompare": {
+      "week": "No previous week to compare",
+      "month": "No previous month to compare",
+      "act": "No previous act to compare"
+    }
+  },
+  "evolution": {
+    "eyebrow": "Since day one",
+    "title": "My evolution",
+    "since": "Tracked since {{date}}: {{count}} games over {{days}} days.",
+    "noMatchesYet": "No cached games yet — click “Refresh”.",
+    "verdictTitle": "Am I really improving?",
+    "notEnough": "At least 20 tracked games are needed to compare your start with now. You have {{count}}.",
+    "compareIntro": "Your first {{count}} games (since {{date}}) compared with your last {{count}}.",
+    "verdict": {
+      "progress": "Yes: your indicators are up compared with your early games.",
+      "stable": "Your level is steady compared with your early games.",
+      "decline": "Your indicators are down compared with your early games."
+    },
+    "verdictNote": "Winrate also depends on your team and opponents: K/D and headshot rate are better reflections of your own play.",
+    "metric": {
+      "winrate": "Winrate",
+      "kd": "K/D",
+      "hs": "Headshot rate"
+    },
+    "trendTitle": "Progress curve",
+    "trendHint": "Each point is the average of your last 20 games at that moment, to smooth out the ups and downs.",
+    "trendNotEnough": "At least 10 games are needed to draw the curve.",
+    "rankTitle": "Rank and RR",
+    "rankNone": "Rank history builds up as you sync: come back after a few ranked games to see your curve.",
+    "rankPeak": "Recorded peak",
+    "rankFirst": "Only one reading so far: the curve appears as soon as your RR changes.",
+    "rankTracked": "Rank tracking recorded since {{date}} (the API only returns the latest ranked games, older history doesn't exist).",
+    "rankChange": {
+      "promotion": "Promotion: {{from}} → {{to}}",
+      "demotion": "Demotion: {{from}} → {{to}}"
+    },
+    "agentsTitle": "Agents",
+    "mapsTitle": "Maps",
+    "gamesCount_one": "{{count}} game",
+    "gamesCount_other": "{{count}} games",
+    "firstPlayed": "1st game on {{date}}",
+    "recordsTitle": "Records broken",
+    "recordsNone": "No record broken beyond your first games yet.",
+    "sessionsTitle": "Play sessions",
+    "sessionsCount": "sessions",
+    "avgGames": "games per session",
+    "avgDuration": "average length",
+    "longestSession_one": "longest session ({{count}} game)",
+    "longestSession_other": "longest session ({{count}} games)",
+    "playtime": "played in total",
+    "sessionsPerPeriod": "Sessions per period",
+    "sessionsHint": {
+      "week": "One bar per week: number of sessions (games played less than 45 min apart).",
+      "month": "One bar per month: number of sessions (games played less than 45 min apart)."
+    },
+    "milestonesTitle": "Milestones",
+    "milestone": {
+      "first": "First tracked game",
+      "games": "{{count}} games reached",
+      "streak": "{{count}}-win streak",
+      "agent": "You take up {{agent}} ({{count}} games so far)",
+      "rankUp": "New rank reached: {{tier}}",
+      "record": {
+        "kills": "Kill record: {{value}} ({{agent}}, {{map}})",
+        "kd": "Best K/D: {{value}} ({{agent}}, {{map}})",
+        "hs": "Best headshot rate: {{value}} ({{agent}}, {{map}})"
+      }
+    }
+  },
   "postmortem": {
     "promptTitle": "Post-match double check",
     "promptSubtitle": "{{map}} — before you see your real stats, quickly answer these 3 questions.",
@@ -2316,7 +2676,7 @@
     }
   },
   "welcome": {
-    "tagline": "Search for a player — yourself or anyone else. It doesn't affect your account, it's just to check out a tracker.",
+    "tagline": "Enter your Riot ID and API key to load your matches.",
     "apiKeyHelp": "The API key is used to fetch your matches from HenrikDev (the service the app uses to talk to Valorant) — it's free. Here's how:",
     "apiKeyStep1": "Click the button below — it opens the HenrikDev site in your browser.",
     "apiKeyStep2": "Sign in (with your Discord account if asked), then go to \"API Keys\" in the left menu.",
@@ -2354,7 +2714,7 @@
     "disclaimerDefinitively": "permanently",
     "disclaimerMiddle": "link this Valorant account to your MVP Tracker account — it's what will drive your goals, your Hall of Fame, your skin collection, etc. This is",
     "disclaimerNot": "not",
-    "disclaimerSuffix": "the place to look up someone else's tracker — you'll be able to do that freely once signed in, without it touching your account.",
+    "disclaimerSuffix": "just a preview: this Valorant account will be the one behind your tracker.",
     "usernamePlaceholder": "Username",
     "tagPlaceholder": "Tag",
     "apiKeyPlaceholder": "HenrikDev API key",
@@ -2528,6 +2888,71 @@
     "rotate": "Rotate 90°",
     "pointsAnalyzed_one": "{{count}} point analyzed",
     "pointsAnalyzed_other": "{{count}} points analyzed",
+    "views": {
+      "classic": "Classic heatmap",
+      "duels": "Duel heatmap"
+    },
+    "landing": {
+      "eyebrow": "Duel analysis",
+      "subtitle": "Pick your view: where you die and get kills, or where you win and lose your duels.",
+      "games_one": "{{count}} game cached",
+      "games_other": "{{count}} games cached",
+      "open": "Open",
+      "back": "Home",
+      "classic": {
+        "tagline": "Positions",
+        "desc": "The heat map of your deaths and kills, map by map. Spot where you get hit the most.",
+        "tag1": "Deaths / kills",
+        "tag2": "Attack / defense",
+        "tag3": "Round type"
+      },
+      "duels": {
+        "tagline": "Engagements",
+        "desc": "Where you win and where you lose your duels, with the score and success rate per zone. On one game or on all of them.",
+        "tag1": "Won / lost",
+        "tag2": "Per game",
+        "tag3": "Rate per zone"
+      }
+    },
+    "duel": {
+      "title": "Duel heatmap",
+      "description": "Where you win and where you lose your duels. Each cell shows your won-lost duels; colour goes from red (you lose) to green (you win).",
+      "allGames": "All games ({{count}})",
+      "total_one": "{{count}} duel",
+      "total_other": "{{count}} duels",
+      "wins_one": "{{count}} won",
+      "wins_other": "{{count}} won",
+      "losses_one": "{{count}} lost",
+      "losses_other": "{{count}} lost",
+      "winrate": "{{percent}} success rate",
+      "noData": "No duels on this map with these filters.",
+      "hint": "Click a coloured cell to see its duels: opponent, weapon, distance and round.",
+      "close": "Close",
+      "won": "Won",
+      "lost": "Lost",
+      "round": "Round {{number}}",
+      "unknownEnemy": "Unknown opponent",
+      "zoneTitle": "Map zone",
+      "tileDuels": "Duels",
+      "tileWins": "Won",
+      "tileLosses": "Lost",
+      "tileRate": "Success",
+      "avgDistance": "Average distance",
+      "favWeapon": "Favourite weapon",
+      "distance": "Distance",
+      "legendHint": "Colour = the zone's success rate",
+      "mapGames_one": "{{count}} game",
+      "mapGames_other": "{{count}} games",
+      "noGames": "No games played on a standard map yet.",
+      "bestZones": "Your best zones",
+      "worstZones": "Your worst zones",
+      "rankEmpty": "Not enough duels yet (3 minimum per zone).",
+      "zoneDuels_one": "{{count}} duel in this zone",
+      "zoneDuels_other": "{{count}} duels in this zone",
+      "zoneScore": "{{wins}} won / {{losses}} lost — {{percent}}",
+      "fewDuels": "Too few duels to show a trend.",
+      "limits": "Only duels decided by a kill are counted (Riot does not expose trades without a death). A duel is placed between you and your opponent."
+    },
     "legendLow": "low",
     "legendHigh": "high",
     "periods": {

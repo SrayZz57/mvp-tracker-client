@@ -32,6 +32,7 @@ import {
 import useBattlePass from './battlePass/useBattlePass.js';
 import useShop from './shop/useShop.js';
 import WelcomeBonusModal from './shop/WelcomeBonusModal.jsx';
+import { utcDayKey } from './shop/dailyLogin.js';
 import ModesScreen from './ModesScreen.jsx';
 import HubLobby from './HubLobby.jsx';
 import StatsScreen from './StatsScreen.jsx';
@@ -224,6 +225,7 @@ const AimTrainerGame = lazy(loadGame);
 const SkinViewer = lazy(() => import('./SkinViewer.jsx'));
 const BattlePassScreen = lazy(() => import('./battlePass/BattlePassScreen.jsx'));
 const ShopScreen = lazy(() => import('./shop/ShopScreen.jsx'));
+const DailyRewardScreen = lazy(() => import('./shop/DailyRewardScreen.jsx'));
 // Éditeur d'arène : three.js et ses poignées, chargés à l'ouverture seulement.
 const ArenaEditor = lazy(() => import('./arenaEditor/ArenaEditor.jsx'));
 
@@ -824,6 +826,13 @@ function AimTrainerHub({ config: initialRawConfig }) {
   // saute directement en jeu dessus, sans repasser par le menu/la sélection
   // de mode.
   useEffect(() => {
+    // Routine demandée (ex. échauffement d'un modèle de Session guidée) : les
+    // modes s'enchaînent comme la routine d'échauffement du hub.
+    const requestedPlaylist = initialRawConfig?.playlist;
+    if (Array.isArray(requestedPlaylist) && requestedPlaylist.length > 0 && requestedPlaylist.every((id) => MODES[id])) {
+      launch({ playlist: requestedPlaylist });
+      return;
+    }
     const requestedMode = initialRawConfig?.mode;
     if (!requestedMode || !MODES[requestedMode]) return;
     launch({ mode: requestedMode, ...MODES[requestedMode].preset });
@@ -1285,6 +1294,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
             profile={{ userId: myId, name: displayName, tag: riotTag, avatar: avatarArt.icon, tier: currentTier, logo: mvpTrackerLogo }}
             bp={bp}
             shopBalance={shop.status === 'ready' ? shop.balance : null}
+            dailyClaimed={shop.status === 'ready' ? shop.dailyDays.has(utcDayKey(Date.now())) : null}
             config={config}
             previews={SKIN_PREVIEWS}
             activeModeId={config.mode}
@@ -1695,6 +1705,12 @@ function AimTrainerHub({ config: initialRawConfig }) {
         {screen === 'shop' && (
           <Suspense fallback={null}>
             <ShopScreen t={t} shop={shop} previews={SKIN_PREVIEWS} weapon={activeWeapon} weaponSkin={config.weaponSkins?.[activeWeapon] ?? 'standard'} />
+          </Suspense>
+        )}
+
+        {screen === 'daily' && (
+          <Suspense fallback={null}>
+            <DailyRewardScreen t={t} shop={shop} locale={i18n.language} />
           </Suspense>
         )}
 

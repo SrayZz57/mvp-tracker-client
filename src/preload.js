@@ -89,6 +89,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startPlaySession: () => ipcRenderer.invoke('play-session:start'),
   endPlaySession: (id) => ipcRenderer.invoke('play-session:end', id),
   getPlaySessionHistory: (limit) => ipcRenderer.invoke('play-session:history', limit),
+  getRankSnapshots: () => ipcRenderer.invoke('evolution:rank-snapshots'),
+  getActiveGuidedSession: () => ipcRenderer.invoke('guided-session:get-active'),
+  startGuidedSession: (planJson) => ipcRenderer.invoke('guided-session:start', planJson),
+  endGuidedSession: (id, resultJson) => ipcRenderer.invoke('guided-session:end', { id, resultJson }),
+  getGuidedSessionHistory: (limit) => ipcRenderer.invoke('guided-session:history', limit),
   getMatchAssessment: (matchId) => ipcRenderer.invoke('assessment:get', matchId),
   saveMatchAssessment: (matchId, date, map, answersJson) =>
     ipcRenderer.invoke('assessment:save', { matchId, date, map, answersJson }),

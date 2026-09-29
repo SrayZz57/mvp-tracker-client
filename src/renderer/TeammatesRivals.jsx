@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Medal } from 'lucide-react';
 import { computeTeammateSynergy, computeNemesis } from './socialStats.js';
+import { computePlayerRecord, listRegulars } from './playerRecord.js';
+import PlayerRecordModal from './PlayerRecordModal.jsx';
 import { useAgentIcons } from './agentIcons.js';
 import { usePlayerCardArt, useRankTiers } from './rankData.js';
 import LoadingState from './LoadingState.jsx';
@@ -118,7 +120,7 @@ function SynergyGraph({ teammates, myPuuid, centerLabel, onNodeClick, t }) {
 // avant K/D récent) : previewRiotAccount ne persiste rien sur disque
 // (contrairement à getMatches, qui écrase le "joueur suivi" de toute
 // l'app) — un simple coup d'œil ne doit avoir aucun effet de bord.
-function TeammateQuickViewModal({ name, tag, apiKey, onClose, t }) {
+function TeammateQuickViewModal({ name, tag, apiKey, onClose, onOpenRecord, t }) {
   const rankTiers = useRankTiers();
   const [account, setAccount] = useState(undefined); // undefined = chargement, null = échec
   const [recentStats, setRecentStats] = useState(undefined);
@@ -177,6 +179,11 @@ function TeammateQuickViewModal({ name, tag, apiKey, onClose, t }) {
           </div>
         )}
 
+        {onOpenRecord && (
+          <button type="button" className="refresh teammate-quickview-record" onClick={onOpenRecord}>
+            {t('social.record.open')}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -201,7 +208,8 @@ function initials(name) {
 function TeammatesRivals({ settings, matches, loading, myPuuid }) {
   const { t } = useTranslation();
   const agentIcons = useAgentIcons();
-  const [quickView, setQuickView] = useState(null); // { name, tag } | null
+  const [quickView, setQuickView] = useState(null); // { name, tag, puuid } | null
+  const [recordPuuid, setRecordPuuid] = useState(null); // fiche ouverte (puuid du joueur)
   const { platforms, platform, setPlatform, filteredMatches } = usePlatformFilter(matches);
   const teammates = useMemo(
     () => computeTeammateSynergy(filteredMatches, settings.name, settings.tag),
@@ -210,6 +218,14 @@ function TeammatesRivals({ settings, matches, loading, myPuuid }) {
   const nemesis = useMemo(
     () => computeNemesis(filteredMatches, settings.name, settings.tag),
     [filteredMatches, settings.name, settings.tag],
+  );
+  const regulars = useMemo(
+    () => listRegulars(filteredMatches, settings.name, settings.tag),
+    [filteredMatches, settings.name, settings.tag],
+  );
+  const record = useMemo(
+    () => (recordPuuid ? computePlayerRecord(filteredMatches, settings.name, settings.tag, recordPuuid) : null),
+    [recordPuuid, filteredMatches, settings.name, settings.tag],
   );
   // Le centre du graphe représente le tracker actuellement consulté — "Toi"
   // seulement quand c'est vraiment le cas, sinon le pseudo de l'autre joueur.
@@ -231,10 +247,30 @@ function TeammatesRivals({ settings, matches, loading, myPuuid }) {
             teammates={teammates}
             myPuuid={myPuuid}
             centerLabel={centerLabel}
-            onNodeClick={(tm) => setQuickView({ name: tm.name, tag: tm.tag })}
+            onNodeClick={(tm) => setQuickView({ name: tm.name, tag: tm.tag, puuid: tm.puuid })}
             t={t}
           />
         </div>
+      </CollapsibleCard>
+
+      <CollapsibleCard id="social.regulars" title={t('social.regularsTitle')} className="gs-card">
+        <p className="label">{t('social.regularsHint')}</p>
+        {regulars.length === 0 ? (
+          <p>{t('social.regularsEmpty')}</p>
+        ) : (
+          <div className="pr-regulars">
+            {regulars.slice(0, 12).map((p) => (
+              <button key={p.puuid} type="button" className="pr-regular" onClick={() => setRecordPuuid(p.puuid)}>
+                <span className="rival-avatar">{initials(p.name)}</span>
+                <span className="pr-regular-name">
+                  <b>{displayName(t, p, myPuuid)}</b>
+                  <small>{t('social.regularSplit', { together: p.together, against: p.against })}</small>
+                </span>
+                <span className="pr-regular-total">{t('social.gamesCount', { count: p.total })}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </CollapsibleCard>
 
       <div className="nemesis-columns">
@@ -272,7 +308,15 @@ function TeammatesRivals({ settings, matches, loading, myPuuid }) {
           ) : (
             <div className="fm-rows">
               {nemesis.players.slice(0, 8).map((n, i) => (
-                <div key={n.puuid} className="fm-row fm-row-rival">
+                <div
+                  key={n.puuid}
+                  className="fm-row fm-row-rival fm-row-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setRecordPuuid(n.puuid)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setRecordPuuid(n.puuid)}
+                  title={t('social.record.open')}
+                >
                   <span className="fm-row-label">
                     <RankBadge rank={i} />
                     <span className="rival-avatar">{initials(displayName(t, n, myPuuid))}</span>
@@ -299,7 +343,28 @@ function TeammatesRivals({ settings, matches, loading, myPuuid }) {
           tag={quickView.tag}
           apiKey={settings?.apiKey}
           onClose={() => setQuickView(null)}
+          onOpenRecord={
+            quickView.puuid
+              ? () => {
+                  setRecordPuuid(quickView.puuid);
+                  setQuickView(null);
+                }
+              : null
+          }
           t={t}
+        />
+      )}
+
+      {record && (
+        <PlayerRecordModal
+          record={record}
+          settings={settings}
+          agentIcons={agentIcons}
+          onClose={() => setRecordPuuid(null)}
+          onQuickView={(r) => {
+            setRecordPuuid(null);
+            setQuickView({ name: r.name, tag: r.tag, puuid: r.puuid });
+          }}
         />
       )}
     </div>

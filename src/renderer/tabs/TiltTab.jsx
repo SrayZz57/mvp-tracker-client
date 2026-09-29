@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Eye, Moon } from 'lucide-react';
 import Icon from '../Icon.jsx';
-import { findMe, resultLabel, resultLabelKey, formStats, tiltStatus, tiltFrequency, excludeDeathmatch } from '../valorantStats.js';
+import { findMe, resultLabel, resultLabelKey, tiltFrequency, excludeDeathmatch } from '../valorantStats.js';
+import { computeTiltSignals } from '../tiltSignals.js';
 import CountUp from '../CountUp.jsx';
 import LoadingState from '../LoadingState.jsx';
 import PlatformFilterToggle from '../PlatformFilterToggle.jsx';
@@ -10,19 +11,51 @@ import usePlatformFilter from '../usePlatformFilter.js';
 import CollapsibleCard from '../CollapsibleCard.jsx';
 
 const STREAK_DOTS_COUNT = 10;
+const LEVEL_ICONS = { calm: CheckCircle2, watch: Eye, strong: AlertTriangle, idle: Moon };
+
+function formatDuration(ms) {
+  const totalMinutes = Math.max(0, Math.round(ms / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours} h ${String(minutes).padStart(2, '0')}` : `${minutes} min`;
+}
+
+// « 25 min », « 3 h 10 », « 2 jours » : depuis combien de temps tu n'as pas joué.
+function formatAgo(ms, t) {
+  if (ms >= 48 * 3600000) return t('tilt.agoDays', { count: Math.floor(ms / (24 * 3600000)) });
+  return formatDuration(ms);
+}
+
+// Valeur et référence affichées pour chaque signal — la mesure observée, puis ce
+// à quoi on la compare. Un signal « na » n'a pas assez de données pour conclure.
+function describeSignal(signal, t) {
+  if (signal.status === 'na') {
+    return { value: '?', reference: signal.id === 'session' ? t('tilt.noSession') : t('tilt.notEnough') };
+  }
+  const usual = (text) => `${t('tilt.refUsual', { value: text })}${signal.lowReference ? ' *' : ''}`;
+  const pct = (v) => `${Math.round(v)}%`;
+  switch (signal.id) {
+    case 'lossStreak':
+      return { value: String(signal.value), reference: t('tilt.refThreshold', { count: signal.reference }) };
+    case 'kd':
+      return { value: signal.value.toFixed(2), reference: usual(signal.reference.toFixed(2)) };
+    case 'firstDeaths':
+      return { value: pct(signal.value * 100), reference: usual(pct(signal.reference * 100)) };
+    case 'hs':
+    case 'winrate':
+      return { value: pct(signal.value), reference: usual(pct(signal.reference)) };
+    default:
+      return { value: formatDuration(signal.value), reference: t('tilt.refSession', { count: signal.session.games }) };
+  }
+}
 
 function TiltTab({ settings, matches, loading }) {
   const { t } = useTranslation();
   const { platforms, platform, setPlatform, filteredMatches } = usePlatformFilter(matches);
 
-  const form = useMemo(
-    () => formStats(excludeDeathmatch(filteredMatches), settings.name, settings.tag),
+  const analysis = useMemo(
+    () => computeTiltSignals(filteredMatches, settings.name, settings.tag),
     [filteredMatches, settings.name, settings.tag],
-  );
-
-  const tilt = useMemo(
-    () => tiltStatus(excludeDeathmatch(filteredMatches), settings.name, settings.tag, form),
-    [filteredMatches, settings.name, settings.tag, form],
   );
 
   const recentResults = useMemo(
@@ -36,8 +69,6 @@ function TiltTab({ settings, matches, loading }) {
     [filteredMatches, settings.name, settings.tag],
   );
 
-  const last3KdRatio = form.overallKd && tilt.last3Kd !== null ? tilt.last3Kd / form.overallKd : null;
-
   const frequency = useMemo(
     () => tiltFrequency(filteredMatches, settings.name, settings.tag),
     [filteredMatches, settings.name, settings.tag],
@@ -48,28 +79,54 @@ function TiltTab({ settings, matches, loading }) {
     return <p>{t('tilt.noMatchesYet')}</p>;
   }
 
+  const lit = analysis.signals.filter((s) => s.status === 'alert' || s.status === 'watch');
+  const ago = analysis.idle ? formatAgo(analysis.idleMs, t) : null;
+  const anyLowReference = analysis.signals.some((s) => s.lowReference && s.status !== 'na');
+
   return (
     <div>
       <PlatformFilterToggle platforms={platforms} platform={platform} onChange={setPlatform} />
 
-      <div className={`card tilt-card ${tilt.isTilted ? '' : 'calm'}`}>
+      <div className={`card tilt-card ${analysis.level === 'calm' || analysis.level === 'idle' ? 'calm' : ''}`} data-level={analysis.level}>
         <div className="tilt-card-header">
-          <span className="tilt-card-badge"><Icon icon={tilt.isTilted ? AlertTriangle : CheckCircle2} /></span>
+          <span className="tilt-card-badge"><Icon icon={LEVEL_ICONS[analysis.level]} /></span>
           <div>
-            <h3>{tilt.isTilted ? t('tilt.tiltedTitle') : t('tilt.calmTitle')}</h3>
-            {tilt.isTilted ? (
-              <p className="warning">
-                {tilt.lossStreakTilt && t('tilt.lossStreak', { count: form.streakCount })}
-                {tilt.perfDegradation &&
-                  t('tilt.perfDegradation', { recentKd: tilt.last3Kd.toFixed(2), overallKd: form.overallKd.toFixed(2) })}
-                {t('tilt.breakSuggestion')}
+            <h3>{t(`tilt.level.${analysis.level}.title`)}</h3>
+            <p className={analysis.level === 'strong' ? 'warning' : ''}>{t(`tilt.level.${analysis.level}.text`, { ago })}</p>
+            {lit.length > 0 && (
+              <p className="tilt-lit">
+                {t(analysis.idle ? 'tilt.litSignalsIdle' : 'tilt.litSignals')} {lit.map((s) => t(`tilt.signals.${s.id}.label`)).join(' · ')}
               </p>
-            ) : (
-              <p>{t('tilt.allGood')}</p>
             )}
+            <p className="tilt-disclaimer">{t('tilt.disclaimer')}</p>
           </div>
         </div>
       </div>
+
+      <CollapsibleCard id="tilt.signals" title={t('tilt.signalsTitle')} className="gs-card">
+        <p className="label">{analysis.idle ? t('tilt.signalsIntroIdle', { ago }) : t('tilt.signalsIntro')}</p>
+        <div className="tilt-signals">
+          {analysis.signals.map((signal) => {
+            const { value, reference } = describeSignal(signal, t);
+            return (
+              <div key={signal.id} className="tilt-signal" data-status={signal.status}>
+                <span className="tilt-signal-dot" aria-hidden="true" />
+                <div className="tilt-signal-main">
+                  <b>{t(`tilt.signals.${signal.id}.label`)}</b>
+                  <small>{t(`tilt.signals.${signal.id}.hint`)}</small>
+                </div>
+                <div className="tilt-signal-values">
+                  <strong>{value}</strong>
+                  <small>{reference}</small>
+                </div>
+                <span className="tilt-signal-status">{t(`tilt.status.${signal.status}`)}</span>
+              </div>
+            );
+          })}
+        </div>
+        {analysis.lowData && <p className="tilt-note">{t('tilt.lowDataNote', { count: analysis.matchCount })}</p>}
+        {anyLowReference && <p className="tilt-note">{t('tilt.lowReferenceNote')}</p>}
+      </CollapsibleCard>
 
       <CollapsibleCard id="tilt.recentResults" title={t('tilt.recentResults')} className="gs-card">
         <div className="streak-dots">
@@ -112,40 +169,6 @@ function TiltTab({ settings, matches, loading }) {
             </p>
           </>
         )}
-      </CollapsibleCard>
-
-      <CollapsibleCard id="tilt.whatIsWatched" title={t('tilt.whatIsWatched')} className="gs-card">
-        <div className="gs-figures fm-figures fm-figures-3">
-          <div className="gs-figure">
-            <span className="gs-figure-label">{t('tilt.lossStreakLabel')}</span>
-            <span className={`gs-figure-value ${tilt.lossStreakTilt ? 'down' : ''}`}>
-              {form.streakType === 'Défaite' ? form.streakCount : 0}
-            </span>
-          </div>
-          <div className="gs-figure">
-            <span className="gs-figure-label">{t('tilt.last3Kd')}</span>
-            <span className={`gs-figure-value ${tilt.perfDegradation ? 'down' : ''}`}>
-              {tilt.last3Kd === null ? '?' : tilt.last3Kd.toFixed(2)}
-            </span>
-          </div>
-          <div className="gs-figure">
-            <span className="gs-figure-label">{t('tilt.ofOverallAverage')}</span>
-            <span className="gs-figure-value">{last3KdRatio === null ? '?' : `${(last3KdRatio * 100).toFixed(0)}%`}</span>
-          </div>
-        </div>
-
-        <h4 className="account-subsection-title" style={{ marginTop: '1rem' }}>{t('tilt.howItWorks')}</h4>
-        <p className="label">{t('tilt.howItWorksIntro')}</p>
-        <div className="tilt-rule-list">
-          <div className={`tilt-rule ${tilt.lossStreakTilt ? 'active' : ''}`}>
-            <span className="tilt-rule-icon"><Icon icon={Circle} size={12} fill="currentColor" /></span>
-            {t('tilt.rule1')}
-          </div>
-          <div className={`tilt-rule ${tilt.perfDegradation ? 'active' : ''}`}>
-            <span className="tilt-rule-icon"><Icon icon={Circle} size={12} fill="currentColor" /></span>
-            {t('tilt.rule2')}
-          </div>
-        </div>
       </CollapsibleCard>
     </div>
   );

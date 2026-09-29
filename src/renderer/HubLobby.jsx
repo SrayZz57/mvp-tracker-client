@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, BarChart3, Boxes, Crosshair, Crown, Flame, Gauge, Gem, Gift, ShoppingBag, LogOut, Palette, Play, Settings as SettingsIcon, SlidersHorizontal, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, BarChart3, Boxes, Check, Crosshair, Crown, Flame, Gauge, Gem, Gift, ShoppingBag, LogOut, Palette, Play, Settings as SettingsIcon, SlidersHorizontal, Trophy, Volume2, VolumeX } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { MODES, VALORANT_MODE_IDS, WEAPON_MODELS } from './aimTrainerModes.js';
 import { ModeArt } from './ModesScreen.jsx';
@@ -10,6 +10,7 @@ import GloveSwatch from './battlePass/GloveSwatch.jsx';
 import { PlayerTitle, usePlayerCard } from './battlePass/playerCosmetics.jsx';
 import { challengeLabel, challengeProgress, challengeValueText, rewardRarity } from './battlePass/labels.js';
 import arenaEditorPreview from '../assets/arena-editor-preview.png';
+import { ECONOMY } from './shop/economy.js';
 import './hubLobby.css';
 
 // Accueil de l'Aim Trainer façon « lobby » de jeu : au centre, le mode en cours
@@ -165,6 +166,7 @@ export default function HubLobby({
   profile,
   bp,
   shopBalance = null,
+  dailyClaimed = null,
   config,
   previews,
   activeModeId,
@@ -442,6 +444,20 @@ export default function HubLobby({
           </button>
           <PassChallenges bp={bp} t={t} />
           {friendsCard}
+          {dailyClaimed !== null && (
+            <button type="button" className="lb-daily" data-ready={dailyClaimed ? 'false' : 'true'} onMouseEnter={sfx.hover} onClick={click(() => onNavigate('daily'))}>
+              <span className="lb-daily-icon">
+                <Icon icon={dailyClaimed ? Check : Gift} size={22} />
+              </span>
+              <span className="lb-daily-text">
+                <b>{t('aimTrainer.shop.dailyLogin.cardTitle')}</b>
+                <small>
+                  {dailyClaimed ? t('aimTrainer.shop.dailyLogin.cardDone') : t('aimTrainer.shop.dailyLogin.cardReady', { amount: ECONOMY.dailyLoginPoints.toLocaleString() })}
+                </small>
+              </span>
+              <Icon icon={ArrowRight} size={16} />
+            </button>
+          )}
         </aside>
       </main>
 

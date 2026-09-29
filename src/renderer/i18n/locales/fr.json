@@ -188,6 +188,7 @@
       "analyse": "Analyse",
       "social": "Coéquipiers & Rivaux",
       "graphiques": "Graphiques",
+      "myEvolution": "Mon évolution",
       "myHallOfFame": "Mon Hall of Fame",
       "myWeakness": "Points à travailler",
       "myCollection": "Ma collection",
@@ -329,6 +330,35 @@
     "deletePublishedAdmin": "Supprimer cette composition (modération)"
   },
   "social": {
+    "regularsTitle": "Joueurs croisés régulièrement",
+    "regularsHint": "Clique sur un joueur pour voir votre historique commun : parties ensemble, face à face et performances.",
+    "regularsEmpty": "Pas encore de joueur croisé au moins 2 fois.",
+    "regularSplit": "{{together}} ensemble · {{against}} face à face",
+    "record": {
+      "open": "Historique commun",
+      "quickview": "Aperçu du compte",
+      "summary": "{{count}} parties en commun, du {{from}} au {{to}}",
+      "together": "Dans ton équipe",
+      "against": "Face à face",
+      "noneTogether": "Aucune partie dans la même équipe.",
+      "noneAgainst": "Aucune partie dans des équipes adverses.",
+      "games": "Parties",
+      "winrate": "Winrate",
+      "kd": "K/D",
+      "hs": "Précision tête",
+      "adr": "Dégâts / round",
+      "vsAverage": "Les flèches comparent avec ta moyenne habituelle.",
+      "yourAgents": "Tes agents",
+      "theirAgents": "Ses agents",
+      "duels": "Duels directs : {{mine}} éliminations de ta part, {{theirs}} de sa part.",
+      "lowSample": "Seulement {{count}} parties en commun : ces pourcentages sont à prendre avec recul.",
+      "history": "Historique commun",
+      "togetherTag": "Ensemble",
+      "againstTag": "Face à face",
+      "showAll": "Voir les {{count}} parties",
+      "showLess": "Voir moins",
+      "disclaimer": "Ces chiffres décrivent vos parties communes. Ils varient selon les groupes, les associations de joueurs et le hasard : l'objectif est d'observer les données, pas de juger une personne."
+    },
     "you": "Toi",
     "notEnoughSynergyData": "Pas encore assez de matchs avec les mêmes coéquipiers pour dégager un réseau.",
     "gamesCount_one": "{{count}} partie",
@@ -517,6 +547,104 @@
     "title": "Session guidée",
     "description": "Génère un plan de session basé sur tes vraies stats : créneau horaire actuel, dernière stratégie sauvegardée sur ta map récente, et ton état de forme/tilt en ce moment.",
     "newSession": "Nouvelle session",
+    "start": "Démarrer la session",
+    "launchWarmup": "Lancer l'échauffement",
+    "templateWarmupReason": "Prévu par ton modèle « {{name}} »",
+    "templates": {
+      "title": "Modèle de session",
+      "auto": "Automatique",
+      "autoDesc": "Le plan est calculé d'après tes stats : créneau horaire, forme du moment et dernière map.",
+      "create": "Créer un modèle",
+      "customize": "Personnaliser",
+      "edit": "Modifier",
+      "copy": "copie",
+      "summary": "{{warmup}} min d'échauffement · {{count}} parties · pause après {{losses}} défaites",
+      "ranked": "Grind classé",
+      "rankedDesc": "Échauffement complet, 4 parties, pause stricte",
+      "chill": "Session détente",
+      "chillDesc": "Court échauffement, 2 parties, sans pression",
+      "aim": "Travail de la visée",
+      "aimDesc": "Long échauffement, objectif de précision élevé"
+    },
+    "editor": {
+      "name": "Nom du modèle",
+      "namePlaceholder": "Ex : Mon rituel du soir",
+      "warmupMinutes": "Échauffement (minutes)",
+      "matchCount": "Nombre de parties",
+      "hsTarget": "Précision tête visée (%)",
+      "pauseLosses": "Pause conseillée",
+      "afterLosses": "après {{count}} défaites",
+      "targetMap": "Map à réviser",
+      "mapAuto": "Automatique (dernière map jouée)",
+      "exercises": "Exercices d'échauffement",
+      "exercisesHint": "Des modes de l'Aim Trainer, enchaînés dans cet ordre. Un bouton de la checklist les lance en un clic.",
+      "addExercise": "+ Ajouter un exercice",
+      "valorantTitle": "Échauffement dans Valorant",
+      "valorantHint": "Ces parties comptent comme échauffement : suivies automatiquement, elles ne sont pas comptées dans les parties de ta session. Le champ de tir se coche à la main.",
+      "addValorant": "+ Ajouter une étape Valorant",
+      "games": "partie(s)",
+      "minutes": "min",
+      "estimate": "≈ {{count}} min d'exercices",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "remove": "Retirer",
+      "save": "Enregistrer le modèle",
+      "cancel": "Annuler",
+      "delete": "Supprimer"
+    },
+    "valorantModes": {
+      "deathmatch": "Deathmatch",
+      "hurm": "Team Deathmatch",
+      "ggteam": "Escalade",
+      "spikerush": "Spike Rush",
+      "range": "Champ de tir"
+    },
+    "reportWarmup": "Échauffement : {{label}} {{played}}/{{target}}",
+    "vsPreviousTemplate": "Flèches : écart avec ta dernière session « {{name}} »",
+    "steps": {
+      "before": {
+        "title": "Avant",
+        "text": "Ton plan : échauffement, stratégie, état de forme et objectif chiffré de la session."
+      },
+      "during": {
+        "title": "Pendant",
+        "text": "Le suivi de tes parties en direct : compteur, stats de session et conseils (pause après une série de défaites)."
+      },
+      "after": {
+        "title": "Après",
+        "text": "Ton bilan, comparé à ta session précédente et gardé dans l'historique."
+      }
+    },
+    "liveTitle": "Session en cours",
+    "progress": "Partie {{played}} sur {{target}}",
+    "tileRecord": "Victoires - défaites",
+    "tileGames": "Parties",
+    "tileWinrate": "Winrate",
+    "tileKd": "K/D",
+    "tileHs": "Précision tête",
+    "hsTarget": "objectif {{target}}%",
+    "advice": {
+      "start": "Lance ta première partie : l'app suit la session dès que tes parties sont synchronisées.",
+      "go": "Tu es lancé, continue sur ce rythme. Encore {{remaining}} partie(s) pour atteindre ton objectif.",
+      "last": "Dernière partie de ton objectif : donne tout, puis on fait le bilan.",
+      "done": "Objectif atteint ! C'est le bon moment pour une pause : termine la session pour voir ton bilan.",
+      "pause": "{{count}} défaites d'affilée : prends dix minutes de pause avant de relancer, le tilt coûte plus cher qu'une partie."
+    },
+    "refreshHint": "Les parties apparaissent ici après un clic sur « Rafraîchir » (compte quelques minutes après la fin d'une partie).",
+    "end": "Terminer la session",
+    "close": "Fermer",
+    "reportEyebrow": "Session terminée",
+    "reportTitle": "Bilan de la session",
+    "reportNoGames": "Aucune partie détectée pendant cette session. Si tu as joué, clique sur « Rafraîchir » avant de terminer.",
+    "reportDuration": "Durée : {{time}}",
+    "vsPrevious": "Flèches : écart avec ta session précédente",
+    "noPrevious": "Première session enregistrée : le prochain bilan sera comparé à celui-ci",
+    "objectiveGames": "Parties : {{played}} jouées sur {{target}} prévues",
+    "objectiveHs": "Précision tête : {{value}}% (objectif {{target}}%)",
+    "objectiveHsNone": "Précision tête : pas de données (objectif {{target}}%)",
+    "historyTitle": "Historique des sessions",
+    "historyGames_one": "{{count}} partie",
+    "historyGames_other": "{{count}} parties",
     "launch": "Lancer ma session",
     "checklistTitle": "Checklist de session",
     "noMatchesYet": "Aucun match en cache pour l'instant — clique sur « Rafraîchir ».",
@@ -1114,6 +1242,22 @@
       "welcomeTitle": "Bienvenue !",
       "welcomeText": "{{amount}} MVP Points t'attendent : ton bonus de bienvenue, à récupérer une seule fois.",
       "welcomeClaim": "Obtenir",
+      "dailyLogin": {
+        "title": "Récompense quotidienne",
+        "subtitle": "Connecte-toi chaque jour et viens récupérer tes MVP Points.",
+        "readyText": "Ta récompense du jour t'attend.",
+        "claimedText": "Récupérée pour aujourd'hui.",
+        "claim": "Récupérer",
+        "next": "Prochaine récompense dans {{time}}",
+        "success": "+{{amount}} MVP Points récupérés !",
+        "already": "Déjà récupérée aujourd'hui.",
+        "week": "7 derniers jours",
+        "streak": "Série : {{count}} j",
+        "today": "Auj.",
+        "cardTitle": "Récompense quotidienne",
+        "cardReady": "{{amount}} MVP Points à récupérer",
+        "cardDone": "Récupérée — reviens demain"
+      },
       "bundleTag": "Pack de bienvenue",
       "bundleName": "Pack de bienvenue",
       "bundleDesc": "Trois skins légendaires pour bien commencer : un seul achat, une seule fois.",
@@ -1471,6 +1615,55 @@
     "yourTeam": "ton équipe",
     "myKillsByWeapon": "Mes kills par arme sur ce match",
     "noKillsRecorded": "Aucun kill enregistré.",
+    "timeline": {
+      "title": "Timeline du match",
+      "round": "Round {{number}}",
+      "legendBars": "Barres : écart de score",
+      "legendClutch": "Clutch",
+      "legendMulti": "3 kills ou plus",
+      "legendEco": "Éco gagné face à un full buy",
+      "moments": "Moments marquants ({{count}})",
+      "previousMoment": "Moment marquant précédent",
+      "nextMoment": "Moment marquant suivant",
+      "selfKill": "S'est éliminé",
+      "yourTeam": "Ton équipe",
+      "enemyTeam": "Équipe adverse",
+      "yourRound": "Ton round",
+      "kills": "kills",
+      "damage": "dégâts",
+      "died": "Tu es mort",
+      "survived": "Tu as survécu",
+      "noEvents": "Aucun événement enregistré pour ce round.",
+      "plant": "{{name}} pose le spike (site {{site}})",
+      "defuse": "{{name}} désamorce le spike",
+      "halfTime": "Mi-temps : {{me}} - {{enemy}}",
+      "sideShort": {
+        "attack": "A",
+        "defense": "D"
+      },
+      "end": {
+        "eliminated": "Élimination",
+        "detonated": "Spike explosé",
+        "defused": "Spike désamorcé",
+        "timer": "Temps écoulé",
+        "surrender": "Abandon"
+      },
+      "buy": {
+        "pistol": "Pistol round",
+        "eco": "Éco",
+        "semi": "Semi-buy",
+        "full": "Full buy"
+      },
+      "moment": {
+        "streakWon": "Série de {{count}} rounds gagnés (R{{from}} à R{{to}})",
+        "streakLost": "Série de {{count}} rounds perdus (R{{from}} à R{{to}})",
+        "ace": "Ace au round {{round}}",
+        "multi": "{{count}} kills au round {{round}}",
+        "clutchWon": "Clutch 1v{{versus}} gagné (round {{round}})",
+        "clutchLost": "Clutch 1v{{versus}} perdu (round {{round}})",
+        "ecoWin": "Round éco gagné face à un full buy (round {{round}})"
+      }
+    },
     "roundByRound": "Round par round",
     "showRounds": "Afficher les {{count}} rounds",
     "hideRounds": "Masquer",
@@ -2094,6 +2287,71 @@
   "tilt": {
     "noMatchesYet": "Aucun match en cache pour l'instant — clique sur « Rafraîchir ».",
     "tiltedTitle": "Signes de tilt détectés",
+    "level": {
+      "idle": {
+        "title": "Tu n'as pas joué récemment",
+        "text": "Ta dernière partie remonte à {{ago}} : tu es déjà en pause, rien à suggérer pour l'instant. Les signaux ci-dessous datent de ta dernière session."
+      },
+      "calm": {
+        "title": "Aucun signal inquiétant",
+        "text": "Tes indicateurs récents sont dans ta norme. Continue comme ça."
+      },
+      "watch": {
+        "title": "Quelques signaux à surveiller",
+        "text": "Un ou deux indicateurs s'écartent de ta norme. Rien de grave, mais une courte pause pourrait t'aider à garder ton niveau."
+      },
+      "strong": {
+        "title": "Plusieurs signaux de baisse de performance",
+        "text": "Plusieurs indicateurs se dégradent en même temps. Suggestion : une pause de 10 à 15 minutes avant de relancer une partie."
+      }
+    },
+    "litSignals": "Signaux concernés :",
+    "litSignalsIdle": "Signaux relevés lors de ta dernière session :",
+    "signalsIntroIdle": "Photo de ta dernière session, terminée il y a {{ago}} : chaque signal compare tes dernières parties à ta référence habituelle.",
+    "agoDays_one": "{{count}} jour",
+    "agoDays_other": "{{count}} jours",
+    "disclaimer": "Ces signaux sont des indicateurs statistiques calculés sur tes parties, pas un diagnostic : à toi de juger si une pause te ferait du bien.",
+    "signalsTitle": "Signaux observés",
+    "signalsIntro": "Chaque signal est une mesure de tes dernières parties comparée à ta référence habituelle.",
+    "signals": {
+      "lossStreak": {
+        "label": "Série de défaites",
+        "hint": "Défaites d'affilée en ce moment"
+      },
+      "kd": {
+        "label": "Baisse de K/D",
+        "hint": "Sur tes 3 dernières parties"
+      },
+      "firstDeaths": {
+        "label": "Premières morts",
+        "hint": "Part des rounds où tu meurs en premier (3 dernières parties)"
+      },
+      "hs": {
+        "label": "Précision tête",
+        "hint": "Sur tes 3 dernières parties"
+      },
+      "winrate": {
+        "label": "Winrate récent",
+        "hint": "Sur tes 5 dernières parties"
+      },
+      "session": {
+        "label": "Durée de session",
+        "hint": "Parties enchaînées à moins de 45 min d'écart"
+      }
+    },
+    "status": {
+      "ok": "Normal",
+      "watch": "À surveiller",
+      "alert": "Alerte",
+      "na": "Non concluant"
+    },
+    "refUsual": "d'habitude {{value}}",
+    "refThreshold": "alerte dès {{count}}",
+    "refSession": "{{count}} parties enchaînées",
+    "noSession": "aucune session en cours",
+    "notEnough": "pas assez de données",
+    "lowDataNote": "Seulement {{count}} parties analysées : ces signaux sont fragiles.",
+    "lowReferenceNote": "* Référence calculée sur peu de parties, à prendre comme un ordre de grandeur.",
     "calmTitle": "Pas de signe de tilt",
     "lossStreak": "{{count}} défaites d'affilée. ",
     "perfDegradation": "Perf en baisse sur les 3 derniers matchs (K/D {{recentKd}} vs moyenne {{overallKd}}). ",
@@ -2256,8 +2514,8 @@
     }
   },
   "weekly": {
-    "widgetTitle": "Ta semaine",
-    "notchLabel": "SEMAINE",
+    "widgetTitle": "Ton Wrapped",
+    "notchLabel": "WRAPPED",
     "title": "SEMAINE DERNIÈRE",
     "noMatches": "Aucun match la semaine dernière — le wrapped se remplira à partir de lundi prochain.",
     "gamesPlayed": "parties jouées",
@@ -2290,6 +2548,108 @@
       "rankDown": "Petit recul cette semaine : de {{previous}} à {{current}}. Rien d'irréversible."
     }
   },
+  "wrapped": {
+    "kind": {
+      "week": "Semaine",
+      "month": "Mois",
+      "act": "Acte"
+    },
+    "period": {
+      "week": "Semaine du {{date}}",
+      "actUnknown": "Acte"
+    },
+    "gamesShort_one": "{{count}} partie",
+    "gamesShort_other": "{{count}} parties",
+    "empty": {
+      "week": "Aucune partie sur cette période — le Wrapped de la semaine se remplira dès que tu auras joué.",
+      "month": "Aucune partie ce mois-ci pour l'instant.",
+      "act": "Aucune partie trouvée pour un acte."
+    },
+    "winsShort": "V",
+    "lossesShort": "D",
+    "bestAgent": "Agent favori : {{agent}} ({{count}} parties)",
+    "mostPlayedMap": "Map la plus jouée : {{map}} ({{count}} parties)",
+    "mostKills": "Record de kills : {{kills}} ({{agent}}, {{map}})",
+    "winStreak": "Meilleure série : {{count}} victoires de suite",
+    "clutches": "Clutchs : {{wins}} gagnés sur {{attempts}}",
+    "playtime": "Temps de jeu : {{time}}",
+    "rrGames": "sur {{count}} parties classées",
+    "rrPartial": "au moins",
+    "compare": {
+      "week": "Flèches : écart avec la semaine précédente",
+      "month": "Flèches : écart avec le mois précédent",
+      "act": "Flèches : écart avec l'acte précédent"
+    },
+    "noCompare": {
+      "week": "Pas de semaine précédente à comparer",
+      "month": "Pas de mois précédent à comparer",
+      "act": "Pas d'acte précédent à comparer"
+    }
+  },
+  "evolution": {
+    "eyebrow": "Depuis le début",
+    "title": "Mon évolution",
+    "since": "Suivi depuis le {{date}} : {{count}} parties en {{days}} jours.",
+    "noMatchesYet": "Aucun match en cache pour l'instant — clique sur « Rafraîchir ».",
+    "verdictTitle": "Est-ce que je progresse vraiment ?",
+    "notEnough": "Il faut au moins 20 parties suivies pour comparer ton début à maintenant. Tu en as {{count}}.",
+    "compareIntro": "Tes {{count}} premières parties (depuis le {{date}}) comparées à tes {{count}} dernières.",
+    "verdict": {
+      "progress": "Oui : tes indicateurs sont en hausse par rapport à tes débuts.",
+      "stable": "Ton niveau est stable par rapport à tes débuts.",
+      "decline": "Tes indicateurs sont en baisse par rapport à tes débuts."
+    },
+    "verdictNote": "Le winrate dépend aussi de ton équipe et de tes adversaires : le K/D et la précision tête sont de meilleurs reflets de ton propre jeu.",
+    "metric": {
+      "winrate": "Winrate",
+      "kd": "K/D",
+      "hs": "Précision tête"
+    },
+    "trendTitle": "Courbe de progression",
+    "trendHint": "Chaque point est la moyenne de tes 20 dernières parties à ce moment-là, pour lisser les hauts et les bas.",
+    "trendNotEnough": "Il faut au moins 10 parties pour tracer la courbe.",
+    "rankTitle": "Rang et RR",
+    "rankNone": "L'historique de rang se construit au fil de tes synchronisations : reviens après quelques parties classées pour voir ta courbe.",
+    "rankPeak": "Pic enregistré",
+    "rankFirst": "Un seul relevé pour l'instant : la courbe apparaîtra dès le prochain changement de RR.",
+    "rankTracked": "Suivi du rang enregistré depuis le {{date}} (l'API ne donne que les dernières parties classées, l'historique plus ancien n'existe pas).",
+    "rankChange": {
+      "promotion": "Montée : {{from}} → {{to}}",
+      "demotion": "Descente : {{from}} → {{to}}"
+    },
+    "agentsTitle": "Agents",
+    "mapsTitle": "Maps",
+    "gamesCount_one": "{{count}} partie",
+    "gamesCount_other": "{{count}} parties",
+    "firstPlayed": "1re partie le {{date}}",
+    "recordsTitle": "Records battus",
+    "recordsNone": "Pas encore de record battu au-delà de tes premières parties.",
+    "sessionsTitle": "Sessions de jeu",
+    "sessionsCount": "sessions",
+    "avgGames": "parties par session",
+    "avgDuration": "durée moyenne",
+    "longestSession_one": "plus longue session ({{count}} partie)",
+    "longestSession_other": "plus longue session ({{count}} parties)",
+    "playtime": "de jeu au total",
+    "sessionsPerPeriod": "Sessions par période",
+    "sessionsHint": {
+      "week": "Une barre par semaine : nombre de sessions (parties enchaînées à moins de 45 min d'écart).",
+      "month": "Une barre par mois : nombre de sessions (parties enchaînées à moins de 45 min d'écart)."
+    },
+    "milestonesTitle": "Grandes étapes",
+    "milestone": {
+      "first": "Première partie suivie",
+      "games": "Cap des {{count}} parties",
+      "streak": "Série de {{count}} victoires d'affilée",
+      "agent": "Tu adoptes {{agent}} (déjà {{count}} parties)",
+      "rankUp": "Nouveau rang atteint : {{tier}}",
+      "record": {
+        "kills": "Record de kills : {{value}} ({{agent}}, {{map}})",
+        "kd": "Meilleur K/D : {{value}} ({{agent}}, {{map}})",
+        "hs": "Meilleure précision tête : {{value}} ({{agent}}, {{map}})"
+      }
+    }
+  },
   "postmortem": {
     "promptTitle": "Double check post-match",
     "promptSubtitle": "{{map}} — avant de voir tes vraies stats, réponds vite fait à ces 3 questions.",
@@ -2316,7 +2676,7 @@
     }
   },
   "welcome": {
-    "tagline": "Cherche un joueur — toi-même ou n'importe qui d'autre. Ça ne change rien à ton compte, c'est juste pour consulter un tracker.",
+    "tagline": "Entre ton Riot ID et ta clé API pour retrouver tes matchs.",
     "apiKeyHelp": "La clé API sert à récupérer tes matchs depuis HenrikDev (le service que l'appli utilise pour parler à Valorant) — c'est gratuit. Marche à suivre :",
     "apiKeyStep1": "Clique sur le bouton ci-dessous — ça ouvre le site HenrikDev dans ton navigateur.",
     "apiKeyStep2": "Connecte-toi (avec ton compte Discord si demandé), puis va dans « API Keys » dans le menu de gauche.",
@@ -2354,7 +2714,7 @@
     "disclaimerDefinitively": "définitivement",
     "disclaimerMiddle": "ce compte Valorant à ton compte MVP Tracker — c'est lui qui déterminera tes objectifs, ton Hall of Fame, ta collection de skins, etc. Ce n'est",
     "disclaimerNot": "pas",
-    "disclaimerSuffix": "l'endroit pour consulter le tracker de quelqu'un d'autre — ça, tu pourras le faire librement une fois connecté, sans que ça touche à ton compte.",
+    "disclaimerSuffix": "un simple aperçu : ce compte Valorant sera celui de ton tracker.",
     "usernamePlaceholder": "Pseudo",
     "tagPlaceholder": "Tag",
     "apiKeyPlaceholder": "Clé API HenrikDev",
@@ -2528,6 +2888,71 @@
     "rotate": "Tourner 90°",
     "pointsAnalyzed_one": "{{count}} point analysé",
     "pointsAnalyzed_other": "{{count}} points analysés",
+    "views": {
+      "classic": "Heatmap classique",
+      "duels": "Heatmap duels"
+    },
+    "landing": {
+      "eyebrow": "Analyse de tes duels",
+      "subtitle": "Choisis ta vue : où tu meurs et où tu tues, ou où tu gagnes et perds tes duels.",
+      "games_one": "{{count}} partie en cache",
+      "games_other": "{{count}} parties en cache",
+      "open": "Ouvrir",
+      "back": "Accueil",
+      "classic": {
+        "tagline": "Positions",
+        "desc": "La carte de chaleur de tes morts et de tes kills, map par map. Repère les endroits où tu te fais toucher le plus souvent.",
+        "tag1": "Morts / kills",
+        "tag2": "Attaque / défense",
+        "tag3": "Type de round"
+      },
+      "duels": {
+        "tagline": "Affrontements",
+        "desc": "Où tu gagnes et où tu perds tes duels, avec le score et le taux de réussite par zone. Sur une partie précise ou sur toutes.",
+        "tag1": "Gagnés / perdus",
+        "tag2": "Par partie",
+        "tag3": "Taux par zone"
+      }
+    },
+    "duel": {
+      "title": "Heatmap des duels",
+      "description": "Où tu gagnes et où tu perds tes duels. Chaque case affiche tes duels gagnés-perdus ; la couleur va du rouge (tu perds) au vert (tu gagnes).",
+      "allGames": "Toutes les parties ({{count}})",
+      "total_one": "{{count}} duel",
+      "total_other": "{{count}} duels",
+      "wins_one": "{{count}} gagné",
+      "wins_other": "{{count}} gagnés",
+      "losses_one": "{{count}} perdu",
+      "losses_other": "{{count}} perdus",
+      "winrate": "{{percent}} de réussite",
+      "noData": "Aucun duel sur cette map avec ces filtres.",
+      "hint": "Clique sur une case colorée pour voir ses duels : adversaire, arme, distance et round.",
+      "close": "Fermer",
+      "won": "Gagné",
+      "lost": "Perdu",
+      "round": "Round {{number}}",
+      "unknownEnemy": "Adversaire inconnu",
+      "zoneTitle": "Zone de la carte",
+      "tileDuels": "Duels",
+      "tileWins": "Gagnés",
+      "tileLosses": "Perdus",
+      "tileRate": "Réussite",
+      "avgDistance": "Distance moyenne",
+      "favWeapon": "Arme favorite",
+      "distance": "Distance",
+      "legendHint": "Couleur = taux de réussite de la zone",
+      "mapGames_one": "{{count}} partie",
+      "mapGames_other": "{{count}} parties",
+      "noGames": "Aucune partie jouée sur une map classique pour l'instant.",
+      "bestZones": "Tes meilleures zones",
+      "worstZones": "Tes pires zones",
+      "rankEmpty": "Pas encore assez de duels (3 minimum par zone).",
+      "zoneDuels_one": "{{count}} duel dans cette zone",
+      "zoneDuels_other": "{{count}} duels dans cette zone",
+      "zoneScore": "{{wins}} gagné(s) / {{losses}} perdu(s) — {{percent}}",
+      "fewDuels": "Trop peu de duels pour en tirer une tendance.",
+      "limits": "Seuls les duels tranchés par un kill sont comptés (Riot n'expose pas les échanges de tirs sans mort). Un duel est placé entre toi et ton adversaire."
+    },
     "legendLow": "faible",
     "legendHigh": "élevé",
     "periods": {

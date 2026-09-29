@@ -1,0 +1,171 @@
+/* Page « Récompense quotidienne » (DailyRewardScreen.jsx). Réutilise l'en-tête
+   et le fond de la boutique (shop.css). */
+
+.dr-body {
+  display: grid;
+  gap: 1.1rem;
+  width: min(760px, 100%);
+}
+
+.dr-card {
+  --gem: #7fe3ff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 2.2rem 1.5rem 1.8rem;
+  text-align: center;
+  background: linear-gradient(170deg, rgba(127, 227, 255, 0.14), #12141b 62%), #0c0e13;
+  border: 1px solid rgba(127, 227, 255, 0.45);
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+}
+
+.dr-card[data-claimed='true'] {
+  border-color: rgba(61, 220, 132, 0.4);
+  background: linear-gradient(170deg, rgba(61, 220, 132, 0.1), #12141b 62%), #0c0e13;
+}
+
+.dr-gem {
+  display: grid;
+  place-items: center;
+  color: var(--gem);
+  filter: drop-shadow(0 0 16px var(--gem));
+}
+
+.dr-card[data-claimed='true'] .dr-gem {
+  color: #3ddc84;
+  filter: drop-shadow(0 0 16px #3ddc84);
+}
+
+.dr-amount {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-hero);
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 1;
+  color: #fff;
+}
+
+.dr-amount svg {
+  color: var(--gem);
+}
+
+.dr-card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.dr-claim {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  padding: 0.95rem 2.4rem;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #06222b;
+  cursor: pointer;
+  background: linear-gradient(180deg, #a6efff, var(--gem));
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  box-shadow: 0 10px 30px rgba(127, 227, 255, 0.3);
+  transition: filter 0.15s, transform 0.15s var(--ease-out, ease);
+}
+
+.dr-claim:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.dr-claim:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dr-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.dr-msg {
+  font-size: 0.85rem;
+  color: var(--accent, #ff4655);
+}
+
+.dr-msg-ok {
+  color: #3ddc84;
+}
+
+.dr-week {
+  padding: 1rem 1.2rem 1.2rem;
+  background: var(--lb-panel, rgba(14, 16, 22, 0.85));
+  border: 1px solid var(--lb-line, rgba(255, 255, 255, 0.08));
+  border-top: 2px solid var(--lb-red, #ff4655);
+}
+
+.dr-week header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.dr-streak {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--hue-gold, #ffc857);
+}
+
+.dr-week ul {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dr-week li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.2rem;
+  border: 1px solid var(--lb-line, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dr-week li small {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dr-week li > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.dr-week li[data-done='true'] > span {
+  color: #06222b;
+  background: #3ddc84;
+  border-radius: 50%;
+}
+
+.dr-week li[data-today='true'] {
+  border-color: rgba(127, 227, 255, 0.6);
+  background: rgba(127, 227, 255, 0.08);
+}

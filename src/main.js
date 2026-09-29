@@ -29,6 +29,13 @@ import {
   startPlaySession,
   endPlaySession,
   getPlaySessionHistory,
+  getActiveGuidedSession,
+  startGuidedSession,
+  endGuidedSession,
+  getGuidedSessionHistory,
+  saveRankSnapshot,
+  saveRankSnapshots,
+  getRankSnapshots,
   backfillLegacyPuuid,
   getCareerRecords,
   saveCareerRecords,
@@ -953,6 +960,21 @@ ipcMain.handle('valorant:get-mmr-history', async (_event, { force = false } = {}
     }
     if (raw === null) throw lastErr;
     const history = mergeMmrHistory(sameAccount ? cached.history : [], slimMmrHistory(raw));
+    // Chaque partie classée de cet historique nourrit aussi l'historique durable
+    // du rang (récupéré à rebours sur ce que l'API donne encore).
+    if (settings.puuid && settings.puuid === currentPuuid()) {
+      saveRankSnapshots(
+        settings.puuid,
+        history.map((entry) => ({
+          at: new Date(entry.date).getTime(),
+          tierId: entry.tierId,
+          tierName: entry.tierName,
+          rr: entry.rr,
+          elo: entry.elo ?? (entry.tierId - 3) * 100 + entry.rr,
+          source: 'game',
+        })),
+      );
+    }
     store.set('mmrHistoryCache', { key: `${settings.name}#${settings.tag}`.toLowerCase(), at: Date.now(), history });
     return { history };
   } catch (err) {
@@ -985,6 +1007,18 @@ ipcMain.handle('valorant:get-matches', async (_event, { name, tag, apiKey }) => 
       peakSeasonUuid: mmr.peak.season.id,
     };
     store.set(`valorantRank:${account.puuid}`, rankInfo);
+    // Historique durable du rang : seulement pour le compte lié à MVP Tracker,
+    // jamais pour un profil simplement consulté.
+    if (account.puuid === currentPuuid()) {
+      saveRankSnapshot(account.puuid, {
+        at: Date.now(),
+        tierId: rankInfo.tierId,
+        tierName: rankInfo.tierName,
+        rr: rankInfo.rr,
+        elo: typeof mmr.current.elo === 'number' ? mmr.current.elo : (rankInfo.tierId - 3) * 100 + rankInfo.rr,
+        source: 'sync',
+      });
+    }
   } catch {
     // Rang indisponible pour CE compte (non classé, erreur API, rate limit) —
     // on ne touche pas au cache d'un autre compte (voir le retour ci-dessous,
@@ -1780,6 +1814,20 @@ ipcMain.handle('play-session:end', (_event, id) => {
 
 ipcMain.handle('play-session:history', (_event, limit) =>
   currentPuuid() ? getPlaySessionHistory(currentPuuid(), limit ?? 30) : [],
+);
+
+ipcMain.handle('evolution:rank-snapshots', () => (currentPuuid() ? getRankSnapshots(currentPuuid()) : []));
+
+ipcMain.handle('guided-session:get-active', () => (currentPuuid() ? getActiveGuidedSession(currentPuuid()) : null));
+
+ipcMain.handle('guided-session:start', (_event, planJson) => (currentPuuid() ? startGuidedSession(currentPuuid(), planJson) : null));
+
+ipcMain.handle('guided-session:end', (_event, { id, resultJson }) => {
+  if (currentPuuid()) endGuidedSession(currentPuuid(), id, resultJson);
+});
+
+ipcMain.handle('guided-session:history', (_event, limit) =>
+  currentPuuid() ? getGuidedSessionHistory(currentPuuid(), limit ?? 10) : [],
 );
 
 ipcMain.handle('assessment:get', (_event, matchId) =>

@@ -27,6 +27,7 @@ create table if not exists public.shop_settings (
 -- Migration d'une base créée avec la première version (Éclats tirés de l'XP).
 alter table public.shop_settings add column if not exists welcome_bonus integer not null default 1000;
 alter table public.shop_settings add column if not exists pass_level_points integer not null default 100;
+alter table public.shop_settings add column if not exists daily_login_points integer not null default 100;
 alter table public.shop_settings drop column if exists coins_per_xp;
 alter table public.shop_settings drop column if exists level_up_coins;
 
@@ -67,6 +68,7 @@ alter table public.shop_offers add constraint shop_offers_kind_check check (kind
 -- crédite jamais deux fois la même récompense.
 --   welcome  : bonus de bienvenue, ref = 'welcome'
 --   pass     : récompense « currency » réclamée, ref = '<saison>:<récompense>'
+--   daily    : connexion quotidienne, ref = jour UTC 'YYYY-MM-DD' (un par jour)
 --   purchase : ref = id de l'objet ou du pack acheté
 --   pack     : achat avec de l'argent réel — PAS branché, réservé pour plus tard
 create table if not exists public.shop_ledger (
@@ -85,7 +87,7 @@ create index if not exists shop_ledger_user_idx on public.shop_ledger (user_id);
 delete from public.shop_ledger where source in ('xp', 'level');
 alter table public.shop_ledger drop constraint if exists shop_ledger_source_check;
 alter table public.shop_ledger add constraint shop_ledger_source_check
-  check (source in ('welcome', 'pass', 'purchase', 'pack'));
+  check (source in ('welcome', 'pass', 'daily', 'purchase', 'pack'));
 
 create table if not exists public.shop_purchases (
   user_id     uuid not null references auth.users (id) on delete cascade,
@@ -220,6 +222,44 @@ begin
 end;
 $$;
 
+-- Connexion quotidienne : crédite daily_login_points une fois par jour UTC
+-- (le jour change à 00:00 UTC, comme la rotation de la boutique). Idempotent :
+-- l'unicité (joueur, 'daily', jour) empêche tout double crédit, même si deux
+-- PC appellent en même temps. Le jour vient de l'horloge du SERVEUR, jamais du
+-- client. Renvoie { claimed, amount, balance }.
+create or replace function public.shop_claim_daily()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid     uuid := auth.uid();
+  cfg     public.shop_settings;
+  before  integer;
+  after   integer;
+begin
+  if uid is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+  select * into cfg from public.shop_settings where id;
+  if not found then
+    return jsonb_build_object('claimed', false, 'amount', 0, 'balance', 0);
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('shop:' || uid::text, 0));
+
+  select coalesce(sum(amount), 0) into before from public.shop_ledger where user_id = uid;
+
+  insert into public.shop_ledger (user_id, amount, source, ref)
+  values (uid, cfg.daily_login_points, 'daily', to_char(now() at time zone 'utc', 'YYYY-MM-DD'))
+  on conflict (user_id, source, ref) do nothing;
+
+  select coalesce(sum(amount), 0) into after from public.shop_ledger where user_id = uid;
+  return jsonb_build_object('claimed', after > before, 'amount', after - before, 'balance', after);
+end;
+$$;
+
 -- Achète une offre EN COURS. Renvoie { status, balance } avec status :
 --   ok | owned (déjà possédé) | insufficient (solde trop bas) | unavailable
 create or replace function public.shop_buy(p_offer text)
@@ -310,10 +350,12 @@ $$;
 revoke all on function public.shop_balance() from public, anon;
 revoke all on function public.shop_award() from public, anon;
 revoke all on function public.shop_claim_welcome() from public, anon;
+revoke all on function public.shop_claim_daily() from public, anon;
 revoke all on function public.shop_buy(text) from public, anon;
 revoke all on function public.bp_equip(text, text) from public, anon;
 grant execute on function public.shop_balance() to authenticated;
 grant execute on function public.shop_award() to authenticated;
 grant execute on function public.shop_claim_welcome() to authenticated;
+grant execute on function public.shop_claim_daily() to authenticated;
 grant execute on function public.shop_buy(text) to authenticated;
 grant execute on function public.bp_equip(text, text) to authenticated;

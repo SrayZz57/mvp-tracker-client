@@ -1,6 +1,6 @@
 import { excludeDeathmatch, findMe, groupStats, formStats, overallHsPercent, overallWinrate } from './valorantStats.js';
 
-// Recalcule le même récapitulatif que la carte "Ta semaine" (WeeklyRecapCard),
+// Recalcule le même récapitulatif que la carte Wrapped hebdomadaire (WrappedCard),
 // plus une pire map, pour avoir de quoi écrire un vrai contraste dans le récit.
 export function buildWeekRecap(weekAllMatches, name, tag) {
   const week = excludeDeathmatch(weekAllMatches);

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { findMe, weaponKillsFor, isRedBlueMatch, rankedTeamGroups, resultLabel, resultLabelKey } from './valorantStats.js';
 import { useMapImages } from './mapImages.js';
 import { useWeaponIcons } from './weaponIcons.js';
+import MatchTimeline from './MatchTimeline.jsx';
 
 const byScore = (a, b) => (b.stats?.score ?? 0) - (a.stats?.score ?? 0);
 
@@ -155,6 +156,13 @@ function MatchDetailModal({ match, settings, agentIcons, onClose }) {
             </div>
           )}
         </section>
+
+        {redBlue && me && rounds.length > 0 && (
+          <section className="md-panel">
+            <h3>{t('detail.timeline.title')}</h3>
+            <MatchTimeline match={match} me={me} agentIcons={agentIcons} />
+          </section>
+        )}
 
         <section className="md-panel">
           <button type="button" className="md-rounds-toggle" onClick={() => setShowRounds((v) => !v)}>

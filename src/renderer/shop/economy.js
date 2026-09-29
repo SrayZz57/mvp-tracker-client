@@ -13,6 +13,9 @@
 export const ECONOMY = {
   welcomeBonus: 1000,
   passLevelPoints: 100,
+  // Connexion quotidienne : crédité automatiquement à la première ouverture de
+  // l'Aim Trainer de chaque jour (jour UTC, comme la rotation de la boutique).
+  dailyLoginPoints: 100,
 };
 
 // Prix par rareté (skins d'armes) et par type d'exclusivité. Calés sur ce qu'une

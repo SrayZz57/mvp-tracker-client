@@ -58,6 +58,7 @@ const HeatmapTab = lazy(() => import('./tabs/HeatmapTab.jsx'));
 const AnalyseTab = lazy(() => import('./tabs/AnalyseTab.jsx'));
 const CompositionTab = lazy(() => import('./tabs/CompositionTab.jsx'));
 const HallOfFameTab = lazy(() => import('./tabs/HallOfFameTab.jsx'));
+const EvolutionTab = lazy(() => import('./tabs/EvolutionTab.jsx'));
 const PerformanceChartsTab = lazy(() => import('./tabs/PerformanceChartsTab.jsx'));
 const TeammatesRivalsTab = lazy(() => import('./tabs/TeammatesRivalsTab.jsx'));
 const BuySimulatorTab = lazy(() => import('./tabs/BuySimulatorTab.jsx'));
@@ -78,7 +79,7 @@ const MessagesTab = lazy(() => import('./tabs/MessagesTab.jsx'));
 const FriendsTab = lazy(() => import('./tabs/FriendsTab.jsx'));
 
 import GoalsWidget from './GoalsWidget.jsx';
-import WeeklyRecapCard from './WeeklyRecapCard.jsx';
+import WrappedCard from './WrappedCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
 import WelcomeScreen from './WelcomeScreen.jsx';
 import LinkRiotAccount from './LinkRiotAccount.jsx';
@@ -117,6 +118,7 @@ const NAV_SECTIONS = [
     sectionKey: 'nav.sections.myAccount',
     tabs: [
       { id: 'my-hall-of-fame', labelKey: 'nav.tabs.myHallOfFame', icon: Trophy },
+      { id: 'my-evolution', labelKey: 'nav.tabs.myEvolution', icon: TrendingUp },
       { id: 'my-weakness', labelKey: 'nav.tabs.myWeakness', icon: Compass },
       { id: 'my-skins-collection', labelKey: 'nav.tabs.myCollection', icon: Gem },
       { id: 'tilt', labelKey: 'nav.tabs.tilt', icon: Angry },
@@ -1001,13 +1003,18 @@ function App() {
           setLinkingRiot(false);
           return;
         }
-        setProfile({
+        // Fusionné avec le profil précédent (pas remplacé) : sur une ligne déjà
+        // existante (dissociation puis reliaison manuelle), un remplacement
+        // complet effacerait localement display_name/avatar/role jusqu'au
+        // prochain rechargement complet du profil.
+        setProfile((prev) => ({
+          ...(prev ?? {}),
           riot_name: settings.name,
           riot_tag: settings.tag,
           riot_puuid: settings.puuid,
           henrikdev_api_key: settings.apiKey,
-          created_at: new Date().toISOString(),
-        });
+          created_at: prev?.created_at ?? new Date().toISOString(),
+        }));
         setLinkingRiot(false);
       });
   }, [session, linkingRiot, settings?.puuid, settings?.name, settings?.tag]);
@@ -1143,7 +1150,11 @@ function App() {
     );
   }
 
-  if (profile === null) {
+  // profile existe mais riot_puuid est vide : cas d'une dissociation manuelle
+  // (voir Discord, compte lié par erreur à un autre Riot ID) — traité comme
+  // "pas encore lié", pour repasser par le même écran plutôt que de laisser
+  // l'app dans un état bancal qui suppose partout un riot_puuid présent.
+  if (profile === null || !profile.riot_puuid) {
     if (linkingRiot) {
       // Le puuid est déjà connu à ce stade (issu de l'aperçu confirmé) —
       // l'écriture du lien est quasi instantanée, ce n'est qu'un court passage.
@@ -1271,6 +1282,8 @@ function App() {
             puuid={profile?.riot_puuid}
           />
         );
+      case 'my-evolution':
+        return <EvolutionTab settings={mySettings} matches={myMatches} loading={isViewingSelf && data.loading} />;
       case 'my-weakness':
         return <WeaknessTab settings={mySettings} matches={myMatches} onNavigate={handleWeaknessNavigate} />;
       case 'my-skins-collection':
@@ -1280,7 +1293,17 @@ function App() {
       case 'play-sessions':
         return <PlaySessionsTab settings={mySettings} matches={myMatches} apiKey={settings?.apiKey} />;
       case 'session':
-        return <SessionGuideTab settings={mySettings} matches={myMatches} loading={isViewingSelf && data.loading} />;
+        return (
+          <SessionGuideTab
+            settings={mySettings}
+            matches={myMatches}
+            loading={isViewingSelf && data.loading}
+            myId={session.user.id}
+            apiKey={settings?.apiKey}
+            rank={myRank}
+            profile={profile}
+          />
+        );
       case 'aim-trainer':
         return (
           <AimTrainerTab
@@ -1614,7 +1637,7 @@ function App() {
       </div>
 
       <GoalsWidget matches={myMatches} settings={mySettings} myId={session.user.id} />
-      <WeeklyRecapCard matches={myMatches} settings={mySettings} rank={myRank} />
+      <WrappedCard matches={myMatches} settings={mySettings} rank={myRank} />
       {isViewingSelf && <PostMortemModal matches={myMatches} settings={mySettings} />}
       {showAnnouncements && <AnnouncementsModal announcements={announcements} onClose={() => setShowAnnouncements(false)} />}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} />}

@@ -168,6 +168,42 @@ db.exec(`
   )
 `);
 
+// Historique DURABLE du rang (page « Mon évolution ») : l'historique de RR de
+// HenrikDev ne remonte qu'à 20 parties, et l'app ne le garde que 30 jours dans
+// les réglages. Chaque instantané (rang + RR à un instant donné) est donc
+// conservé ici indéfiniment, pour le seul compte lié. `source` : 'sync'
+// (instantané pris à une synchro) ou 'game' (une partie classée de l'historique
+// de RR de HenrikDev, récupérée à rebours).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS rank_snapshots (
+    puuid TEXT NOT NULL,
+    at INTEGER NOT NULL,
+    tier_id INTEGER NOT NULL,
+    tier_name TEXT,
+    rr INTEGER NOT NULL,
+    elo INTEGER,
+    source TEXT NOT NULL,
+    PRIMARY KEY (puuid, at)
+  )
+`);
+
+// Session guidée (onglet « Session guidée ») : un programme avec un plan posé au
+// départ et un bilan à l'arrivée. Distinct de play_sessions ci-dessus (l'outil
+// « Sessions », simple plage horaire). plan_json = le plan généré au lancement ;
+// result_json = le bilan calculé à l'arrêt (NULL tant que la session tourne, ou
+// si elle a été refermée sans bilan). Aucune donnée par match n'est dupliquée :
+// les parties de la session se retrouvent dans le cache par leurs dates.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS guided_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    puuid TEXT NOT NULL DEFAULT '',
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    plan_json TEXT NOT NULL,
+    result_json TEXT
+  )
+`);
+
 // Rang par acte / vrais prix de skins / backfill d'historique via l'API
 // locale du client Riot retirés (2026-09-15) : plus aucun code de l'app ne
 // doit parler à cette API non officielle, pour éliminer tout risque côté
@@ -514,6 +550,63 @@ export function endPlaySession(puuid, id) {
 export function getPlaySessionHistory(puuid, limit = 30) {
   return db
     .prepare('SELECT * FROM play_sessions WHERE puuid = ? AND ended_at IS NOT NULL ORDER BY started_at DESC LIMIT ?')
+    .all(puuid, limit);
+}
+
+// Un instantané de synchro n'est gardé que s'il apporte quelque chose : rang ou
+// RR différent du dernier, ou plus de 6 h depuis le dernier (courbe régulière).
+const SNAPSHOT_MIN_GAP_MS = 6 * 60 * 60 * 1000;
+
+export function saveRankSnapshot(puuid, snap) {
+  const last = db.prepare('SELECT * FROM rank_snapshots WHERE puuid = ? ORDER BY at DESC LIMIT 1').get(puuid);
+  const changed = !last || last.tier_id !== snap.tierId || last.rr !== snap.rr;
+  if (!changed && snap.at - last.at < SNAPSHOT_MIN_GAP_MS) return false;
+  db.prepare('INSERT OR IGNORE INTO rank_snapshots (puuid, at, tier_id, tier_name, rr, elo, source) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    puuid,
+    snap.at,
+    snap.tierId,
+    snap.tierName ?? null,
+    snap.rr,
+    snap.elo ?? null,
+    snap.source ?? 'sync',
+  );
+  return true;
+}
+
+export function saveRankSnapshots(puuid, rows) {
+  const insert = db.prepare('INSERT OR IGNORE INTO rank_snapshots (puuid, at, tier_id, tier_name, rr, elo, source) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  rows.forEach((row) => insert.run(puuid, row.at, row.tierId, row.tierName ?? null, row.rr, row.elo ?? null, row.source ?? 'game'));
+}
+
+// Du plus ancien au plus récent.
+export function getRankSnapshots(puuid) {
+  return db
+    .prepare('SELECT at, tier_id AS tierId, tier_name AS tierName, rr, elo, source FROM rank_snapshots WHERE puuid = ? ORDER BY at ASC')
+    .all(puuid);
+}
+
+export function getActiveGuidedSession(puuid) {
+  return (
+    db.prepare('SELECT * FROM guided_sessions WHERE puuid = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1').get(puuid) ?? null
+  );
+}
+
+export function startGuidedSession(puuid, planJson) {
+  // Une session guidée oubliée (app fermée en plein milieu) est refermée sans
+  // bilan avant d'en ouvrir une nouvelle, pour ne jamais en garder deux actives.
+  db.prepare('UPDATE guided_sessions SET ended_at = ? WHERE puuid = ? AND ended_at IS NULL').run(Date.now(), puuid);
+  db.prepare('INSERT INTO guided_sessions (puuid, started_at, plan_json) VALUES (?, ?, ?)').run(puuid, Date.now(), planJson);
+  return getActiveGuidedSession(puuid);
+}
+
+export function endGuidedSession(puuid, id, resultJson) {
+  db.prepare('UPDATE guided_sessions SET ended_at = ?, result_json = ? WHERE id = ? AND puuid = ?').run(Date.now(), resultJson, id, puuid);
+}
+
+// Sessions terminées AVEC bilan, la plus récente d'abord.
+export function getGuidedSessionHistory(puuid, limit = 10) {
+  return db
+    .prepare('SELECT * FROM guided_sessions WHERE puuid = ? AND ended_at IS NOT NULL AND result_json IS NOT NULL ORDER BY started_at DESC LIMIT ?')
     .all(puuid, limit);
 }
 

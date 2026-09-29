@@ -1551,3 +1551,95 @@
 .lb-currency:hover {
   border-color: #7fe3ff;
 }
+
+/* Carte « Récompense quotidienne » en bas de la colonne de droite. */
+.lb-daily {
+  --gem: #7fe3ff;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(127, 227, 255, 0.12), var(--lb-panel) 70%);
+  border: 1px solid rgba(127, 227, 255, 0.4);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  transition: border-color 0.15s, transform 0.15s var(--ease-out, ease);
+}
+
+.lb-daily:hover {
+  border-color: var(--gem);
+  transform: translateY(-2px);
+}
+
+.lb-daily[data-ready='false'] {
+  border-color: var(--lb-line);
+  background: var(--lb-panel);
+}
+
+.lb-daily-icon {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--gem);
+  background: rgba(127, 227, 255, 0.1);
+  border: 1px solid rgba(127, 227, 255, 0.4);
+}
+
+.lb-daily[data-ready='true'] .lb-daily-icon::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lb-red);
+  box-shadow: 0 0 8px var(--lb-red);
+  animation: lbDailyPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes lbDailyPulse {
+  50% {
+    transform: scale(1.35);
+    opacity: 0.7;
+  }
+}
+
+.lb-daily[data-ready='false'] .lb-daily-icon {
+  color: #3ddc84;
+  background: rgba(61, 220, 132, 0.08);
+  border-color: rgba(61, 220, 132, 0.4);
+}
+
+.lb-daily-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.lb-daily-text b {
+  font-size: 0.9rem;
+}
+
+.lb-daily-text small {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.lb-daily > svg:last-child {
+  flex: none;
+  color: var(--gem);
+}
+
+.lb-daily[data-ready='false'] > svg:last-child {
+  color: var(--text-muted);
+}

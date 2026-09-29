@@ -18,11 +18,12 @@ const HEADER = `-- GÉNÉRÉ par scripts/generate-battle-pass-sql.mjs — ne pas
 export function renderShopCatalogSql() {
   const rows = SHOP_ITEMS.map((i) => `  (${q(i.id)}, ${q(i.type)}, ${q(i.rarity)}, ${i.price})`).join(',\n');
   return `${HEADER}
-insert into public.shop_settings (id, welcome_bonus, pass_level_points)
-values (true, ${ECONOMY.welcomeBonus}, ${ECONOMY.passLevelPoints})
+insert into public.shop_settings (id, welcome_bonus, pass_level_points, daily_login_points)
+values (true, ${ECONOMY.welcomeBonus}, ${ECONOMY.passLevelPoints}, ${ECONOMY.dailyLoginPoints})
 on conflict (id) do update set
   welcome_bonus = excluded.welcome_bonus,
-  pass_level_points = excluded.pass_level_points;
+  pass_level_points = excluded.pass_level_points,
+  daily_login_points = excluded.daily_login_points;
 
 insert into public.shop_items (id, type, rarity, price)
 values

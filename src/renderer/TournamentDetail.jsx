@@ -354,7 +354,7 @@ function TournamentDetail({ tournamentId, myId, isAdmin, onBack }) {
   // demandé sur Discord pour partager un tournoi à un serveur/groupe de
   // potes. Aucun lien web n'existe pour un tournoi (l'app n'a pas de site
   // par-tournoi) : une image est ce qui se partage le plus naturellement
-  // sur Discord. Même technique que WeeklyRecapCard.jsx (html-to-image).
+  // sur Discord. Même technique que WrappedCard.jsx (html-to-image).
   const handleShare = () => {
     if (!heroRef.current) return;
     setSharing(true);

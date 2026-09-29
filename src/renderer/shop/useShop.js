@@ -42,10 +42,19 @@ function writeCache(userId, ids) {
   }
 }
 
+// Jours de connexion déjà réclamés (60 derniers). null si la lecture échoue
+// (migration absente...) : l'appelant garde alors ce qu'il avait.
+async function readDailyDays() {
+  const { data, error } = await supabase.from('shop_ledger').select('ref').eq('source', 'daily').order('created_at', { ascending: false }).limit(60);
+  return error ? null : new Set((data ?? []).map((row) => row.ref));
+}
+
 export default function useShop(userId) {
   const [status, setStatus] = useState(userId ? 'loading' : 'signed-out');
   const [balance, setBalance] = useState(0);
   const [lastGain, setLastGain] = useState(0);
+  const [dailyDays, setDailyDays] = useState(() => new Set()); // jours UTC déjà réclamés
+  const [claimingDaily, setClaimingDaily] = useState(false);
   const [offers, setOffers] = useState([]);
   const [ownedIds, setOwnedIds] = useState(() => readCache(userId));
   const [buying, setBuying] = useState(null);
@@ -78,12 +87,14 @@ export default function useShop(userId) {
     if (award.data?.gained > 0) setLastGain(award.data.gained);
 
     const nowIso = new Date().toISOString();
-    const [offersRes, purchasesRes, welcomeRes] = await Promise.all([
+    const [offersRes, purchasesRes, welcomeRes, dailyRes] = await Promise.all([
       supabase.from('shop_offers').select('id, item_id, kind, price, starts_at, ends_at').lte('starts_at', nowIso).gt('ends_at', nowIso),
       supabase.from('shop_purchases').select('item_id'),
       supabase.from('shop_ledger').select('id').eq('source', 'welcome').limit(1),
+      readDailyDays(),
     ]);
     if (!alive.current) return;
+    if (dailyRes) setDailyDays(dailyRes);
     if (offersRes.error || purchasesRes.error) {
       console.error(`[shop] lecture : ${(offersRes.error ?? purchasesRes.error).message}`);
       return setStatus((s) => (s === 'ready' ? s : 'error'));
@@ -109,6 +120,27 @@ export default function useShop(userId) {
     setStatus(userId ? 'loading' : 'signed-out');
     load();
   }, [userId, load]);
+
+  // Connexion quotidienne : le joueur vient la réclamer lui-même (page dédiée).
+  // Renvoie ok | already (déjà réclamée aujourd'hui) | unavailable | error.
+  const claimDaily = useCallback(async () => {
+    setClaimingDaily(true);
+    try {
+      const { data, error } = await supabase.rpc('shop_claim_daily');
+      if (error) {
+        if (isMissingFunction(error)) return 'unavailable';
+        console.error(`[shop] shop_claim_daily : ${error.message}`);
+        return 'error';
+      }
+      if (!alive.current) return data?.claimed ? 'ok' : 'already';
+      if (typeof data?.balance === 'number') setBalance(data.balance);
+      const days = await readDailyDays();
+      if (alive.current && days) setDailyDays(days);
+      return data?.claimed ? 'ok' : 'already';
+    } finally {
+      if (alive.current) setClaimingDaily(false);
+    }
+  }, []);
 
   // Renvoie le statut serveur : ok | owned | insufficient | unavailable | error.
   const buy = useCallback(
@@ -157,5 +189,5 @@ export default function useShop(userId) {
     }
   }, []);
 
-  return { status, balance, lastGain, offers, ownedIds, buying, buy, welcomeClaimed, claimingWelcome, claimWelcome, refresh: load };
+  return { status, balance, lastGain, dailyDays, claimingDaily, claimDaily, offers, ownedIds, buying, buy, welcomeClaimed, claimingWelcome, claimWelcome, refresh: load };
 }

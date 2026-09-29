@@ -2,11 +2,12 @@
 -- À exécuter dans le SQL Editor de Supabase, après sql/shop.sql.
 -- Rejouable : met à jour, ne supprime rien.
 
-insert into public.shop_settings (id, welcome_bonus, pass_level_points)
-values (true, 1000, 100)
+insert into public.shop_settings (id, welcome_bonus, pass_level_points, daily_login_points)
+values (true, 1000, 100, 100)
 on conflict (id) do update set
   welcome_bonus = excluded.welcome_bonus,
-  pass_level_points = excluded.pass_level_points;
+  pass_level_points = excluded.pass_level_points,
+  daily_login_points = excluded.daily_login_points;
 
 insert into public.shop_items (id, type, rarity, price)
 values

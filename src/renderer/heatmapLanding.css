@@ -1,0 +1,325 @@
+/* Page d'accueil de l'onglet Heatmap (HeatmapLanding.jsx) : deux grandes cartes
+   façon menu Valorant — coins coupés, titres Bebas, trait d'accent. */
+
+.hl {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  min-height: calc(100vh - 9.5rem);
+}
+
+.hl-head h2 {
+  margin: 0.3rem 0 0.4rem;
+  font-family: var(--font-hero);
+  font-size: clamp(2.6rem, 5vw, 4rem);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.hl-head p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.hl-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hl-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(440px, 1fr);
+  gap: 1.3rem;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .hl-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(440px, 1fr);
+  }
+}
+
+.hl-card {
+  --tone: #ff4655;
+  --tone-rgb: 255, 70, 85;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  padding: 2rem 2.2rem 1.7rem;
+  overflow: hidden;
+  isolation: isolate;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: #0d0f15;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+  transition: border-color 0.2s, transform 0.25s var(--ease-out, ease), box-shadow 0.25s;
+}
+
+.hl-card[data-tone='duels'] {
+  --tone: #3fd0c4;
+  --tone-rgb: 63, 208, 196;
+}
+
+.hl-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 42%;
+  height: 3px;
+  background: var(--tone);
+  box-shadow: 0 0 18px var(--tone);
+  transition: width 0.3s var(--ease-out, ease);
+}
+
+.hl-card:hover {
+  border-color: var(--tone);
+  transform: translateY(-4px);
+  box-shadow: 0 22px 50px -20px rgba(var(--tone-rgb), 0.55);
+}
+
+.hl-card:hover::after {
+  width: 100%;
+}
+
+.hl-card:focus-visible {
+  outline: 2px solid var(--tone);
+  outline-offset: 3px;
+}
+
+/* --- Visuel ------------------------------------------------------------ */
+
+.hl-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  transition: transform 0.6s var(--ease-out, ease);
+}
+
+.hl-card:hover .hl-art {
+  transform: scale(1.04);
+}
+
+/* Bloc carte : la minimap et ce qui s'affiche dessus (taches, cases) partagent
+   le même cadre carré, donc tout grandit ensemble avec la carte. */
+.hl-map {
+  position: absolute;
+  top: 3%;
+  left: 3%;
+  height: 76%;
+  max-width: 70%;
+  aspect-ratio: 1;
+  container-type: inline-size;
+}
+
+.hl-minimap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.7));
+}
+
+.hl-portrait {
+  position: absolute;
+  right: -3%;
+  bottom: 0;
+  height: 108%;
+  width: auto;
+  max-width: 62%;
+  object-fit: contain;
+  object-position: bottom right;
+  filter: drop-shadow(0 16px 34px rgba(0, 0, 0, 0.75));
+}
+
+.hl-heat {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, rgba(255, 70, 85, 0.85), rgba(255, 70, 85, 0) 68%);
+  animation: hlPulse 4.5s ease-in-out infinite;
+}
+
+.hl-heat-a {
+  left: 8%;
+  top: 14%;
+  width: 46%;
+}
+
+.hl-heat-b {
+  left: 44%;
+  top: 46%;
+  width: 40%;
+  background: radial-gradient(circle, rgba(255, 150, 60, 0.8), rgba(255, 150, 60, 0) 68%);
+  animation-delay: 1.2s;
+}
+
+.hl-heat-c {
+  left: 34%;
+  top: 4%;
+  width: 30%;
+  animation-delay: 2.4s;
+}
+
+@keyframes hlPulse {
+  50% {
+    transform: scale(1.18);
+    opacity: 0.7;
+  }
+}
+
+.hl-cell {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 15%;
+  aspect-ratio: 1;
+  font-family: var(--font-hero);
+  font-size: 5cqw;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.hl-cell[data-tone='win'] {
+  background: rgba(61, 220, 132, 0.6);
+}
+
+.hl-cell[data-tone='mid'] {
+  background: rgba(240, 210, 60, 0.55);
+}
+
+.hl-cell[data-tone='loss'] {
+  background: rgba(255, 70, 85, 0.6);
+}
+
+.hl-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(0deg, rgba(8, 9, 13, 0.97) 6%, rgba(8, 9, 13, 0.78) 30%, rgba(8, 9, 13, 0) 62%);
+}
+
+/* --- Texte ------------------------------------------------------------- */
+
+.hl-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 470px;
+}
+
+.hl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tone);
+  background: rgba(var(--tone-rgb), 0.12);
+  border: 1px solid rgba(var(--tone-rgb), 0.45);
+}
+
+.hl-title {
+  font-family: var(--font-hero);
+  font-size: clamp(3rem, 5vw, 4.6rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.hl-desc {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #c9ccd4;
+}
+
+.hl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.hl-tags span {
+  padding: 0.22rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #e6e8ee;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hl-games {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.hl-games img {
+  height: 22px;
+  width: auto;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7));
+}
+
+.hl-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tone);
+}
+
+.hl-open svg {
+  transition: transform 0.2s var(--ease-out, ease);
+}
+
+.hl-card:hover .hl-open svg {
+  transform: translateX(5px);
+}

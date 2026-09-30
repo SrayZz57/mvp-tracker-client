@@ -28,6 +28,7 @@ import {
   Gauge,
   Trophy,
   Hammer,
+  Map as MapIcon,
 } from 'lucide-react';
 import useBattlePass from './battlePass/useBattlePass.js';
 import useShop from './shop/useShop.js';
@@ -43,6 +44,7 @@ import LeaderboardScreen from './LeaderboardScreen.jsx';
 import { PlayerTitle } from './battlePass/playerCosmetics.jsx';
 import { isHandLocked, isSkinLocked } from './battlePass/ownership.js';
 import { DEFAULT_CONFIG, MODES, VALORANT_MODE_IDS, WEAPON_MODELS } from './aimTrainerModes.js';
+import { PLAYABLE_MAP_IDS } from './playableMapIds.js';
 import SensitivityFinder from './SensitivityFinder.jsx';
 import { analyzeFinderResults } from './sensitivityFit.js';
 import Icon from './Icon.jsx';
@@ -228,6 +230,8 @@ const ShopScreen = lazy(() => import('./shop/ShopScreen.jsx'));
 const DailyRewardScreen = lazy(() => import('./shop/DailyRewardScreen.jsx'));
 // Éditeur d'arène : three.js et ses poignées, chargés à l'ouverture seulement.
 const ArenaEditor = lazy(() => import('./arenaEditor/ArenaEditor.jsx'));
+// Aperçu du site A d'Ascent (futur mode d'entrées sur site), même principe.
+const MapExplorer = lazy(() => import('./MapExplorer.jsx'));
 
 // Accueil « lobby » (HubLobby.jsx) ou accueil d'origine (plus bas dans ce
 // fichier, conservé tel quel) : passer à false pour revenir à l'ancien.
@@ -676,6 +680,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agents.length]);
   const [screen, setScreen] = useState('menu'); // menu | modes | stats | settings
+  const [mapPreviewId, setMapPreviewId] = useState('ascentA'); // carte ouverte dans l'aperçu (voir playableMaps.js)
   // Quel héros (parmi heroAgents) sert de fond à l'accueil : change au survol
   // d'une entrée du menu plutôt que d'afficher les 4 en même temps — un seul
   // point focal à la fois, moins statique qu'une grille figée.
@@ -1490,6 +1495,22 @@ function AimTrainerHub({ config: initialRawConfig }) {
                     <strong>{t('aimTrainer.modesHub.arenaEditorTitle')}</strong>
                     <span>{t('aimTrainer.modesHub.arenaEditorDesc')}</span>
                   </button>
+                  {PLAYABLE_MAP_IDS.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="mc-action"
+                      onMouseEnter={playHoverSfx}
+                      onClick={() => {
+                        setMapPreviewId(id);
+                        setScreen('map-preview');
+                      }}
+                    >
+                      <span className="mc-icon"><Icon icon={MapIcon} size={18} /></span>
+                      <strong>{t(`aimTrainer.mapPreview.maps.${id}.button`)}</strong>
+                      <span>{t(`aimTrainer.mapPreview.maps.${id}.buttonDesc`)}</span>
+                    </button>
+                  ))}
                 </div>
 
                 <h3 className="mc-section-title">{t('aimTrainer.modesHub.presetsTitle')}</h3>
@@ -1699,6 +1720,12 @@ function AimTrainerHub({ config: initialRawConfig }) {
               settings={{ sens: config.sens, fov: config.fov, theme: config.theme, controller: config.controller }}
               onPlay={(customArena) => launch({ mode: 'custom', ...arenaLaunchConfig(customArena) })}
             />
+          </Suspense>
+        )}
+
+        {screen === 'map-preview' && (
+          <Suspense fallback={null}>
+            <MapExplorer key={mapPreviewId} t={t} mapId={mapPreviewId} settings={{ sens: config.sens, fov: config.fov, theme: config.theme }} />
           </Suspense>
         )}
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Check, X, Mail, Palette } from 'lucide-react';
+import { Pencil, Check, X, Mail, Palette, Share2 } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { usePlayerCardArt, useAllPlayerCards } from './rankData.js';
 import { useAgentIcons, useAgentRoles } from './agentIcons.js';
@@ -9,6 +9,7 @@ import { excludeDeathmatch, groupStats, overallWinrate } from './valorantStats.j
 import RoleStackedBar from './charts/RoleStackedBar.jsx';
 import AgentDetailModal from './AgentDetailModal.jsx';
 import IconPickerModal from './IconPickerModal.jsx';
+import ShareProfileModal, { profileBannerKey } from './ShareProfileCard.jsx';
 import { supabase } from './supabaseClient.js';
 import CollapsibleCard from './CollapsibleCard.jsx';
 
@@ -27,11 +28,12 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [bannerPickerOpen, setBannerPickerOpen] = useState(false);
   // Carte dont l'illustration sert de bannière. Gardée sur cet appareil (pas de
   // colonne côté Supabase pour l'instant) ; sans choix, la bannière suit la
   // photo de profil, comme avant.
-  const bannerStorageKey = `mvptracker-profile-banner:${profile.id ?? profile.riot_puuid ?? 'me'}`;
+  const bannerStorageKey = profileBannerKey(profile);
   const [bannerCardUuid, setBannerCardUuid] = useState(() => {
     try {
       return localStorage.getItem(bannerStorageKey);
@@ -190,10 +192,16 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
               {t('account.riotIdLinked', { name: mySettings.name, tag: mySettings.tag })}
               {memberSince && t('account.memberSince', { date: memberSince })}
             </p>
-            <button type="button" className="account-customize-button" onClick={() => setCustomizeOpen(true)}>
-              <Icon icon={Palette} size={15} />
-              {t('account.customizeProfile')}
-            </button>
+            <div className="account-header-actions">
+              <button type="button" className="account-customize-button" onClick={() => setCustomizeOpen(true)}>
+                <Icon icon={Palette} size={15} />
+                {t('account.customizeProfile')}
+              </button>
+              <button type="button" className="account-customize-button account-share-button" onClick={() => setShareOpen(true)}>
+                <Icon icon={Share2} size={15} />
+                {t('shareCard.button')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -288,6 +296,18 @@ function AccountPage({ profile, mySettings, myMatches, myRank, email, onUpdate }
         {contactStatus === 'sent' && <p className="label account-reset-status">{t('account.contactSent')}</p>}
         {contactStatus === 'error' && <p className="warning account-reset-status">{t('account.contactError')}</p>}
       </CollapsibleCard>
+
+      {shareOpen && (
+        <ShareProfileModal
+          profile={profile}
+          settings={mySettings}
+          matches={myMatches}
+          rank={myRank}
+          avatarUrl={avatarArt.icon}
+          bannerUrl={bannerArt.banner}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {customizeOpen && (
         <div className="modal-overlay" onClick={() => setCustomizeOpen(false)}>

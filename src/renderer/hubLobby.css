@@ -1643,3 +1643,59 @@
 .lb-daily[data-ready='false'] > svg:last-child {
   color: var(--text-muted);
 }
+
+/* --- Mise à l'échelle Windows à 125 % / 150 % ------------------------------------- */
+
+@media (min-resolution: 1.2dppx) and (max-resolution: 1.39dppx) and (min-width: 1101px) and (max-width: 1800px) {
+  /* Zoom à 0.8 : la fenêtre (~1536 px CSS) est mise en page comme un écran
+     de 1920 px à 100 %. Les hauteurs en vh et le titre en vw ne suivent pas le zoom,
+     d'où les compensations ; les réglages « petites fenêtres » (≤ 1400 px) sont annulés
+     puisque la mise en page fait de nouveau ~1920 px. */
+  .lb {
+    zoom: 0.8;
+    height: calc(100vh / 0.8);
+  }
+
+  .lb-feature h2 {
+    font-size: clamp(3.2rem, calc(5.4vw / 0.8), 5.6rem);
+  }
+
+  .lb-body {
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr) minmax(320px, 380px);
+  }
+
+  .lb-tab {
+    padding: 0 1.1rem;
+  }
+
+  .lb-bp-next {
+    display: flex;
+  }
+}
+
+@media (min-resolution: 1.4dppx) and (min-width: 1101px) and (max-width: 1800px) {
+  /* Zoom à 0.667 : la fenêtre (~1281 px CSS) est mise en page comme un écran
+     de 1920 px à 100 %. Les hauteurs en vh et le titre en vw ne suivent pas le zoom,
+     d'où les compensations ; les réglages « petites fenêtres » (≤ 1400 px) sont annulés
+     puisque la mise en page fait de nouveau ~1920 px. */
+  .lb {
+    zoom: 0.667;
+    height: calc(100vh / 0.667);
+  }
+
+  .lb-feature h2 {
+    font-size: clamp(3.2rem, calc(5.4vw / 0.667), 5.6rem);
+  }
+
+  .lb-body {
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr) minmax(320px, 380px);
+  }
+
+  .lb-tab {
+    padding: 0 1.1rem;
+  }
+
+  .lb-bp-next {
+    display: flex;
+  }
+}

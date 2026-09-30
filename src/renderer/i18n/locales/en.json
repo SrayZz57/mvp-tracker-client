@@ -1476,6 +1476,107 @@
         "imported": "Arena imported."
       }
     },
+    "mapPreview": {
+      "eyebrow": "Map preview · beta",
+      "play": "Click to play",
+      "coords": "Minimap u {{u}} · v {{v}} · height {{h}} m",
+      "noclip": "free flight",
+      "help": "Esc: menu · M: minimap · N: free flight · 1-9: start points",
+      "keys": {
+        "move": "WASD: move",
+        "walk": "Shift: walk",
+        "jump": "Space: jump",
+        "crouch": "Ctrl or C: crouch",
+        "teleport": "1 to 9: start points",
+        "minimap": "M: official minimap",
+        "noclip": "N: free flight (through walls)"
+      },
+      "maps": {
+        "ascentA": {
+          "button": "Map: Ascent A site",
+          "buttonDesc": "Preview of A site rebuilt from the official minimap, for the upcoming site entry mode.",
+          "title": "Ascent · A Site",
+          "intro": "Ascent’s A site, from A Lobby to Heaven, for the upcoming mode where you move to take your entries. Move like in game and compare with the official minimap in the top right.",
+          "accuracy": "Floor plan traced from the official minimap (±14 cm). Heights measured on in-game screenshots (±20 cm); walls and tall crates estimated. The area ends at the red barriers.",
+          "callouts": {
+            "aLobby": "A Lobby",
+            "aMain": "A Main",
+            "aWine": "A Wine",
+            "aSite": "A Site",
+            "aRafters": "A Heaven (Rafters)",
+            "aHell": "A Hell",
+            "aWindow": "A Window",
+            "aGarden": "A Garden",
+            "aTree": "A Tree",
+            "midCubby": "Mid Cubby",
+            "defenderSide": "Defender side"
+          },
+          "spawns": {
+            "lobby": "A Lobby",
+            "main": "A Main",
+            "plaza": "Foot of the stairs",
+            "site": "Site (default)",
+            "heaven": "Heaven",
+            "hell": "Hell",
+            "tree": "Tree",
+            "garden": "Garden",
+            "defenders": "Defender side"
+          }
+        },
+        "sunsetB": {
+          "button": "Map: Sunset B site",
+          "buttonDesc": "Preview of B site rebuilt from the official minimap, for the upcoming site entry mode.",
+          "title": "Sunset · B Site",
+          "intro": "Sunset’s B site (patch 9.08 version), from B Main to Boba, for the upcoming mode where you move to take your entries. Move like in game and compare with the official minimap in the top right.",
+          "accuracy": "Floor plan traced automatically from the official minimap (±13 cm). Levels from the minimap shades and the patch 9.08 notes; wall, pillar and crate heights estimated from the official screenshots. The area ends at the red barriers.",
+          "callouts": {
+            "bBack": "B Back",
+            "bSite": "B Site",
+            "bBoba": "B Boba",
+            "bMarket": "B Market",
+            "bMain": "B Main",
+            "bLobby": "B Lobby",
+            "midTop": "Mid Top"
+          },
+          "spawns": {
+            "bMain": "B Main (cinema)",
+            "market": "B Market",
+            "site": "In front of the pillar",
+            "platform": "Market-side platform",
+            "back": "B Back",
+            "westPlant": "West plant",
+            "boba": "B Boba",
+            "lobby": "B Lobby"
+          }
+        },
+        "havenA": {
+          "button": "Map: Haven A site",
+          "buttonDesc": "Preview of A site rebuilt from the official minimap, for the upcoming site entry mode.",
+          "title": "Haven · A Site",
+          "intro": "Haven’s A site, from A Lobby to the tower, through A Long and A Sewer. Move like in game and compare with the official minimap in the top right.",
+          "accuracy": "Floor plan traced automatically from the official minimap (±13 cm). Heights (tower, A Long ramp, A Sewer stairs, crates) are estimated from in-game screenshots. The area ends at the red barriers.",
+          "callouts": {
+            "aTower": "A Tower (Heaven)",
+            "aSite": "A Site",
+            "aSewer": "A Sewer",
+            "aLobby": "A Lobby",
+            "aLong": "A Long",
+            "aLink": "A Link",
+            "aHell": "A Hell"
+          },
+          "spawns": {
+            "lobby": "A Lobby",
+            "long": "A Long",
+            "entry": "Foot of the A Long ramp",
+            "site": "Site",
+            "heaven": "Heaven (tower)",
+            "link": "A Link",
+            "sewer": "A Sewer",
+            "hell": "Hell"
+          }
+        }
+      }
+    },
     "openArenaEditor": "Arena editor",
     "builtinArenas": "Built-in maps",
     "myArenas": "My arenas",
@@ -2377,6 +2478,104 @@
   "profile": {
     "cardTitle": "DNA Profile",
     "archetypeLabel": "Your archetype",
+    "plan": {
+      "priorityLabel": "Priority #1",
+      "nextStepLabel": "Next milestone",
+      "otherWeak": "Other areas to work on",
+      "allAxes": "Overview of your areas",
+      "infoButton": "What this means and how it is computed",
+      "measuresLabel": "What it measures",
+      "howLabel": "How it is computed",
+      "stepTrain": "Train",
+      "stepPlay": "In game",
+      "stepGoal": "Measurable goal",
+      "trendUp": "+{{value}} pts",
+      "trendDown": "-{{value}} pts",
+      "trendFlat": "Stable",
+      "trendNone": "Trend: not enough matches",
+      "trendNote": "Trend: your last {{count}} ranked matches compared with the {{count}} before. A gap under 5 points counts as stable.",
+      "trendNeedsMore": "The trend appears once you have {{count}} ranked matches analysed.",
+      "strengths": "Your strengths to keep: {{axes}}.",
+      "status": {
+        "weak": "Needs work",
+        "ok": "Fine",
+        "strong": "Strength"
+      },
+      "dims": {
+        "aim": {
+          "name": "Accuracy",
+          "measures": "Your share of shots to the head. It is the first lever to win your duels.",
+          "how": "Headshots ÷ total shots that hit, over all your analysed ranked matches. The score compares that percentage to 40%: 40% headshots = 100, 20% = 50. Your current percentage: {{value}}%.",
+          "train": "The Micro mode of the Aim Trainer makes you aim at tiny targets: it teaches you to aim fine instead of wide. 10 minutes before a match is enough.",
+          "tips": [
+            "Keep your crosshair at head height on every angle, before you even see an enemy.",
+            "Settle your crosshair before shooting: one steady shot beats three sloppy body shots.",
+            "Take a step back in duels: you gain accuracy and your opponent has to come to you."
+          ],
+          "goal": "Go from {{current}}% to {{target}}% headshots over your next 20 ranked matches."
+        },
+        "positioning": {
+          "name": "Positioning",
+          "measures": "The share of your deaths that happen in the first 20 seconds of the round. The lower it is, the less you get caught off guard early.",
+          "how": "We look at when in the round you die: the share of your deaths that happen in the first 20 seconds. Score = 100 − 2 × that share (0 at minimum): no early deaths = 100, 50% or more = 0. At least 10 deaths must be analysed ({{count}} here). Your current share: {{value}}%.",
+          "train": "The Reflex mode trains you to react and neutralise an enemy who appears quickly, so you stop losing the opening duels.",
+          "tips": [
+            "Do not peek first alone without information: wait for an ability or a teammate.",
+            "Take the angle later in the round: the first 20 seconds are the riskiest.",
+            "Use your smoke or flash before peeking instead of relying on your aim alone."
+          ],
+          "goal": "Bring your early deaths from {{current}}% down to {{target}}% over your next 20 matches."
+        },
+        "aggression": {
+          "name": "Aggression",
+          "measures": "The share of rounds where you are in the very first duel (first kill or first death). Too low and you are always reacting.",
+          "how": "Share of rounds where you are in the very first duel (first kill or first death): {{count}} rounds out of {{rounds}}. The score compares that share to 40%: one opening duel every 2.5 rounds = 100, an average player is around 20% = 50. Your opening duel win rate ({{percent}}%) does not count in the score.",
+          "train": "The Peek mode trains you to step out and engage an appearing opponent quickly: exactly the motion of an opening duel.",
+          "tips": [
+            "Call that you are entering, so your team follows and can trade you.",
+            "Pick the moment to take the first duel (right after an ability) instead of waiting.",
+            "Stay close to a teammate: an opening duel with a possible trade costs far less."
+          ],
+          "goal": "Go from {{current}}% to {{target}}% of rounds where you take the first duel."
+        },
+        "stability": {
+          "name": "Resilience",
+          "measures": "Your performance (K/D) in games played right after a loss, compared with your average. 70 = no drop.",
+          "how": "Your performance (K/D) in games played right after a loss (less than 100 minutes after the previous one started), compared with your average. 70 = no drop, 100 = you play better, 0 = sharp drop. Based on {{count}} games played after a loss (8 minimum).",
+          "train": "The Extreme Precision mode builds consistency under pressure: aiming fine AND fast, game after game.",
+          "tips": [
+            "After a loss, take a 5-minute break before queueing again.",
+            "Switch agent or mode instead of replaying the same game on a loop.",
+            "Do a 5-minute aim warm-up before the next game."
+          ],
+          "goal": "Aim for a resilience score of {{target}} (currently {{current}}): no K/D drop after a loss."
+        },
+        "versatility": {
+          "name": "Versatility",
+          "measures": "The number of agents you truly master: at least 5 games each, with good results.",
+          "how": "Agents you truly master: at least 5 games, with a 45% win rate or a K/D close to your average (at least 90% of it). The score rises more and more slowly and never reaches 100 (4 agents ≈ 70, 6 ≈ 82). Here {{count}} mastered out of {{total}} played.",
+          "train": "Composition helps you find an agent that complements your main, to learn and then try in unranked.",
+          "tips": [
+            "Pick a single new agent and play it for 5 unranked games.",
+            "Try an agent from a different role to understand what your teammates do.",
+            "Keep your main for important ranked games."
+          ],
+          "goal": "Go from {{current}} to {{target}} mastered agents."
+        },
+        "clutch": {
+          "name": "Clutch factor",
+          "measures": "Your win rate when you are alone against several opponents.",
+          "how": "Your win rate when you are in a clutch situation (alone against several opponents). The score is that win rate, computed from at least 3 situations: {{count}} situation(s) analysed.",
+          "train": "The Snap-hold mode trains you to aim fast then hold your position: the reflex of a good clutch.",
+          "tips": [
+            "Do not run at the enemies: isolate the duels one by one.",
+            "Use the time left: a clutch is often won against the clock, not by rushing.",
+            "Review your lost clutches to spot where you took the wrong duel."
+          ],
+          "goal": "Go from {{current}}% to {{target}}% of clutches won."
+        }
+      }
+    },
     "notReady_one": "{{count}} more ranked match needed before your player profile can be generated.",
     "notReady_other": "{{count}} more ranked matches needed before your player profile can be generated.",
     "infoLabel": "How this score is calculated",
@@ -3278,5 +3477,26 @@
       "tiger": "Tiger"
     },
     "points": "{{amount}} MVP Points"
+  },
+  "shareCard": {
+    "button": "Share my card",
+    "title": "My profile card",
+    "hint": "An image of your profile to share: rank, RR, K/D, accuracy, KAST, favorite agent and player type.",
+    "playerType": "Player type",
+    "intro": "New: here is your profile card. Share it with your friends, you can find it anytime in My account.",
+    "typePending": "Analysis in progress",
+    "rank": "Rank",
+    "unranked": "Unranked",
+    "kd": "Average K/D",
+    "accuracy": "Accuracy",
+    "kast": "KAST",
+    "favoriteAgent": "Favorite agent",
+    "matches_one": "{{count}} ranked match",
+    "matches_other": "{{count}} ranked matches",
+    "download": "Download image",
+    "exporting": "Creating image...",
+    "copy": "Copy image",
+    "copied": "Image copied",
+    "error": "Could not create the image. Try again in a moment."
   }
 }

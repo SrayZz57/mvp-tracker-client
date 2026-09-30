@@ -792,6 +792,10 @@ function cloudCanvas() {
   });
 }
 
+// Réutilisés par la carte du site A (aimMapAscentA.js) : même rendu d'une
+// carte à l'autre, et chaque texture n'est dessinée qu'une fois par lancement.
+export { rng, paint, tex, blotches, speckle, stuccoCanvas, ashlarCanvas, pavingCanvas, roofCanvas, windowCanvas, crateCanvas, metalBoxCanvas, generatorCanvas, doorCanvas };
+
 // --- Construction -------------------------------------------------------------
 
 export function buildAscentArena(arena, { floorY, isDark }) {

@@ -80,6 +80,7 @@ const FriendsTab = lazy(() => import('./tabs/FriendsTab.jsx'));
 
 import GoalsWidget from './GoalsWidget.jsx';
 import WrappedCard from './WrappedCard.jsx';
+import { ShareCardIntro, SHARE_CARD_INTRO_KEY } from './ShareProfileCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
 import WelcomeScreen from './WelcomeScreen.jsx';
 import LinkRiotAccount from './LinkRiotAccount.jsx';
@@ -792,8 +793,17 @@ function App() {
     return () => clearTimeout(id);
   }, [enteredApp, termsAccepted, overlaySettingsSeen]);
 
+  const [onboardingDone, setOnboardingDone] = useState(() => {
+    try {
+      return !!localStorage.getItem('mvptracker-onboarding-done');
+    } catch {
+      return true;
+    }
+  });
+
   const closeOnboarding = () => {
     localStorage.setItem('mvptracker-onboarding-done', '1');
+    setOnboardingDone(true);
     setShowOnboarding(false);
   };
 
@@ -1100,6 +1110,40 @@ function App() {
     // repère restait figé à son ancienne position, dans le vide.
   }, [activeTab, settings, collapsedSections, navQuery]);
 
+  // Carte de profil partageable : présentée une seule fois, à la première ouverture
+  // après l'ajout de la fonctionnalité. Passe après les CGU, la fenêtre de l'overlay
+  // et le tutoriel (jamais deux fenêtres à la fois), et attend que le rang et les
+  // parties soient chargés, sinon la carte s'afficherait à moitié vide.
+  const [showShareIntro, setShowShareIntro] = useState(false);
+  const shareIntroReady =
+    enteredApp &&
+    termsAccepted &&
+    overlaySettingsSeen &&
+    onboardingDone &&
+    !showOnboarding &&
+    !showDailyOverlaySettings &&
+    !!profile &&
+    !!mySettings?.name &&
+    !!myRank &&
+    myMatches.length > 0;
+  useEffect(() => {
+    if (!shareIntroReady) return undefined;
+    try {
+      if (localStorage.getItem(SHARE_CARD_INTRO_KEY)) return undefined;
+    } catch {
+      return undefined;
+    }
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(SHARE_CARD_INTRO_KEY, '1');
+      } catch {
+        // stockage indisponible : elle reviendra au prochain lancement
+      }
+      setShowShareIntro(true);
+    }, 1500);
+    return () => clearTimeout(id);
+  }, [shareIntroReady]);
+
   if (recoveryPending) {
     return <SetNewPasswordScreen onDone={() => setRecoveryPending(false)} />;
   }
@@ -1196,10 +1240,20 @@ function App() {
         rank={myRank}
         matches={myMatches}
         announcements={announcements}
-        onOpenAimTrainer={() => {
-          setActiveTab('aim-trainer');
-          setEnteredApp(true);
-        }}
+        // Ouvre directement la fenêtre plein écran (même config que le bouton
+        // de la barre du haut) et laisse l'accueil affiché derrière : le joueur
+        // entre dans le tracker quand il le décide, avec le bouton d'à côté.
+        onOpenAimTrainer={() =>
+          window.electronAPI.openAimTrainer({
+            userId: session.user.id,
+            apiKey: settings?.apiKey,
+            name: mySettings?.name,
+            tag: mySettings?.tag,
+            rank: myRank ? { tierId: myRank.tierId, tierName: myRank.tierName, cardUuid: myRank.cardUuid } : null,
+            avatarCardUuid: profile?.avatar_card_uuid ?? myRank?.cardUuid ?? null,
+            displayName: profile?.display_name ?? null,
+          })
+        }
         onEnter={() => {
           // L'app est personnelle (plus de recherche d'autres joueurs), mais
           // des réglages locaux hérités d'une ancienne version peuvent encore
@@ -1530,7 +1584,20 @@ function App() {
           <button
             className={activeTab === 'aim-trainer' ? 'aim-topbar-button active' : 'aim-topbar-button'}
             title={t('aimTrainer.topbarTitle')}
-            onClick={() => setActiveTab('aim-trainer')}
+            // Ouvre directement la fenêtre plein écran de l'Aim Trainer (même
+            // config que le bouton de l'onglet Aim Trainer, qui reste dans le
+            // menu de gauche pour la carte d'impact sur les parties classées).
+            onClick={() =>
+              window.electronAPI.openAimTrainer({
+                userId: session.user.id,
+                apiKey: settings?.apiKey,
+                name: mySettings?.name,
+                tag: mySettings?.tag,
+                rank: myRank ? { tierId: myRank.tierId, tierName: myRank.tierName, cardUuid: myRank.cardUuid } : null,
+                avatarCardUuid: profile?.avatar_card_uuid ?? myRank?.cardUuid ?? null,
+                displayName: profile?.display_name ?? null,
+              })
+            }
           >
             <span className="aim-topbar-icon"><Icon icon={Target} size={16} /></span>
             <span>{t('nav.tabs.aimTrainer')}</span>
@@ -1651,6 +1718,15 @@ function App() {
         />
       )}
       {showOnboarding && termsAccepted && <OnboardingTour onClose={closeOnboarding} />}
+      {showShareIntro && (
+        <ShareCardIntro
+          profile={profile}
+          settings={mySettings}
+          matches={myMatches}
+          rank={myRank}
+          onClose={() => setShowShareIntro(false)}
+        />
+      )}
       {showDailyOverlaySettings && (
         <DailyOverlaySettings matches={myMatches} onClose={closeDailyOverlaySettings} />
       )}

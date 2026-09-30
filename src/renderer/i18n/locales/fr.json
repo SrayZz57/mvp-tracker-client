@@ -1411,6 +1411,107 @@
         "imported": "Arène importée."
       }
     },
+    "mapPreview": {
+      "eyebrow": "Aperçu de carte · bêta",
+      "play": "Cliquer pour jouer",
+      "coords": "Minimap u {{u}} · v {{v}} · hauteur {{h}} m",
+      "noclip": "vol libre",
+      "help": "Échap : menu · M : minimap · N : vol libre · 1-9 : points de départ",
+      "keys": {
+        "move": "ZQSD : se déplacer",
+        "walk": "Maj : marcher",
+        "jump": "Espace : sauter",
+        "crouch": "Ctrl ou C : s’accroupir",
+        "teleport": "1 à 9 : points de départ",
+        "minimap": "M : minimap officielle",
+        "noclip": "N : vol libre (traverse les murs)"
+      },
+      "maps": {
+        "ascentA": {
+          "button": "Carte : Ascent site A",
+          "buttonDesc": "Aperçu du site A reproduit d’après la minimap officielle, pour le futur mode d’entrées sur site.",
+          "title": "Ascent · Site A",
+          "intro": "Le site A d’Ascent, de A Lobby à Heaven, pour le futur mode où l’on se déplace pour faire ses entrées. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
+          "accuracy": "Plan au sol relevé sur la minimap officielle (±14 cm). Hauteurs mesurées sur des captures du jeu (±20 cm) ; murs et grandes caisses estimés. La zone s’arrête aux barrières rouges.",
+          "callouts": {
+            "aLobby": "A Lobby",
+            "aMain": "A Main",
+            "aWine": "A Wine",
+            "aSite": "A Site",
+            "aRafters": "A Heaven (Rafters)",
+            "aHell": "A Hell",
+            "aWindow": "A Window",
+            "aGarden": "A Garden",
+            "aTree": "A Tree",
+            "midCubby": "Mid Cubby",
+            "defenderSide": "Côté défenseurs"
+          },
+          "spawns": {
+            "lobby": "A Lobby",
+            "main": "A Main",
+            "plaza": "Pied de l’escalier",
+            "site": "Site (default)",
+            "heaven": "Heaven",
+            "hell": "Hell",
+            "tree": "Tree",
+            "garden": "Garden",
+            "defenders": "Côté défenseurs"
+          }
+        },
+        "sunsetB": {
+          "button": "Carte : Sunset site B",
+          "buttonDesc": "Aperçu du site B reproduit d’après la minimap officielle, pour le futur mode d’entrées sur site.",
+          "title": "Sunset · Site B",
+          "intro": "Le site B de Sunset (version du patch 9.08), de B Main à Boba, pour le futur mode où l’on se déplace pour faire ses entrées. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
+          "accuracy": "Plan au sol relevé automatiquement sur la minimap officielle (±13 cm). Niveaux d’après les teintes de la minimap et les notes du patch 9.08 ; hauteurs des murs, du pilier et des caisses estimées sur les captures officielles. La zone s’arrête aux barrières rouges.",
+          "callouts": {
+            "bBack": "B Back",
+            "bSite": "B Site",
+            "bBoba": "B Boba",
+            "bMarket": "B Market",
+            "bMain": "B Main",
+            "bLobby": "B Lobby",
+            "midTop": "Mid Top"
+          },
+          "spawns": {
+            "bMain": "B Main (cinéma)",
+            "market": "B Market",
+            "site": "Devant le pilier",
+            "platform": "Plateforme côté Market",
+            "back": "B Back",
+            "westPlant": "Plant ouest",
+            "boba": "B Boba",
+            "lobby": "B Lobby"
+          }
+        },
+        "havenA": {
+          "button": "Carte : Haven site A",
+          "buttonDesc": "Aperçu du site A reproduit d’après la minimap officielle, pour le futur mode d’entrées sur site.",
+          "title": "Haven · Site A",
+          "intro": "Le site A de Haven, de A Lobby à la tour, par A Long et A Sewer. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
+          "accuracy": "Plan au sol relevé automatiquement sur la minimap officielle (±13 cm). Les hauteurs (tour, rampe d’A Long, descente d’A Sewer, caisses) sont estimées sur des captures en jeu. La zone s’arrête aux barrières rouges.",
+          "callouts": {
+            "aTower": "A Tower (Heaven)",
+            "aSite": "A Site",
+            "aSewer": "A Sewer",
+            "aLobby": "A Lobby",
+            "aLong": "A Long",
+            "aLink": "A Link",
+            "aHell": "A Hell"
+          },
+          "spawns": {
+            "lobby": "A Lobby",
+            "long": "A Long",
+            "entry": "Pied de la rampe d’A Long",
+            "site": "Site",
+            "heaven": "Heaven (tour)",
+            "link": "A Link",
+            "sewer": "A Sewer",
+            "hell": "Hell"
+          }
+        }
+      }
+    },
     "openArenaEditor": "Éditeur d’arène",
     "builtinArenas": "Cartes intégrées",
     "myArenas": "Mes arènes",
@@ -2377,6 +2478,104 @@
   "profile": {
     "cardTitle": "Profil ADN",
     "archetypeLabel": "Ton archétype",
+    "plan": {
+      "priorityLabel": "Priorité n°1",
+      "nextStepLabel": "Prochain palier",
+      "otherWeak": "Autres axes à travailler",
+      "allAxes": "Vue d'ensemble de tes axes",
+      "infoButton": "À quoi ça correspond et comment c'est calculé",
+      "measuresLabel": "Ce que ça mesure",
+      "howLabel": "Comment c'est calculé",
+      "stepTrain": "S'entraîner",
+      "stepPlay": "En partie",
+      "stepGoal": "Objectif mesurable",
+      "trendUp": "+{{value}} pts",
+      "trendDown": "-{{value}} pts",
+      "trendFlat": "Stable",
+      "trendNone": "Tendance : pas assez de matchs",
+      "trendNote": "Tendance : tes {{count}} derniers matchs classés comparés aux {{count}} précédents. Un écart de moins de 5 points est considéré comme stable.",
+      "trendNeedsMore": "La tendance apparaît dès que tu as {{count}} matchs classés analysés.",
+      "strengths": "Tes points forts à conserver : {{axes}}.",
+      "status": {
+        "weak": "À travailler",
+        "ok": "Correct",
+        "strong": "Point fort"
+      },
+      "dims": {
+        "aim": {
+          "name": "Précision",
+          "measures": "Ta part de tirs dans la tête. C'est le premier levier pour gagner tes duels.",
+          "how": "Nombre de tirs dans la tête ÷ nombre total de tirs qui touchent, sur tous tes matchs classés analysés. Le score compare ce pourcentage à 40 % : 40 % de headshots = 100, 20 % = 50. Ton pourcentage actuel : {{value}} %.",
+          "train": "Le mode Micro de l'Aim Trainer force à viser des cibles minuscules : il t'apprend à viser fin plutôt que large. 10 minutes avant de lancer une partie suffisent.",
+          "tips": [
+            "Garde ton viseur à hauteur de tête à chaque angle, avant même d'apercevoir un ennemi.",
+            "Corrige ton viseur avant de tirer : un tir stabilisé vaut mieux que trois tirs approximatifs au corps.",
+            "Recule d'un pas dans tes duels : tu gagnes en précision et ton adversaire doit venir à toi."
+          ],
+          "goal": "Passe de {{current}} % à {{target}} % de headshots sur tes 20 prochains matchs classés."
+        },
+        "positioning": {
+          "name": "Positionnement",
+          "measures": "La part de tes morts qui tombent dans les 20 premières secondes du round. Plus elle est basse, moins tu te fais surprendre en entrée.",
+          "how": "On regarde à quel moment du round tu meurs : la part de tes morts survenues dans les 20 premières secondes. Score = 100 − 2 × cette part (0 au minimum) : aucune mort d'entrée = 100, 50 % ou plus = 0. Il faut au moins 10 morts analysées ({{count}} ici). Ta part actuelle : {{value}} %.",
+          "train": "Le mode Réflexe entraîne à réagir et neutraliser vite un ennemi qui apparaît, pour ne plus subir les premiers duels.",
+          "tips": [
+            "Ne sors pas seul en premier sans information : attends une capacité ou un coéquipier.",
+            "Prends l'angle plus tard dans le round : les 20 premières secondes sont les plus risquées.",
+            "Utilise ta fumée ou ton flash avant de peek au lieu de compter sur ton aim seul."
+          ],
+          "goal": "Ramène tes morts d'entrée de {{current}} % à {{target}} % sur tes 20 prochains matchs."
+        },
+        "aggression": {
+          "name": "Agressivité",
+          "measures": "La part des rounds où tu es dans le tout premier duel (premier sang ou première mort). Trop bas, tu subis le rythme du round.",
+          "how": "Part des rounds où tu es dans le tout premier duel (premier sang ou première mort) : {{count}} rounds sur {{rounds}}. Le score compare cette part à 40 % : un duel d'ouverture tous les 2,5 rounds = 100, un joueur moyen est autour de 20 % = 50. Ton taux de premiers duels gagnés ({{percent}} %) n'entre pas dans le score.",
+          "train": "Le mode Peek t'entraîne à sortir et engager vite un adversaire qui apparaît : exactement le geste d'un premier duel.",
+          "tips": [
+            "Annonce à ton équipe que tu entres, pour qu'elle te suive et puisse t'échanger.",
+            "Choisis le moment de prendre le premier duel (juste après une capacité) plutôt que d'attendre.",
+            "Reste près d'un coéquipier : un premier duel avec un trade possible coûte beaucoup moins cher."
+          ],
+          "goal": "Passe de {{current}} % à {{target}} % de rounds où tu prends le premier duel."
+        },
+        "stability": {
+          "name": "Résilience",
+          "measures": "Ta performance (K/D) dans les parties jouées juste après une défaite, comparée à ta moyenne. 70 = aucune baisse.",
+          "how": "Ta performance (K/D) dans les parties jouées juste après une défaite (moins de 100 minutes après le début de la précédente), comparée à ta moyenne. 70 = aucune baisse, 100 = tu joues mieux, 0 = chute nette. Basé sur {{count}} parties enchaînées après une défaite (8 minimum).",
+          "train": "Le mode Précision extrême travaille la constance sous pression : viser fin ET vite, partie après partie.",
+          "tips": [
+            "Après une défaite, fais une pause de 5 minutes avant de relancer.",
+            "Change d'agent ou de mode au lieu de rejouer la même partie en boucle.",
+            "Lance un échauffement de visée de 5 minutes avant la partie suivante."
+          ],
+          "goal": "Vise un score de résilience de {{target}} (contre {{current}} aujourd'hui) : aucune baisse de K/D après une défaite."
+        },
+        "versatility": {
+          "name": "Polyvalence",
+          "measures": "Le nombre d'agents que tu maîtrises vraiment : au moins 5 parties, avec de bons résultats.",
+          "how": "Agents que tu maîtrises : au moins 5 parties, avec 45 % de victoires ou un K/D proche de ta moyenne (au moins 90 %). Le score monte de moins en moins vite et n'atteint jamais 100 (4 agents ≈ 70, 6 ≈ 82). Ici {{count}} maîtrisé(s) sur {{total}} joué(s).",
+          "train": "La Composition t'aide à repérer un agent complémentaire à ton main, à apprendre puis à essayer en non classé.",
+          "tips": [
+            "Choisis un seul nouvel agent et joue-le 5 parties en non classé.",
+            "Essaie un agent d'un rôle différent du tien pour comprendre ce que font tes coéquipiers.",
+            "Garde ton main pour les parties classées importantes."
+          ],
+          "goal": "Passe de {{current}} à {{target}} agents maîtrisés."
+        },
+        "clutch": {
+          "name": "Clutch factor",
+          "measures": "Ton winrate quand tu te retrouves seul contre plusieurs adversaires.",
+          "how": "Ton winrate quand tu es en situation de clutch (seul contre plusieurs adversaires). Le score est ce winrate, calculé à partir de 3 situations minimum : {{count}} situation(s) analysée(s).",
+          "train": "Le mode Snap-hold entraîne à viser vite puis à tenir sa position : le réflexe d'un bon clutch.",
+          "tips": [
+            "Ne cours pas vers les ennemis : isole les duels un par un.",
+            "Utilise le temps restant : un clutch se gagne souvent en jouant contre la montre, pas en fonçant.",
+            "Reviens sur tes clutchs perdus pour repérer où tu as pris le mauvais duel."
+          ],
+          "goal": "Passe de {{current}} % à {{target}} % de clutchs gagnés."
+        }
+      }
+    },
     "notReady_one": "Encore {{count}} match classé avant de pouvoir générer ton profil de joueur.",
     "notReady_other": "Encore {{count}} matchs classés avant de pouvoir générer ton profil de joueur.",
     "infoLabel": "Comment ce score est calculé",
@@ -3278,5 +3477,26 @@
       "tiger": "Tigre"
     },
     "points": "{{amount}} MVP Points"
+  },
+  "shareCard": {
+    "button": "Partager ma carte",
+    "title": "Ma carte de profil",
+    "hint": "Une image de ton profil à partager : rang, RR, K/D, précision, KAST, agent fétiche et type de joueur.",
+    "playerType": "Type de joueur",
+    "intro": "Nouveau : voici ta carte de profil. Partage-la avec tes amis, tu pourras la retrouver quand tu veux dans Mon compte.",
+    "typePending": "Analyse en cours",
+    "rank": "Rang",
+    "unranked": "Non classé",
+    "kd": "K/D moyen",
+    "accuracy": "Précision",
+    "kast": "KAST",
+    "favoriteAgent": "Agent fétiche",
+    "matches_one": "{{count}} match classé",
+    "matches_other": "{{count}} matchs classés",
+    "download": "Télécharger l'image",
+    "exporting": "Création de l'image...",
+    "copy": "Copier l'image",
+    "copied": "Image copiée",
+    "error": "Impossible de créer l'image. Réessaie dans un instant."
   }
 }

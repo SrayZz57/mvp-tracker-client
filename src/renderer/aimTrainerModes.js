@@ -613,6 +613,8 @@ export const DEFAULT_CONFIG = {
   spread: 28,
   fov: 103,
   showWeapon: true,
+  // 'left' : arme et mains en miroir, tenues à gauche de l'écran.
+  weaponSide: 'right',
   // Une clé de WEAPON_MODELS (mains + arme avec son propre jeu d'animations).
   // Les anciens réglages 'default' sont lus comme 'vandal' (voir AimTrainerGame).
   // Résolu à chaque lancement par AimTrainerHub.launch() (voir weaponSkins

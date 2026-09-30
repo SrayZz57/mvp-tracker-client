@@ -187,7 +187,6 @@
       "heatmap": "Heatmap",
       "analyse": "Analyse",
       "social": "Coéquipiers & Rivaux",
-      "graphiques": "Graphiques",
       "myEvolution": "Mon évolution",
       "myHallOfFame": "Mon Hall of Fame",
       "myWeakness": "Points à travailler",
@@ -200,7 +199,6 @@
       "strategy": "Stratégie",
       "skins": "Skins",
       "composition": "Composition",
-      "buySimulator": "Simulation d'achat",
       "wiki": "Wiki",
       "messages": "Messages",
       "friends": "Amis",
@@ -208,9 +206,9 @@
       "settings": "Réglages",
       "adminTerms": "CGU acceptées",
       "lineups": "Lineups",
-      "clips": "Clips",
       "teamListings": "Recherche de Team",
-      "adminNotify": "Envoyer une notification"
+      "adminNotify": "Envoyer une notification",
+      "graphiques": "Graphiques"
     },
     "rankUnavailable": "Rang indisponible",
     "searchPlaceholder": "Chercher un onglet...",
@@ -1591,7 +1589,10 @@
     "finderInputLabel": "Périphérique",
     "finderInputMouse": "Souris",
     "finderInputController": "Manette",
-    "finderCurrentSensController": "Sensibilité manette actuelle (Base) : {{sens}}"
+    "finderCurrentSensController": "Sensibilité manette actuelle (Base) : {{sens}}",
+    "crosshairAdd": "Ajouter un crosshair",
+    "weaponLeftLabel": "Arme à gauche",
+    "sensHint": "Mets la même valeur que dans Valorant."
   },
   "playSessions": {
     "title": "Session en cours",
@@ -1614,39 +1615,6 @@
     "noMatchesInWindow": "Aucun match joué pendant cette session.",
     "refreshMatches": "Resynchroniser mes matchs",
     "refreshing": "Resynchronisation..."
-  },
-  "buySim": {
-    "noRoundData": "Aucun match avec données de round en cache pour l'instant.",
-    "coherentRounds_one": "{{coherent}}/{{total}} round cohérent ({{percent}}%)",
-    "coherentRounds_other": "{{coherent}}/{{total}} rounds cohérents ({{percent}}%)",
-    "coherent": "Cohérent",
-    "toReview": "À vérifier",
-    "availableCredits": "Crédits disponibles",
-    "chooseAgentOptional": "— agent (optionnel) —",
-    "noWeapon": "Aucune arme",
-    "noShield": "Pas de bouclier",
-    "creditsSuffix": "{{cost}} crédits",
-    "remainingCredits": "Crédits restants",
-    "tooLowBudget": "Budget trop faible pour une arme ou un bouclier — garde tes crédits pour le prochain round.",
-    "abilitiesOf": "Capacités de {{agent}}",
-    "free": "Gratuite",
-    "costsResearched": "Coûts recherchés le {{date}} (wiki officiel Riot){{suffix}}",
-    "costsResearchedSuffixWithRemaining": " — comparés aux {{remaining}} crédits restants après arme + bouclier.",
-    "costsResearchedSuffixPeriod": ".",
-    "noAbilityCosts": "Pas encore de coûts de capacités fiables pour {{agent}} — non couvert par la source utilisée (agent récent ou kit atypique).",
-    "disclaimer": "Arme et bouclier basés sur les vrais prix du shop (API officielle). Les coûts de capacités ne sont exposés par aucune API — recherchés manuellement sur le wiki Riot, disponibles pour une partie du roster seulement (voir ci-dessus si ton agent n'est pas couvert).",
-    "noMatchesYet": "Aucun match en cache pour l'instant — clique sur « Rafraîchir ».",
-    "roundAnalysisTitle": "Analyse d'achat round par round",
-    "roundAnalysisHint": "Compare ton achat réel à ce que l'économie moyenne de ton équipe permettait ce round-là.",
-    "calculatorTitle": "Calculateur de budget",
-    "calculatorHint": "Entre tes crédits disponibles pour voir le meilleur achat possible.",
-    "explanation": {
-      "coherent": "Achat cohérent : {{tier}}, comme l'économie de l'équipe le permettait.",
-      "tooHigh": "Tu as fait un {{actual}} alors que l'économie d'équipe pointait plutôt vers un {{recommended}}.",
-      "tooLow": "Tu as joué en {{actual}} alors que l'équipe avait les moyens d'un {{recommended}}."
-    },
-    "roleNoteDuelist": "En tant que duelliste, priorise l'arme sur le bouclier si tu dois trancher : tu vas au contact, une arme forte compte plus.",
-    "roleNoteDefensive": "En tant que {{role}}, le bouclier complet vaut le coup même avec une arme plus faible : tu es souvent en retrait."
   },
   "wiki": {
     "title": "Wiki Valorant",
@@ -2773,17 +2741,7 @@
     "clutches": "Clutchs : {{wins}} gagnés sur {{attempts}}",
     "playtime": "Temps de jeu : {{time}}",
     "rrGames": "sur {{count}} parties classées",
-    "rrPartial": "au moins",
-    "compare": {
-      "week": "Flèches : écart avec la semaine précédente",
-      "month": "Flèches : écart avec le mois précédent",
-      "act": "Flèches : écart avec l'acte précédent"
-    },
-    "noCompare": {
-      "week": "Pas de semaine précédente à comparer",
-      "month": "Pas de mois précédent à comparer",
-      "act": "Pas d'acte précédent à comparer"
-    }
+    "rrPartial": "au moins"
   },
   "evolution": {
     "eyebrow": "Depuis le début",
@@ -3063,7 +3021,16 @@
     "choosePhoto": "Choisir une photo de profil",
     "chooseFavoriteAgent": "Choisir ton agent fétiche",
     "perfLiteLabel": "Mode économique",
-    "perfLiteHint": "Réduit les animations et les effets de flou pour alléger l'app sur un PC modeste. Activé automatiquement sur les PC peu puissants ; tu peux le changer ici."
+    "perfLiteHint": "Réduit les animations et les effets de flou pour alléger l'app sur un PC modeste. Activé automatiquement sur les PC peu puissants ; tu peux le changer ici.",
+    "dailyOverlayHotkeyLabel": "Raccourci pour masquer l'overlay",
+    "dailyOverlayHotkeyHint": "Appuie sur ce raccourci, même en pleine partie, pour cacher l'overlay de session, et à nouveau pour le remettre. Clique sur le bouton puis tape la combinaison voulue (Retour arrière pour désactiver, Échap pour annuler).",
+    "dailyOverlayHotkeyPress": "Appuie sur les touches…",
+    "dailyOverlayHotkeyNone": "Aucun",
+    "dailyOverlayHotkeyReset": "Raccourci par défaut",
+    "dailyOverlayHotkeyErrors": {
+      "in_use": "Ce raccourci est déjà utilisé par une autre application. Choisis-en un autre.",
+      "invalid": "Raccourci non valide : ajoute Ctrl, Alt ou Maj (une touche F seule est acceptée)."
+    }
   },
   "heatmap": {
     "title": "Heatmap",
@@ -3232,7 +3199,7 @@
     "trainingTitle": "Entraînement",
     "trainingText": "Aim Trainer 3D (modes d'entraînement, agents en mouvement sur le site A du Monastère, Sensitivity Finder, armes et skins) et session guidée d'échauffement.",
     "toolsTitle": "Outils",
-    "toolsText": "Sessions, crosshairs, tableau de stratégie, compositions, simulateur d'achat, lineups, clips, recherche de team, catalogue de skins, wiki.",
+    "toolsText": "Sessions, crosshairs, tableau de stratégie, compositions, lineups, recherche de team, catalogue de skins, wiki.",
     "endTitle": "C'est tout !",
     "endText": "Tu peux revoir ce tutoriel à tout moment depuis Réglages, dans « Sécurité et compte ».",
     "previous": "← Précédent",
@@ -3476,7 +3443,14 @@
       "chrome": "Chrome",
       "tiger": "Tigre"
     },
-    "points": "{{amount}} MVP Points"
+    "points": "{{amount}} MVP Points",
+    "claimErrors": {
+      "level_too_low": "Le serveur n'a pas encore ce niveau pour toi : ton XP n'est peut-être pas à jour. Rafraîchis la page ou rejoue une partie puis réessaie.",
+      "unknown_reward": "Cette récompense n'existe pas encore côté serveur : la mise à jour de la saison n'a pas été appliquée. Préviens le développeur.",
+      "not_authenticated": "Tu as été déconnecté : reconnecte-toi puis réessaie.",
+      "other": "Impossible de réclamer cette récompense ({{code}}). Vérifie ta connexion et réessaie."
+    },
+    "dismiss": "Fermer"
   },
   "shareCard": {
     "button": "Partager ma carte",

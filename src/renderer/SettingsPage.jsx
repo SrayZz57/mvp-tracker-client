@@ -7,6 +7,7 @@ import CollapsibleCard from './CollapsibleCard.jsx';
 import DeleteAccountModal from './DeleteAccountModal.jsx';
 import { useE2EE } from './E2EEContext.jsx';
 import { isPerfLiteEnabled, setPerfLite } from './perfMode.js';
+import { DEFAULT_OVERLAY_HOTKEY, acceleratorFromEvent } from './overlayHotkey.js';
 
 // Une ligne de réglage à bascule : étiquette + description à gauche (sur une
 // largeur raisonnable, pas étirées sur toute la carte), switch aligné à
@@ -53,6 +54,9 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
   const [dailyOverlayEnabled, setDailyOverlayEnabled] = useState(true);
   const [dailyOverlaySize, setDailyOverlaySize] = useState(100);
   const [dailyOverlayMoving, setDailyOverlayMoving] = useState(false);
+  const [overlayHotkey, setOverlayHotkey] = useState({ accelerator: '', defaultAccelerator: DEFAULT_OVERLAY_HOTKEY });
+  const [hotkeyListening, setHotkeyListening] = useState(false);
+  const [hotkeyError, setHotkeyError] = useState(null);
   // Resynchro du Riot ID lié — pour les joueurs qui ont changé de pseudo EN
   // JEU après avoir lié leur compte (le tracker reste bloqué sur l'ancien nom
   // tant qu'on ne le met pas à jour ici, voir onUpdateRiotId dans App.jsx).
@@ -70,6 +74,7 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
     window.electronAPI.getDailyOverlayEnabled().then(setDailyOverlayEnabled);
     window.electronAPI.getDailyOverlaySize().then(setDailyOverlaySize);
     window.electronAPI.getDailyOverlayDragMode().then(setDailyOverlayMoving);
+    window.electronAPI.getDailyOverlayHotkey().then(setOverlayHotkey);
   }, []);
 
   // Quitter Réglages (donc démonter ce composant) pendant que le mode
@@ -119,6 +124,35 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
     setDailyOverlaySize(next);
     window.electronAPI.setDailyOverlaySize(next);
   };
+
+  // Enregistre un nouveau raccourci (ou '' pour le désactiver) ; le processus principal
+  // refuse un raccourci déjà pris par une autre application et garde l'ancien.
+  const saveOverlayHotkey = async (accelerator) => {
+    const result = await window.electronAPI.setDailyOverlayHotkey(accelerator);
+    if (result.ok) {
+      setOverlayHotkey((prev) => ({ ...prev, accelerator }));
+      setHotkeyError(null);
+    } else {
+      setHotkeyError(result.error);
+    }
+  };
+
+  // Pendant la saisie, on capte la prochaine combinaison au clavier.
+  useEffect(() => {
+    if (!hotkeyListening) return undefined;
+    const onKeyDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const result = acceleratorFromEvent(e);
+      if (result.status === 'partial') return;
+      setHotkeyListening(false);
+      if (result.status === 'cancel') return;
+      if (result.status === 'invalid') return setHotkeyError('invalid');
+      saveOverlayHotkey(result.status === 'clear' ? '' : result.accelerator);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [hotkeyListening]);
 
   const handleToggleDailyOverlayMoving = () => {
     const next = !dailyOverlayMoving;
@@ -299,6 +333,32 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
               onChange={handleDailyOverlaySizeChange}
             />
             <span className="label">{dailyOverlaySize}%</span>
+          </div>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-text">
+            <span className="settings-row-label">{t('account.dailyOverlayHotkeyLabel')}</span>
+            <p className="settings-row-hint">{t('account.dailyOverlayHotkeyHint')}</p>
+            {hotkeyError && <p className="settings-row-hint overlay-hotkey-error">{t(`account.dailyOverlayHotkeyErrors.${hotkeyError}`)}</p>}
+          </div>
+          <div className="overlay-hotkey-controls">
+            <button
+              type="button"
+              className={hotkeyListening ? 'overlay-hotkey-btn listening' : 'overlay-hotkey-btn'}
+              onClick={() => {
+                setHotkeyError(null);
+                setHotkeyListening((v) => !v);
+              }}
+            >
+              {hotkeyListening
+                ? t('account.dailyOverlayHotkeyPress')
+                : overlayHotkey.accelerator || t('account.dailyOverlayHotkeyNone')}
+            </button>
+            {overlayHotkey.accelerator !== overlayHotkey.defaultAccelerator && (
+              <button type="button" className="account-forgot-password" onClick={() => saveOverlayHotkey(overlayHotkey.defaultAccelerator)}>
+                {t('account.dailyOverlayHotkeyReset')}
+              </button>
+            )}
           </div>
         </div>
         <SettingsToggleRow

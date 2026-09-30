@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell, Menu, Notification, session, safeStorage, screen, autoUpdater, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Menu, Notification, session, safeStorage, screen, autoUpdater, Tray, globalShortcut } from 'electron';
+import { DEFAULT_OVERLAY_HOTKEY, isValidAccelerator } from './renderer/overlayHotkey.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -749,6 +750,18 @@ ipcMain.handle('aim-trainer:close', (event) => {
   BrowserWindow.fromWebContents(event.sender)?.close();
 });
 
+// Depuis l'Aim Trainer (fenêtre plein écran à part) : revenir dans l'app sur un
+// onglet précis, par exemple pour ajouter un crosshair à la bibliothèque.
+ipcMain.handle('aim-trainer:open-tab', (event, tab) => {
+  if (typeof tab !== 'string' || tab.length > 40) return;
+  BrowserWindow.fromWebContents(event.sender)?.close();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send('app:open-tab', tab);
+});
+
 
 ipcMain.handle('settings:get', () => store.get('valorantSettings') || null);
 
@@ -1478,10 +1491,11 @@ function createDailyOverlay() {
   });
 
   dailyOverlayWindow.showInactive();
+  if (dailyOverlayUserHidden) dailyOverlayWindow.hide();
   if (!dailyOverlayTopmostInterval) {
     dailyOverlayTopmostInterval = setInterval(() => {
       try {
-        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed() && !dailyOverlayUserHidden) {
           dailyOverlayWindow.moveTop();
         }
       } catch {
@@ -1685,6 +1699,60 @@ async function refreshDailyOverlay() {
 // d'avoir lancé une partie.
 let dailyOverlayLastRunning = false;
 
+// Masquage volontaire par raccourci clavier (voir toggleDailyOverlayVisibility) : la
+// fenêtre reste en mémoire et continue de recevoir les stats, elle est juste cachée.
+// Remis à zéro à la fermeture du jeu, pour retrouver l'overlay à la partie suivante.
+let dailyOverlayUserHidden = false;
+let registeredOverlayHotkey = null;
+
+function toggleDailyOverlayVisibility() {
+  dailyOverlayUserHidden = !dailyOverlayUserHidden;
+  if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) return;
+  if (dailyOverlayUserHidden) {
+    dailyOverlayWindow.hide();
+  } else {
+    dailyOverlayWindow.showInactive();
+    dailyOverlayWindow.moveTop();
+  }
+}
+
+// undefined en base = jamais réglé (raccourci par défaut) ; '' = désactivé par le joueur.
+function currentOverlayHotkey() {
+  const saved = store.get('dailyOverlayHotkey');
+  return saved === undefined ? DEFAULT_OVERLAY_HOTKEY : saved;
+}
+
+function registerOverlayHotkey(accelerator) {
+  if (registeredOverlayHotkey) {
+    globalShortcut.unregister(registeredOverlayHotkey);
+    registeredOverlayHotkey = null;
+  }
+  if (!accelerator) return { ok: true };
+  try {
+    // register() renvoie false quand une autre application a déjà pris ce raccourci.
+    if (!globalShortcut.register(accelerator, toggleDailyOverlayVisibility)) return { ok: false, error: 'in_use' };
+  } catch {
+    return { ok: false, error: 'invalid' };
+  }
+  registeredOverlayHotkey = accelerator;
+  return { ok: true };
+}
+
+ipcMain.handle('daily-overlay:get-hotkey', () => ({ accelerator: currentOverlayHotkey(), defaultAccelerator: DEFAULT_OVERLAY_HOTKEY }));
+
+ipcMain.handle('daily-overlay:set-hotkey', (_event, accelerator) => {
+  if (accelerator !== '' && !isValidAccelerator(accelerator)) return { ok: false, error: 'invalid' };
+  const previous = registeredOverlayHotkey;
+  const result = registerOverlayHotkey(accelerator);
+  if (!result.ok) {
+    // On garde l'ancien raccourci plutôt que de se retrouver sans aucun.
+    registerOverlayHotkey(previous);
+    return result;
+  }
+  store.set('dailyOverlayHotkey', accelerator);
+  return { ok: true, accelerator };
+});
+
 function scheduleDailyOverlayRefresh() {
   console.log('[daily-overlay] Valorant détecté, lancement du suivi');
   refreshDailyOverlay();
@@ -1711,6 +1779,7 @@ setInterval(async () => {
   } else if (!running && dailyOverlayLastRunning) {
     console.log('[daily-overlay] Valorant fermé, arrêt du suivi');
     closeDailyOverlay();
+    dailyOverlayUserHidden = false;
     // Le tilt repart de zéro à chaque fermeture du jeu : sans ça, l'alerte déjà
     // envoyée (notified) bloquait toute nouvelle alerte à la session suivante, et
     // le dernier match mémorisé faisait traiter le premier match de la nouvelle
@@ -1895,6 +1964,7 @@ ipcMain.handle('goals:delete', (_event, id) => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   cleanupOldSquirrelVersions();
+  registerOverlayHotkey(currentOverlayHotkey());
 
   // Content-Security-Policy — uniquement en production packagée : le serveur
   // de dev Vite a besoin d'unsafe-eval pour le rechargement à chaud, inutile
@@ -2009,6 +2079,7 @@ app.on('window-all-closed', () => {
 // events d'une session (ex. le crash qui vient de la faire quitter) peuvent
 // se perdre s'ils n'ont pas encore été envoyés.
 app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
   shutdownTelemetry();
 });
 

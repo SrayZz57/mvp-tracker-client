@@ -187,7 +187,6 @@
       "heatmap": "Heatmap",
       "analyse": "Analysis",
       "social": "Teammates & Rivals",
-      "graphiques": "Charts",
       "myEvolution": "My evolution",
       "myHallOfFame": "My Hall of Fame",
       "myWeakness": "Points to work on",
@@ -200,7 +199,6 @@
       "strategy": "Strategy",
       "skins": "Skins",
       "composition": "Composition",
-      "buySimulator": "Buy simulator",
       "wiki": "Wiki",
       "messages": "Messages",
       "friends": "Friends",
@@ -208,9 +206,9 @@
       "settings": "Settings",
       "adminTerms": "Terms accepted",
       "lineups": "Lineups",
-      "clips": "Clips",
       "teamListings": "Team Search",
-      "adminNotify": "Send a notification"
+      "adminNotify": "Send a notification",
+      "graphiques": "Charts"
     },
     "rankUnavailable": "Rank unavailable",
     "searchPlaceholder": "Search a tab...",
@@ -1656,7 +1654,10 @@
     "finderInputLabel": "Input device",
     "finderInputMouse": "Mouse",
     "finderInputController": "Controller",
-    "finderCurrentSensController": "Current controller sensitivity (Base): {{sens}}"
+    "finderCurrentSensController": "Current controller sensitivity (Base): {{sens}}",
+    "crosshairAdd": "Add a crosshair",
+    "weaponLeftLabel": "Weapon on the left",
+    "sensHint": "Use the same value as in Valorant."
   },
   "playSessions": {
     "title": "Current session",
@@ -1679,39 +1680,6 @@
     "noMatchesInWindow": "No match played during this session.",
     "refreshMatches": "Refresh my matches",
     "refreshing": "Refreshing..."
-  },
-  "buySim": {
-    "noRoundData": "No match with round data cached yet.",
-    "coherentRounds_one": "{{coherent}}/{{total}} coherent round ({{percent}}%)",
-    "coherentRounds_other": "{{coherent}}/{{total}} coherent rounds ({{percent}}%)",
-    "coherent": "Coherent",
-    "toReview": "To review",
-    "availableCredits": "Available credits",
-    "chooseAgentOptional": "— agent (optional) —",
-    "noWeapon": "No weapon",
-    "noShield": "No shield",
-    "creditsSuffix": "{{cost}} credits",
-    "remainingCredits": "Remaining credits",
-    "tooLowBudget": "Budget too low for a weapon or a shield — save your credits for the next round.",
-    "abilitiesOf": "{{agent}}'s abilities",
-    "free": "Free",
-    "costsResearched": "Costs researched on {{date}} (official Riot wiki){{suffix}}",
-    "costsResearchedSuffixWithRemaining": " — compared to the {{remaining}} credits remaining after weapon + shield.",
-    "costsResearchedSuffixPeriod": ".",
-    "noAbilityCosts": "No reliable ability costs for {{agent}} yet — not covered by the source used (recent agent or unusual kit).",
-    "disclaimer": "Weapon and shield based on real shop prices (official API). Ability costs aren't exposed by any API — researched manually on the Riot wiki, available for only part of the roster (see above if your agent isn't covered).",
-    "noMatchesYet": "No cached matches yet — click \"Refresh\".",
-    "roundAnalysisTitle": "Round-by-round buy analysis",
-    "roundAnalysisHint": "Compares your actual buy to what your team's average economy allowed that round.",
-    "calculatorTitle": "Budget calculator",
-    "calculatorHint": "Enter your available credits to see the best possible buy.",
-    "explanation": {
-      "coherent": "Coherent buy: {{tier}}, as the team's economy allowed.",
-      "tooHigh": "You went {{actual}} while the team's economy pointed more toward {{recommended}}.",
-      "tooLow": "You played {{actual}} while the team could afford {{recommended}}."
-    },
-    "roleNoteDuelist": "As a duelist, prioritize the weapon over the shield if you have to choose: you're going into contact, a strong weapon matters more.",
-    "roleNoteDefensive": "As a {{role}}, the full shield is worth it even with a weaker weapon: you're often playing further back."
   },
   "wiki": {
     "title": "Valorant Wiki",
@@ -2773,17 +2741,7 @@
     "clutches": "Clutches: {{wins}} won out of {{attempts}}",
     "playtime": "Play time: {{time}}",
     "rrGames": "over {{count}} ranked games",
-    "rrPartial": "at least",
-    "compare": {
-      "week": "Arrows: change vs the previous week",
-      "month": "Arrows: change vs the previous month",
-      "act": "Arrows: change vs the previous act"
-    },
-    "noCompare": {
-      "week": "No previous week to compare",
-      "month": "No previous month to compare",
-      "act": "No previous act to compare"
-    }
+    "rrPartial": "at least"
   },
   "evolution": {
     "eyebrow": "Since day one",
@@ -3063,7 +3021,16 @@
     "choosePhoto": "Choose a profile photo",
     "chooseFavoriteAgent": "Choose your favorite agent",
     "perfLiteLabel": "Low-resource mode",
-    "perfLiteHint": "Reduces animations and blur effects to make the app lighter on a modest PC. Turned on automatically on low-powered PCs; you can change it here."
+    "perfLiteHint": "Reduces animations and blur effects to make the app lighter on a modest PC. Turned on automatically on low-powered PCs; you can change it here.",
+    "dailyOverlayHotkeyLabel": "Shortcut to hide the overlay",
+    "dailyOverlayHotkeyHint": "Press this shortcut, even mid-game, to hide the session overlay, and again to bring it back. Click the button then type the combination you want (Backspace to disable, Esc to cancel).",
+    "dailyOverlayHotkeyPress": "Press the keys…",
+    "dailyOverlayHotkeyNone": "None",
+    "dailyOverlayHotkeyReset": "Default shortcut",
+    "dailyOverlayHotkeyErrors": {
+      "in_use": "This shortcut is already used by another application. Pick a different one.",
+      "invalid": "Invalid shortcut: add Ctrl, Alt or Shift (a lone F key is accepted)."
+    }
   },
   "heatmap": {
     "title": "Heatmap",
@@ -3232,7 +3199,7 @@
     "trainingTitle": "Training",
     "trainingText": "3D Aim Trainer (training modes, moving agents on the Monastery A site, Sensitivity Finder, weapons and skins) and guided warmup session.",
     "toolsTitle": "Tools",
-    "toolsText": "Sessions, crosshair library, strategy board, team compositions, buy simulator, lineups, clips, team search, skin catalog, wiki.",
+    "toolsText": "Sessions, crosshair library, strategy board, team compositions, lineups, team search, skin catalog, wiki.",
     "endTitle": "That's it!",
     "endText": "You can replay this tour anytime from Settings, under “Security and account”.",
     "previous": "← Previous",
@@ -3476,7 +3443,14 @@
       "chrome": "Chrome",
       "tiger": "Tiger"
     },
-    "points": "{{amount}} MVP Points"
+    "points": "{{amount}} MVP Points",
+    "claimErrors": {
+      "level_too_low": "The server doesn't have this level for you yet: your XP may be out of date. Refresh or play a game, then try again.",
+      "unknown_reward": "This reward doesn't exist on the server yet: the season update hasn't been applied. Let the developer know.",
+      "not_authenticated": "You have been signed out: sign in again and retry.",
+      "other": "Could not claim this reward ({{code}}). Check your connection and try again."
+    },
+    "dismiss": "Close"
   },
   "shareCard": {
     "button": "Share my card",

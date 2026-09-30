@@ -766,7 +766,9 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   // seulement hors "running" : pendant la partie, c'est le bloc "Manette"
   // plus haut dans animate() qui lit la manette (viser, tirer, pause).
   const overlayRef = useRef(null);
-  const [phase, setPhase] = useState('ready'); // ready | running | paused | done
+  const [phase, setPhase] = useState('ready'); // ready | countdown | running | paused | done
+  const [countdown, setCountdown] = useState(0);
+  const countdownTimerRef = useRef(null);
   const [timeLeft, setTimeLeft] = useState(config.duration);
   const [stats, setStats] = useState({ hits: 0, misses: 0, times: [] });
   const [flashStats, setFlashStats] = useState({ dodged: 0, failed: 0 });
@@ -1260,7 +1262,14 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // le tir appelle fireAction.play() et la boucle appelle mixer.update().
       // En jeu, l'arme est tenue par des mains gantées (pas dans le Vestiaire).
       const weapon = proceduralWeapon({ renderer, scene, skin: config.weaponSkin, hands: config.handSkin ?? 'standard' });
-      camera.add(weapon.holder);
+      if (config.weaponSide === 'left') {
+        const mirror = new THREE.Group();
+        mirror.scale.x = -1;
+        mirror.add(weapon.holder);
+        camera.add(mirror);
+      } else {
+        camera.add(weapon.holder);
+      }
       stateRef.current.weaponHolder = weapon.holder;
       camera.updateMatrixWorld(true);
       const muzzleWorld = new THREE.Vector3();
@@ -1356,7 +1365,14 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
           holder.position.set(0.22, -0.2, -0.45);
         }
         holder.rotation.set(0.03, -0.06, 0);
-        camera.add(holder);
+        if (config.weaponSide === 'left') {
+          const mirror = new THREE.Group();
+          mirror.scale.x = -1;
+          mirror.add(holder);
+          camera.add(mirror);
+        } else {
+          camera.add(holder);
+        }
 
         if (gltf.animations?.length > 0) {
           const mixer = new THREE.AnimationMixer(model);
@@ -2394,9 +2410,18 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         clearTrackingHold();
         setPhase('paused');
       }
+      // Échap pendant le compte à rebours : on annule et on revient à « Prêt ? ».
+      if (!isLocked && phaseRef.current === 'countdown') {
+        clearTimeout(countdownTimerRef.current);
+        setCountdown(0);
+        setPhase('ready');
+      }
     };
     document.addEventListener('pointerlockchange', handleLockChange);
-    return () => document.removeEventListener('pointerlockchange', handleLockChange);
+    return () => {
+      document.removeEventListener('pointerlockchange', handleLockChange);
+      clearTimeout(countdownTimerRef.current);
+    };
   }, []);
 
   const savedForSessionRef = useRef(false);
@@ -2413,7 +2438,34 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     state.allTargets.slice(count).forEach(hideTargetEntry);
   };
 
+  // 3, 2, 1 avant le départ : la souris est déjà verrouillée, mais rien ne bouge
+  // ni ne se met en place avant la fin (les cibles et le chrono partent d'un seul coup).
+  const beginCountdown = (prepare) => {
+    clearTimeout(countdownTimerRef.current);
+    let remaining = 3;
+    setCountdown(remaining);
+    setPhase('countdown');
+    const tick = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        setCountdown(0);
+        prepare();
+        setPhase('running');
+        return;
+      }
+      setCountdown(remaining);
+      countdownTimerRef.current = setTimeout(tick, 1000);
+    };
+    countdownTimerRef.current = setTimeout(tick, 1000);
+  };
+
   const startSession = () => {
+    // Le verrouillage du pointeur doit être demandé de façon synchrone dans la
+    // foulée du clic (exigence de sécurité de Chromium) — pas d'await avant.
+    lockPointer(() => beginCountdown(prepareSession));
+  };
+
+  const prepareSession = () => {
     setStats({ hits: 0, misses: 0, times: [] });
     setFlashStats({ dodged: 0, failed: 0 });
     setTimeLeft(config.duration);
@@ -2436,12 +2488,6 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       Object.assign(stateRef.current.scope, { on: false, t: 0 });
       stateRef.current.boltUntil = 0;
     }
-    // Le verrouillage du pointeur doit être demandé de façon synchrone dans la
-    // foulée du clic (exigence de sécurité de Chromium) — pas d'await avant.
-    // La phase ne passe en "running" qu'une fois le verrouillage confirmé
-    // (voir lockPointer) — sinon le crosshair resterait caché et la souris
-    // système visible si jamais la demande échouait.
-    lockPointer(() => setPhase('running'));
   };
 
   // Étape suivante de la routine : on change de mode puis on relance dans la
@@ -2587,7 +2633,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
   const gamepads = useConnectedGamepads();
   const hasGamepad = gamepads.length > 0;
   const controllerBrand = detectControllerBrand(gamepads[0]?.id ?? '');
-  useGamepadMenuNav({ containerRef: overlayRef, active: phase !== 'running', onBack: onExit });
+  useGamepadMenuNav({ containerRef: overlayRef, active: phase !== 'running' && phase !== 'countdown', onBack: onExit });
 
   return (
     <div className="aim-game">
@@ -2652,7 +2698,13 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         </>
       )}
 
-      {phase !== 'running' && (
+      {phase === 'countdown' && (
+        <div className="aim-countdown" aria-live="assertive">
+          <span key={countdown}>{countdown}</span>
+        </div>
+      )}
+
+      {phase !== 'running' && phase !== 'countdown' && (
         <div ref={overlayRef} className="aim-game-overlay">
           <div className="aim-game-panel">
             {phase === 'ready' && (
@@ -2674,7 +2726,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                   )}
                 </h1>
                 <p>
-                  Sensibilité <strong>{config.sens}</strong> · {config.dpi} DPI · {config.duration} secondes
+                  Sensibilité <strong>{config.sens}</strong> · {config.duration} secondes
                 </p>
                 {config.challengeDate && <p className="aim-game-tip"><Icon icon={Trophy} size={16} /> Défi du jour — score comptabilisé au classement</p>}
                 {MODES[behaviorKey(config)]?.holdTracking && (
@@ -2807,7 +2859,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
                 </div>
 
                 <p className="aim-game-tip">
-                  Sensibilité {config.sens} · {config.dpi} DPI · cibles {config.targetSize.toFixed(2)}
+                  Sensibilité {config.sens} · cibles {config.targetSize.toFixed(2)}
                 </p>
 
                 {saveState === 'saving' && <p className="aim-game-tip"><Icon icon={Save} size={16} /> Enregistrement du score…</p>}

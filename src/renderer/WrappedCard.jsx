@@ -284,9 +284,6 @@ function WrappedCard({ settings, matches, rank }) {
                       </li>
                     </ul>
 
-                    <div className="wrapped-compare">
-                      {previousRecap ? t(`wrapped.compare.${kind}`) : t(`wrapped.noCompare.${kind}`)}
-                    </div>
                   </div>
                 </div>
 

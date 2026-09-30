@@ -15,7 +15,6 @@ import {
   Target,
   Map,
   Puzzle as PuzzleIcon,
-  Wallet,
   BookOpen,
   Shield,
   User,
@@ -27,7 +26,6 @@ import {
   Search,
   Compass,
   Video,
-  Film,
   Swords,
   Settings,
   FileCheck,
@@ -48,6 +46,7 @@ import { useE2EE } from './E2EEContext.jsx';
 const StatsTab = lazy(() => import('./tabs/StatsTab.jsx'));
 const WeaknessTab = lazy(() => import('./tabs/WeaknessTab.jsx'));
 const FormTab = lazy(() => import('./tabs/FormTab.jsx'));
+const PerformanceChartsTab = lazy(() => import('./tabs/PerformanceChartsTab.jsx'));
 const NetworkTab = lazy(() => import('./tabs/NetworkTab.jsx'));
 const TiltTab = lazy(() => import('./tabs/TiltTab.jsx'));
 const CrosshairsTab = lazy(() => import('./tabs/CrosshairsTab.jsx'));
@@ -59,16 +58,13 @@ const AnalyseTab = lazy(() => import('./tabs/AnalyseTab.jsx'));
 const CompositionTab = lazy(() => import('./tabs/CompositionTab.jsx'));
 const HallOfFameTab = lazy(() => import('./tabs/HallOfFameTab.jsx'));
 const EvolutionTab = lazy(() => import('./tabs/EvolutionTab.jsx'));
-const PerformanceChartsTab = lazy(() => import('./tabs/PerformanceChartsTab.jsx'));
 const TeammatesRivalsTab = lazy(() => import('./tabs/TeammatesRivalsTab.jsx'));
-const BuySimulatorTab = lazy(() => import('./tabs/BuySimulatorTab.jsx'));
 const PlaySessionsTab = lazy(() => import('./tabs/PlaySessionsTab.jsx'));
 const SessionGuideTab = lazy(() => import('./tabs/SessionGuideTab.jsx'));
 const AimTrainerTab = lazy(() => import('./tabs/AimTrainerTab.jsx'));
 const WikiTab = lazy(() => import('./tabs/WikiTab.jsx'));
 const LineupsTab = lazy(() => import('./tabs/LineupsTab.jsx'));
 const TeamListingsTab = lazy(() => import('./tabs/TeamListingsTab.jsx'));
-const ClipsTab = lazy(() => import('./tabs/ClipsTab.jsx'));
 const AccountPage = lazy(() => import('./AccountPage.jsx'));
 const SettingsPage = lazy(() => import('./SettingsPage.jsx'));
 const AdminPage = lazy(() => import('./AdminPage.jsx'));
@@ -153,9 +149,7 @@ const NAV_SECTIONS = [
       { id: 'crosshairs', labelKey: 'nav.tabs.crosshairs', icon: Target },
       { id: 'strategie', labelKey: 'nav.tabs.strategy', icon: Map },
       { id: 'composition', labelKey: 'nav.tabs.composition', icon: PuzzleIcon },
-      { id: 'buy-simulator', labelKey: 'nav.tabs.buySimulator', icon: Wallet },
       { id: 'lineups', labelKey: 'nav.tabs.lineups', icon: Video },
-      { id: 'clips', labelKey: 'nav.tabs.clips', icon: Film },
       { id: 'team-listings', labelKey: 'nav.tabs.teamListings', icon: Users },
       { id: 'skins', labelKey: 'nav.tabs.skins', icon: Gem },
       { id: 'wiki', labelKey: 'nav.tabs.wiki', icon: BookOpen },
@@ -406,6 +400,12 @@ function App() {
   // Mise à jour prête à installer — signalée dans l'app plutôt que par une
   // popup Windows qui vole le focus (voir main.js, notifyUser: false).
   const [pendingUpdate, setPendingUpdate] = useState(null);
+
+  // Demande d'ouverture d'un onglet venue d'une autre fenêtre (Aim Trainer).
+  useEffect(() => window.electronAPI.onOpenTab((tab) => {
+    setActiveTab(tab);
+    setEnteredApp(true);
+  }), []);
 
   useEffect(() => {
     window.electronAPI.getUpdateStatus().then(setPendingUpdate);
@@ -1342,8 +1342,6 @@ function App() {
         return <WeaknessTab settings={mySettings} matches={myMatches} onNavigate={handleWeaknessNavigate} />;
       case 'my-skins-collection':
         return <MySkinsCollectionTab myId={session.user.id} />;
-      case 'buy-simulator':
-        return <BuySimulatorTab settings={settings} matches={data.matches} loading={data.loading} />;
       case 'play-sessions':
         return <PlaySessionsTab settings={mySettings} matches={myMatches} apiKey={settings?.apiKey} />;
       case 'session':
@@ -1375,8 +1373,6 @@ function App() {
         return <WikiTab />;
       case 'lineups':
         return <LineupsTab myId={session.user.id} isAdmin={isAdmin} />;
-      case 'clips':
-        return <ClipsTab myId={session.user.id} isAdmin={isAdmin} />;
       case 'team-listings':
         return (
           <TeamListingsTab

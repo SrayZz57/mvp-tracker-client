@@ -1,7 +1,7 @@
 {
   "name": "mvp-tracker",
   "productName": "MVP Tracker",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "description": "Tracker de stats Valorant qui croise performance, réseau et rythme de jeu.",
   "main": ".vite/build/main.js",
   "private": true,
@@ -10,7 +10,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "test": "node --test \"src/renderer/battlePass/*.test.mjs\" \"src/renderer/shop/*.test.mjs\" \"src/renderer/arenaEditor/*.test.mjs\" \"src/renderer/input/*.test.mjs\" \"src/renderer/duelHeatmap.test.mjs\" \"src/renderer/roundTimeline.test.mjs\" \"src/renderer/wrappedStats.test.mjs\" \"src/renderer/sessionProgram.test.mjs\" \"src/renderer/sessionTemplates.test.mjs\" \"src/renderer/tiltSignals.test.mjs\" \"src/renderer/playerRecord.test.mjs\" \"src/renderer/evolution.test.mjs\"",
+    "test": "node --test \"src/renderer/battlePass/*.test.mjs\" \"src/renderer/shop/*.test.mjs\" \"src/renderer/arenaEditor/*.test.mjs\" \"src/renderer/input/*.test.mjs\" \"src/renderer/duelHeatmap.test.mjs\" \"src/renderer/roundTimeline.test.mjs\" \"src/renderer/wrappedStats.test.mjs\" \"src/renderer/sessionProgram.test.mjs\" \"src/renderer/sessionTemplates.test.mjs\" \"src/renderer/tiltSignals.test.mjs\" \"src/renderer/playerRecord.test.mjs\" \"src/renderer/evolution.test.mjs\" \"src/renderer/overlayHotkey.test.mjs\"",
     "lint": "echo \"No linting configured\""
   },
   "keywords": [],

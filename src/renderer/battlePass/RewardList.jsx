@@ -22,7 +22,7 @@ export function rewardName(reward, t) {
 
 export const rewardState = (reward) => (reward.claimed ? 'claimed' : reward.claimable ? 'claimable' : 'locked');
 
-function RewardRow({ reward, maxLevel, previews, selected, onSelect, t }) {
+function RewardRow({ reward, maxLevel, previews, selected, onSelect, onClaim, busy, t }) {
   const rarity = rewardRarity(reward, maxLevel);
   const state = rewardState(reward);
   const isSkin = reward.type === 'weaponSkin';
@@ -65,9 +65,25 @@ function RewardRow({ reward, maxLevel, previews, selected, onSelect, t }) {
       <span className="bp-reward-state">
         {state === 'claimed' && <Icon icon={Check} size={14} />}
         {state === 'claimable' && (
-          <>
+          <span
+            role="button"
+            tabIndex={0}
+            className="bp-reward-claim"
+            aria-disabled={busy?.has(reward.id) ? 'true' : undefined}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!busy?.has(reward.id)) onClaim?.(reward.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!busy?.has(reward.id)) onClaim?.(reward.id);
+              }
+            }}
+          >
             <Icon icon={Gift} size={14} /> {t('battlePass.claim')}
-          </>
+          </span>
         )}
         {state === 'locked' && (
           <>
@@ -79,7 +95,7 @@ function RewardRow({ reward, maxLevel, previews, selected, onSelect, t }) {
   );
 }
 
-export default function RewardList({ season, levelState, rewards, previews, selectedId, onSelect, t }) {
+export default function RewardList({ season, levelState, rewards, previews, selectedId, onSelect, onClaim, busy, t }) {
   const listRef = useRef(null);
   const currentRef = useRef(null);
   const byLevel = useMemo(() => {
@@ -123,6 +139,8 @@ export default function RewardList({ season, levelState, rewards, previews, sele
                   previews={previews}
                   selected={reward.id === selectedId}
                   onSelect={onSelect}
+                  onClaim={onClaim}
+                  busy={busy}
                   t={t}
                 />
               ))}

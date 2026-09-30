@@ -5,6 +5,40 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.13.0',
+    date: '2026-09-30',
+    items: {
+      fr: [
+        'Heatmap : une page d’accueil pour choisir entre la heatmap classique et la nouvelle heatmap par duels. Elle découpe la map en cases colorées (duels gagnés et perdus) ; un clic sur une case ouvre le détail : ennemi, distance, arme et round.',
+        'Détail d’un match : une timeline round par round (clutchs, multi-kills, éco gagnées) avec des filtres rangés derrière un bouton.',
+        'Wrapped : choisis la période, Semaine, Mois ou Acte.',
+        'Nouvel onglet Mon évolution : tes 30 premières parties comparées aux 30 dernières, ta courbe de progression, ton rang dans le temps, tes sessions, tes records et tes jalons.',
+        'Session guidée : un vrai programme tiré de tes stats, des modèles de session enregistrables et un échauffement au choix (modes de l’Aim Trainer ou parties Valorant comme le deathmatch, non comptées dans la session).',
+        'Tilt : des signaux observables (série de défaites, baisse de K/D, premières morts, précision, winrate récent) à la place d’un verdict, et plus aucun conseil de pause si tu n’as pas joué récemment.',
+        'Coéquipiers & rivaux : clique un joueur pour ouvrir sa fiche (vos parties ensemble et face à face).',
+        'Points à travailler : un vrai plan d’amélioration par axe, avec la tendance et une aide. Nouvelle carte de profil à partager, affichée une fois à la première ouverture.',
+        'Aim Trainer : récompense de connexion quotidienne (100 MVP Points), compte à rebours de 3 secondes avant chaque partie, option « Arme à gauche », champ DPI retiré (il ne servait pas à la rotation), réglages centrés, bouton pour ajouter un crosshair quand la bibliothèque est vide et nouveau schéma de manette.',
+        'Battle Pass : le bouton Réclamer de la liste réclame maintenant pour de bon, et une réclamation refusée affiche la raison au lieu de ne rien faire.',
+        'Overlay de session : un raccourci clavier global (Ctrl+Alt+O par défaut) le masque et le remet, même en pleine partie. Il se change dans Réglages.',
+        'Les onglets Clips et Simulation d’achat sont retirés.',
+      ],
+      en: [
+        'Heatmap: a landing page to choose between the classic heatmap and the new duel heatmap. It splits the map into coloured cells (duels won and lost); click a cell to open the details: enemy, distance, weapon and round.',
+        'Match details: a round-by-round timeline (clutches, multi-kills, eco rounds won) with filters tucked behind a button.',
+        'Wrapped: pick the period, Week, Month or Act.',
+        'New My evolution tab: your first 30 games compared with your last 30, your progress curve, your rank over time, your sessions, records and milestones.',
+        'Guided session: a real programme drawn from your stats, saveable session templates and a warm-up of your choice (Aim Trainer modes or Valorant games such as deathmatch, not counted in the session).',
+        'Tilt: observable signals (losing streak, K/D drop, first deaths, accuracy, recent winrate) instead of a verdict, and no break suggestion at all if you have not played recently.',
+        'Teammates & rivals: click a player to open their record (your games together and against each other).',
+        'Points to work on: a real improvement plan per axis, with trend and a help tooltip. New shareable profile card, shown once on first open.',
+        'Aim Trainer: daily login reward (100 MVP Points), a 3-second countdown before every game, a “Weapon on the left” option, DPI field removed (it had no effect on rotation), centred settings, a button to add a crosshair when your library is empty and a new controller diagram.',
+        'Battle Pass: the Claim button in the list now really claims, and a refused claim shows the reason instead of doing nothing.',
+        'Session overlay: a global keyboard shortcut (Ctrl+Alt+O by default) hides and restores it, even mid-game. Change it in Settings.',
+        'The Clips and Buy simulator tabs are removed.',
+      ],
+    },
+  },
+  {
     version: '1.11.0',
     date: '2026-09-25',
     items: {

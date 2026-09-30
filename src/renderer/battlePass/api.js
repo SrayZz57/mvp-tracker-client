@@ -47,8 +47,16 @@ export const loadMyXp = (seasonId) => rpc('bp_my_xp', { p_season: seasonId }, 0)
 
 // Renvoie true si la récompense vient d'être réclamée, false si elle l'était
 // déjà, null si le serveur la refuse (niveau insuffisant…).
-export const claimReward = (seasonId, rewardId) =>
-  rpc('bp_claim_reward', { p_season: seasonId, p_reward: rewardId }, null);
+// { ok: true } ou { ok: false, code } — `code` est le message du serveur (level_too_low,
+// unknown_reward, not_authenticated...) ou un code réseau, affiché tel quel au joueur.
+export async function claimReward(seasonId, rewardId) {
+  const { error } = await supabase.rpc('bp_claim_reward', { p_season: seasonId, p_reward: rewardId });
+  if (error) {
+    console.error(`[battle-pass] bp_claim_reward ${rewardId} : ${error.message}`);
+    return { ok: false, code: error.message || error.code || 'unknown' };
+  }
+  return { ok: true };
+}
 
 // kind : 'title' | 'card' | 'icon' ; rewardId = null pour retirer.
 export async function equipCosmetic(kind, rewardId = null) {

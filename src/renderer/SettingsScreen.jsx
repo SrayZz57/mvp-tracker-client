@@ -83,27 +83,12 @@ export default function SettingsScreen({ t, config, set, onReset, crosshairs, ta
       <div className="ap-settings">
         <section className="ap-card ap-sens">
           <CardHead icon={MousePointer2} title={t('aimTrainer.sensSection')} />
-          <div className="ap-fields">
-            <label className="ap-field">
-              <span>{t('aimTrainer.dpiLabel')}</span>
-              <input type="number" value={config.dpi} onChange={(e) => set({ dpi: Number(e.target.value) || 0 })} />
-            </label>
-            <label className="ap-field">
-              <span>{t('aimTrainer.sensLabel')}</span>
-              <input type="number" step="0.01" value={config.sens} onChange={(e) => set({ sens: Number(e.target.value) || 0 })} />
-            </label>
-          </div>
-          <div className="ap-readouts">
-            <span>
-              <b>{edpi.toFixed(0)}</b>
-              <small>eDPI</small>
-            </span>
-            <span>
-              <b>{cm360 === null ? '—' : cm360.toFixed(1)}</b>
-              <small>cm / 360°</small>
-            </span>
-          </div>
-          <button type="button" className="ap-btn" onClick={onOpenFinder}>
+          <label className="ap-field ap-sens-field">
+            <span>{t('aimTrainer.sensLabel')}</span>
+            <input type="number" step="0.01" min="0" value={config.sens} onChange={(e) => set({ sens: Number(e.target.value) || 0 })} />
+            <small>{t('aimTrainer.sensHint')}</small>
+          </label>
+          <button type="button" className="ap-btn ap-sens-finder" onClick={onOpenFinder}>
             <Icon icon={Gauge} size={15} /> {t('aimTrainer.lobby.finder')}
           </button>
         </section>
@@ -114,7 +99,12 @@ export default function SettingsScreen({ t, config, set, onReset, crosshairs, ta
             {selectedCrosshair ? <CrosshairPreview code={selectedCrosshair.code} bare size={96} /> : <div className="aim-trainer-crosshair-static-preview" />}
           </div>
           {crosshairs.length === 0 ? (
-            <p className="ap-empty">{t('aimTrainer.crosshairEmpty')}</p>
+            <>
+              <p className="ap-empty">{t('aimTrainer.crosshairEmpty')}</p>
+              <button type="button" className="ap-btn" onClick={() => window.electronAPI.openMainTab('crosshairs')}>
+                <Icon icon={Crosshair} size={15} /> {t('aimTrainer.crosshairAdd')}
+              </button>
+            </>
           ) : (
             <div className="ap-crosshair-list">
               <button
@@ -171,6 +161,9 @@ export default function SettingsScreen({ t, config, set, onReset, crosshairs, ta
             <input type="range" min="70" max="120" value={config.fov} onChange={(e) => set({ fov: Number(e.target.value) })} style={{ '--p': `${((config.fov - 70) / 50) * 100}%` }} />
           </label>
           <Toggle checked={config.showWeapon} onChange={(v) => set({ showWeapon: v })} label={t('aimTrainer.showWeaponLabel')} />
+          {config.showWeapon && (
+            <Toggle checked={config.weaponSide === 'left'} onChange={(v) => set({ weaponSide: v ? 'left' : 'right' })} label={t('aimTrainer.weaponLeftLabel')} />
+          )}
           <Toggle checked={config.theme === 'dark'} onChange={(v) => set({ theme: v ? 'dark' : 'day' })} label={t('aimTrainer.darkThemeLabel')} />
           <Toggle checked={config.hitSound} onChange={(v) => set({ hitSound: v })} label={t('aimTrainer.hitSoundLabel')} />
         </section>

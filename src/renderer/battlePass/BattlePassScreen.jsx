@@ -102,6 +102,8 @@ function Message({ icon, title, text, action }) {
   );
 }
 
+const CLAIM_ERRORS = ['level_too_low', 'unknown_reward', 'not_authenticated'];
+
 export default function BattlePassScreen({ bp, previews, config, profile, onEquipSkin, onEquipHands }) {
   const { t, i18n } = useTranslation();
   const now = useNow();
@@ -211,6 +213,16 @@ export default function BattlePassScreen({ bp, previews, config, profile, onEqui
         </p>
       )}
 
+      {bp.claimError && (
+        <p className="bp-since bp-claim-error" role="alert">
+          <Icon icon={Sparkles} size={14} />
+          <span>
+            {t(`battlePass.claimErrors.${CLAIM_ERRORS.includes(bp.claimError.code) ? bp.claimError.code : 'other'}`, { code: bp.claimError.code })}
+          </span>
+          <button type="button" className="bp-claim-error-close" onClick={bp.dismissClaimError} aria-label={t('battlePass.dismiss')}>×</button>
+        </p>
+      )}
+
       <div className="bp-tabs" role="tablist">
         {['rewards', 'challenges'].map((id) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
@@ -228,6 +240,8 @@ export default function BattlePassScreen({ bp, previews, config, profile, onEqui
           previews={previews}
           selectedId={selected?.id}
           onSelect={setSelectedId}
+          onClaim={bp.claim}
+          busy={bp.busy}
           t={t}
         />
       ) : (

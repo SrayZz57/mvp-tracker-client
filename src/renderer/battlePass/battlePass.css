@@ -981,3 +981,32 @@
   color: #7fe3ff;
   text-shadow: 0 0 30px rgba(127, 227, 255, 0.6);
 }
+
+.bp-reward-claim {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.bp-reward-claim[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.bp-since.bp-claim-error {
+  color: #ffb4bb;
+  background: rgba(255, 70, 85, 0.1);
+  border-color: rgba(255, 70, 85, 0.35);
+}
+
+.bp-claim-error-close {
+  margin-left: auto;
+  padding: 0 0.4rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}

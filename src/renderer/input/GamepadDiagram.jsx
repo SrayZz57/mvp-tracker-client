@@ -5,27 +5,29 @@ import { buttonLabel } from './controllerBrand.js';
 // seules les ÉTIQUETTES changent selon `brand`, voir controllerBrand.js) :
 // sert à repérer où se trouve chaque bouton pendant la réassignation (voir
 // GamepadRemap.jsx). `highlight` colore le(s) bouton(s) liés à une action.
-const DPAD_CENTER = { x: 128, y: 100 };
-const FACE_CENTER = { x: 272, y: 100 };
-const FACE_R = 28;
+const DPAD_CENTER = { x: 150, y: 150 };
+const FACE_CENTER = { x: 300, y: 104 };
+const FACE_R = 26;
 
+// Disposition « Xbox » (stick gauche en haut, croix directionnelle en bas) : la
+// plus répandue, et les étiquettes suivent la marque détectée (controllerBrand.js).
 const POSITIONS = {
-  L2: { x: 52, y: 6, w: 76, h: 20, rx: 9 },
-  R2: { x: 272, y: 6, w: 76, h: 20, rx: 9 },
-  L1: { x: 52, y: 30, w: 76, h: 16, rx: 7 },
-  R1: { x: 272, y: 30, w: 76, h: 16, rx: 7 },
-  Select: { x: 144, y: 56, w: 52, h: 16, rx: 7 },
-  Start: { x: 204, y: 56, w: 52, h: 16, rx: 7 },
-  DpadUp: { cx: DPAD_CENTER.x, cy: DPAD_CENTER.y - 20, r: 12 },
-  DpadDown: { cx: DPAD_CENTER.x, cy: DPAD_CENTER.y + 20, r: 12 },
-  DpadLeft: { cx: DPAD_CENTER.x - 20, cy: DPAD_CENTER.y, r: 12 },
-  DpadRight: { cx: DPAD_CENTER.x + 20, cy: DPAD_CENTER.y, r: 12 },
-  Y: { cx: FACE_CENTER.x, cy: FACE_CENTER.y - FACE_R, r: 14 },
-  A: { cx: FACE_CENTER.x, cy: FACE_CENTER.y + FACE_R, r: 14 },
-  X: { cx: FACE_CENTER.x - FACE_R, cy: FACE_CENTER.y, r: 14 },
-  B: { cx: FACE_CENTER.x + FACE_R, cy: FACE_CENTER.y, r: 14 },
-  L3: { cx: 118, cy: 176, r: 24 },
-  R3: { cx: 282, cy: 176, r: 24 },
+  L2: { x: 58, y: 6, w: 84, h: 26, rx: 12 },
+  R2: { x: 258, y: 6, w: 84, h: 26, rx: 12 },
+  L1: { x: 50, y: 36, w: 96, h: 16, rx: 8 },
+  R1: { x: 254, y: 36, w: 96, h: 16, rx: 8 },
+  Select: { x: 152, y: 98, w: 46, h: 15, rx: 7.5 },
+  Start: { x: 204, y: 98, w: 46, h: 15, rx: 7.5 },
+  DpadUp: { cx: DPAD_CENTER.x, cy: DPAD_CENTER.y - 21, r: 12 },
+  DpadDown: { cx: DPAD_CENTER.x, cy: DPAD_CENTER.y + 21, r: 12 },
+  DpadLeft: { cx: DPAD_CENTER.x - 21, cy: DPAD_CENTER.y, r: 12 },
+  DpadRight: { cx: DPAD_CENTER.x + 21, cy: DPAD_CENTER.y, r: 12 },
+  Y: { cx: FACE_CENTER.x, cy: FACE_CENTER.y - FACE_R, r: 13 },
+  A: { cx: FACE_CENTER.x, cy: FACE_CENTER.y + FACE_R, r: 13 },
+  X: { cx: FACE_CENTER.x - FACE_R, cy: FACE_CENTER.y, r: 13 },
+  B: { cx: FACE_CENTER.x + FACE_R, cy: FACE_CENTER.y, r: 13 },
+  L3: { cx: 104, cy: 104, r: 25 },
+  R3: { cx: 252, cy: 152, r: 25 },
 };
 
 const STICK_CAP_RATIO = 0.62;
@@ -61,7 +63,7 @@ function ButtonShape({ name, pos, fill, stroke, textColor, label, onClick, skipL
  */
 export default function GamepadDiagram({ brand = 'generic', highlight = {}, onButtonClick }) {
   return (
-    <svg viewBox="0 0 400 224" className="gp-diagram" role="img" aria-label="Schéma de manette">
+    <svg viewBox="0 0 400 250" className="gp-diagram" role="img" aria-label="Schéma de manette">
       <defs>
         <linearGradient id="gpBodyGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#2b303c" />
@@ -73,21 +75,36 @@ export default function GamepadDiagram({ brand = 'generic', highlight = {}, onBu
         </radialGradient>
       </defs>
 
-      {/* Silhouette générique (deux poignées reliées par une barre centrale) —
-          pas la forme exacte d'une DualSense/Xbox, juste assez reconnaissable
-          comme "une manette" pour situer les boutons. */}
+      {/* Silhouette : corps large, deux poignées qui descendent vers le bas et une
+          échancrure au centre — reconnaissable comme une manette sans copier un modèle précis. */}
       <path
-        d="M 52 98
-           C 52 54 84 30 128 30
-           L 272 30
-           C 316 30 348 54 348 98
-           C 348 146 322 194 276 210
-           C 240 222 216 202 206 178
-           L 194 178
-           C 184 202 160 222 124 210
-           C 78 194 52 146 52 98 Z"
+        d="M 76 60
+           C 100 50 140 48 170 52
+           L 230 52
+           C 260 48 300 50 324 60
+           C 350 70 368 118 372 172
+           C 376 218 358 240 334 236
+           C 312 232 302 208 288 192
+           C 278 182 266 180 254 180
+           L 146 180
+           C 134 180 122 182 112 192
+           C 98 208 88 232 66 236
+           C 42 240 24 218 28 172
+           C 32 118 50 70 76 60 Z"
         className="gp-diagram-body"
       />
+      <path d="M 90 66 C 120 58 150 58 176 62 L 224 62 C 250 58 280 58 310 66" className="gp-diagram-sheen" />
+
+      {/* Gâchettes et pare-chocs : dessinés derrière le corps pour qu'ils en dépassent. */}
+      <rect x={POSITIONS.L2.x - 6} y={POSITIONS.L2.y + 10} width={POSITIONS.L2.w + 12} height={26} rx={10} className="gp-diagram-shoulder" />
+      <rect x={POSITIONS.R2.x - 6} y={POSITIONS.R2.y + 10} width={POSITIONS.R2.w + 12} height={26} rx={10} className="gp-diagram-shoulder" />
+
+      {/* Croix directionnelle : la forme en plus derrière les quatre boutons. */}
+      <path
+        d={`M ${DPAD_CENTER.x - 10} ${DPAD_CENTER.y - 33} h 20 v 23 h 23 v 20 h -23 v 23 h -20 v -23 h -23 v -20 h 23 Z`}
+        className="gp-diagram-dpad-plate"
+      />
+      <circle cx={200} cy={78} r={9} className="gp-diagram-home" />
 
       {/* Anneaux des sticks (le cache/support, sous le bouton lui-même). */}
       <circle cx={POSITIONS.L3.cx} cy={POSITIONS.L3.cy} r={POSITIONS.L3.r + 6} className="gp-diagram-stick-well" />

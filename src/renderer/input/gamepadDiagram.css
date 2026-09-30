@@ -1,6 +1,6 @@
 .gp-diagram {
   width: 100%;
-  max-width: 340px;
+  max-width: 400px;
   height: auto;
   display: block;
   margin: 0.5rem auto 0.75rem;
@@ -69,4 +69,30 @@
 
 .gp-remap-listening {
   color: #ffe066;
+}
+
+.gp-diagram-sheen {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.gp-diagram-shoulder {
+  fill: #1a1d26;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1.5;
+}
+
+.gp-diagram-dpad-plate {
+  fill: #0f1117;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.gp-diagram-home {
+  fill: #0f1117;
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 1.5;
 }

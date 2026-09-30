@@ -19006,3 +19006,61 @@ button.sidebar-section-label {
     width: min(1000px, calc(92vw / 0.667));
   }
 }
+
+/* Compte à rebours 3-2-1 avant une partie d'Aim Trainer. */
+.aim-countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(8, 10, 14, 0.55), rgba(8, 10, 14, 0.25) 60%, transparent 80%);
+}
+
+.aim-countdown span {
+  font-family: var(--font-hero);
+  font-size: clamp(9rem, 22vw, 18rem);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 60px rgba(255, 70, 85, 0.75), 0 6px 0 rgba(0, 0, 0, 0.35);
+  animation: aimCountdownPop 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes aimCountdownPop {
+  0% { opacity: 0; transform: scale(1.7); }
+  22% { opacity: 1; transform: scale(1); }
+  80% { opacity: 1; transform: scale(0.96); }
+  100% { opacity: 0; transform: scale(0.85); }
+}
+
+/* Réglage du raccourci de l'overlay de session (SettingsPage.jsx). */
+.overlay-hotkey-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-shrink: 0;
+}
+
+.overlay-hotkey-btn {
+  min-width: 130px;
+  padding: 0.45rem 0.9rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.overlay-hotkey-btn.listening {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 70, 85, 0.18);
+}
+
+.overlay-hotkey-error {
+  color: var(--accent);
+}

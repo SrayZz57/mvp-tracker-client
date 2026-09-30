@@ -48,6 +48,7 @@ export default function useBattlePass(userId) {
   const [equipped, setEquipped] = useState({});
   const [lastAward, setLastAward] = useState(null);
   const [busy, setBusy] = useState(() => new Set());
+  const [claimError, setClaimError] = useState(null); // { rewardId, code } | null
   const alive = useRef(true);
 
   useEffect(() => {
@@ -144,7 +145,12 @@ export default function useBattlePass(userId) {
     (rewardId) =>
       withBusy(rewardId, async () => {
         const result = await claimReward(season.id, rewardId);
-        if (result === null || !alive.current) return false;
+        if (!alive.current) return false;
+        if (!result.ok) {
+          setClaimError({ rewardId, code: result.code });
+          return false;
+        }
+        setClaimError(null);
         setClaimedIds((prev) => new Set(prev).add(rewardId));
         setOwnedRewardIds((prev) => {
           const next = new Set(prev).add(rewardId);
@@ -189,6 +195,8 @@ export default function useBattlePass(userId) {
     ownedRewardIds,
     lastAward,
     busy,
+    claimError,
+    dismissClaimError: () => setClaimError(null),
     claim,
     claimAll,
     equip,

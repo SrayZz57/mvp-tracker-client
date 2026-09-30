@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendMobilePush: (payload) => ipcRenderer.invoke('mobile-push:send', payload),
   getDailyOverlayExcludedModes: () => ipcRenderer.invoke('daily-overlay:get-excluded-modes'),
   setDailyOverlayExcludedModes: (modeIds) => ipcRenderer.invoke('daily-overlay:set-excluded-modes', modeIds),
+  getDailyOverlayHotkey: () => ipcRenderer.invoke('daily-overlay:get-hotkey'),
+  setDailyOverlayHotkey: (accelerator) => ipcRenderer.invoke('daily-overlay:set-hotkey', accelerator),
   getDailyOverlaySize: () => ipcRenderer.invoke('daily-overlay:get-size'),
   setDailyOverlaySize: (percent) => ipcRenderer.invoke('daily-overlay:set-size', percent),
   onDailyOverlaySize: (callback) => {
@@ -72,6 +74,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDeviceId: () => ipcRenderer.invoke('network:get-device-id'),
   openAimTrainer: (config) => ipcRenderer.invoke('aim-trainer:open', config),
   closeAimTrainer: () => ipcRenderer.invoke('aim-trainer:close'),
+  openMainTab: (tab) => ipcRenderer.invoke('aim-trainer:open-tab', tab),
+  onOpenTab: (callback) => {
+    const handler = (_event, tab) => callback(tab);
+    ipcRenderer.on('app:open-tab', handler);
+    return () => ipcRenderer.removeListener('app:open-tab', handler);
+  },
   onAimTrainerClosed: (callback) => {
     const handler = () => callback();
     ipcRenderer.on('aim-trainer:closed', handler);

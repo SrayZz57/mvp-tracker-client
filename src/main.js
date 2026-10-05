@@ -928,6 +928,8 @@ function slimMmrHistory(rawEntries) {
       elo: typeof entry.elo === 'number' ? entry.elo : null,
       change: typeof entry.last_change === 'number' ? entry.last_change : null,
       map: entry.map?.name ?? null,
+      // Identifiant de la partie : permet de rattacher le RR gagné ou perdu à une ligne de l'historique des parties.
+      matchId: entry.match_id ?? null,
     }))
     .filter((entry) => entry.date && entry.tierId !== null && typeof entry.rr === 'number');
 }

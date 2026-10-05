@@ -246,6 +246,11 @@
   position: relative;
   height: 92px;
   margin-bottom: 0.15rem;
+  /* Largeur explicite : l'image est en position absolue, donc ne donne aucune largeur à
+     sa zone. Dans un bouton (flex en colonne), certains navigateurs ne l'étirent pas
+     et la zone tombait à 0 de large : l'image devenait invisible (Chrome). */
+  align-self: stretch;
+  width: 100%;
 }
 
 .sh-bundle-item:hover,
@@ -314,6 +319,9 @@
 
 .sh-card-art {
   position: relative;
+  /* Même raison que .sh-bundle-art : largeur explicite, l'image n'en fournit pas. */
+  align-self: stretch;
+  width: 100%;
   flex: 1;
   display: grid;
   place-items: center;

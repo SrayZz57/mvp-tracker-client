@@ -5,7 +5,7 @@ import Icon from '../Icon.jsx';
 import { buildClassicRoom, CLASSIC_WALL_HALF, makeSkyTexture } from '../classicArena.js';
 import { AGENT_FLOOR_Y, buildAgentModel } from '../aimBots.js';
 import { AGENT_HEIGHT } from '../aimTrainerModes.js';
-import { ARENA_LIMITS, createArena, createBox, createEnemy, decodeArenaCode, encodeArenaCode, ENEMY_STYLES, loadArenas, sanitizeArena, saveArenas } from './arenaStore.js';
+import { ARENA_LIMITS, createArena, createBox, createEnemy, decodeArenaCode, encodeArenaCode, ENEMY_STYLES, loadArenasOf, sanitizeArena, saveArenasOf } from './arenaStore.js';
 import { BOX_STYLES, BOX_STYLE_IDS, cssColor } from './boxStyles.js';
 import { PATROL_RADIUS } from './buildCustomArena.js';
 import { PIECES, STAIR_STEPS, doorBoxes, pieceDims, placeEnemy, placeOnHit, stairBoxes } from './buildMath.js';
@@ -29,6 +29,7 @@ const REACH = 40; // portée de construction, en mètres
 const HISTORY_MAX = 100;
 const EYE_MAX = 25;
 const DEG = Math.PI / 180;
+const CTRL_CHORD_MS = 400; // au-delà, Ctrl maintenu = descendre (voir onKeyDown)
 const BOUNDS = { halfW: CLASSIC_WALL_HALF, halfD: CLASSIC_WALL_HALF };
 const ENEMY_SLOT = PIECES.findIndex((p) => p.id === 'enemy');
 
@@ -63,7 +64,7 @@ function PieceIcon({ piece }) {
 export default function ArenaEditor({ t, settings = {}, onPlay }) {
   const tr = (key, params) => t(`aimTrainer.arenaEditor.${key}`, params);
   const [arenas, setArenas] = useState(() => {
-    const list = loadArenas();
+    const list = loadArenasOf('classic');
     return list.length ? list : [createArena(t('aimTrainer.arenaEditor.defaultName'))];
   });
   const [arena, setArena] = useState(() => arenas[0]);
@@ -131,7 +132,7 @@ export default function ArenaEditor({ t, settings = {}, onPlay }) {
       : [...arenasRef.current, current];
     arenasRef.current = list;
     setArenas(list);
-    setSaveState(saveArenas(list) ? 'saved' : 'error');
+    setSaveState(saveArenasOf('classic', list) ? 'saved' : 'error');
     return list;
   }, []);
 
@@ -164,7 +165,7 @@ export default function ArenaEditor({ t, settings = {}, onPlay }) {
     if (!next.length) next = [createArena(t('aimTrainer.arenaEditor.defaultName'))];
     arenasRef.current = next;
     setArenas(next);
-    setSaveState(saveArenas(next) ? 'saved' : 'error');
+    setSaveState(saveArenasOf('classic', next) ? 'saved' : 'error');
     openArena(next[0]);
   };
   const setEnemySetting = (field, value) => commit({ ...arenaRef.current, enemySettings: { ...arenaRef.current.enemySettings, [field]: value } });
@@ -179,7 +180,8 @@ export default function ArenaEditor({ t, settings = {}, onPlay }) {
   };
   const importArena = () => {
     const decoded = decodeArenaCode(importText);
-    if (!decoded) {
+    // Une arène posée sur une carte Valorant s'ouvre dans l'éditeur de carte, pas ici.
+    if (!decoded || decoded.base !== 'classic') {
       setShareMsg(tr('share.invalid'));
       return;
     }
@@ -724,14 +726,32 @@ export default function ArenaEditor({ t, settings = {}, onPlay }) {
     const onContextMenu = (e) => e.preventDefault();
     // Déplacements : position physique des touches (e.code, ZQSD en AZERTY).
     // Raccourcis : lettre tapée (e.key), sinon Ctrl+Z tomberait sur Ctrl+W en AZERTY.
+    let ctrlDownAt = 0;
     const onKeyDown = (e) => {
       if (!isLocked()) return;
       const letter = e.key.toLowerCase();
       if (e.code === 'Space' || e.ctrlKey) e.preventDefault();
+      // Ctrl seul = descendre (comme C) : la touche est retenue pour pouvoir descendre
+      // en avançant (Ctrl + Z, A, Q, D). Avec une autre touche en même temps, seuls
+      // Ctrl+Z / Ctrl+Y restent des raccourcis ; le reste sert au déplacement.
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        if (!keys.has(e.code)) ctrlDownAt = performance.now();
+        keys.add(e.code);
+        return;
+      }
       if (e.ctrlKey) {
-        if (e.repeat) return;
-        if (letter === 'z' && !e.shiftKey) undo();
-        else if (letter === 'y' || (letter === 'z' && e.shiftKey)) redo();
+        // Sur AZERTY la touche « avancer » est le Z : un Ctrl maintenu depuis plus de
+        // 0,4 s sert à descendre, donc Z/Y deviennent du déplacement et pas un
+        // Ctrl+Z (sinon descendre en avançant annulerait des blocs).
+        const quickChord = performance.now() - ctrlDownAt < CTRL_CHORD_MS;
+        const isUndoRedo = (letter === 'y' || letter === 'z') && quickChord;
+        if (isUndoRedo) {
+          if (e.repeat) return;
+          if (letter === 'z' && !e.shiftKey) undo();
+          else redo();
+          return;
+        }
+        keys.add(e.code);
         return;
       }
       keys.add(e.code);
@@ -867,7 +887,7 @@ export default function ArenaEditor({ t, settings = {}, onPlay }) {
         const gpDeadzoned = gpMag > 0.15 ? gpLeft : { x: 0, y: 0 };
         const fwd = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0) - gpDeadzoned.y;
         const side = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0) + gpDeadzoned.x;
-        const lift = (keys.has('Space') ? 1 : 0) - (keys.has('KeyC') ? 1 : 0);
+        const lift = (keys.has('Space') ? 1 : 0) - (keys.has('KeyC') || keys.has('ControlLeft') || keys.has('ControlRight') ? 1 : 0);
         if (fwd || side) {
           const len = Math.hypot(fwd, side);
           const sy = Math.sin(euler.y);

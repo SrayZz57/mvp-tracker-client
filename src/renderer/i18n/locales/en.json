@@ -818,7 +818,7 @@
     "weaponSection": "Weapon",
     "weaponModelLabel": "Weapon model",
     "weaponDefault": "Default",
-    "weaponVandal": "Vandal",
+    "weaponVandal": "Kestrel",
     "weaponGlock": "Glock (detailed)",
     "skinSection": "Skin",
     "skinStandard": "Standard",
@@ -954,7 +954,7 @@
       "phoenix": "Crimson lacquer and golden feathers: wings of fire that spread on every shot, a golden beak and flickering flames.",
       "storm": "Lightning-veined armour, Tesla coils linked by live electric arcs, a railgun muzzle.",
       "crown": "Marble, royal blue enamel and baroque gold, precious stones, a crown on the scope and a shower of gold.",
-      "standard": "The original Vandal: machined gunmetal steel, sand and black polymer, engravings and rivets.",
+      "standard": "The original Kestrel: machined gunmetal steel, sand and black polymer, engravings and rivets.",
       "magma": "Cracked obsidian with flowing lava, basalt chunks, a smoking crater muzzle, lava drips and embers.",
       "circuit": "Ceramic and graphite, data-pulsing circuits, a glass magazine of energy cells, a holographic sight.",
       "celeste": "A fragment of the night sky: twinkling nebula, a solar system in the stock, a supernova on every shot.",
@@ -1196,7 +1196,11 @@
       "arenasTitle": "Your arenas",
       "noArenas": "No arena yet: open the editor to build yours.",
       "arenaSummary_one": "{{count}} enemy placed",
-      "arenaSummary_other": "{{count}} enemies placed"
+      "arenaSummary_other": "{{count}} enemies placed",
+      "mapsTitle": "Valorant maps",
+      "mapsIntro": "Place enemies exactly where you want on the map, then practice aiming at them while moving. You can also just explore the map.",
+      "mapPlaceEnemies": "Place enemies",
+      "mapExplore": "Explore"
     },
     "lobby": {
       "tabs": {
@@ -1398,8 +1402,8 @@
           "label": "Move (Shift: faster)"
         },
         "fly": {
-          "keys": "Space / C",
-          "label": "Up / down"
+          "keys": "Space / Ctrl",
+          "label": "Up / down (C works too)"
         },
         "place": {
           "keys": "Left click",
@@ -1475,7 +1479,7 @@
       }
     },
     "mapPreview": {
-      "eyebrow": "Map preview · beta",
+      "eyebrow": "Valorant map · beta",
       "play": "Click to play",
       "coords": "Minimap u {{u}} · v {{v}} · height {{h}} m",
       "noclip": "free flight",
@@ -1492,9 +1496,9 @@
       "maps": {
         "ascentA": {
           "button": "Map: Ascent A site",
-          "buttonDesc": "Preview of A site rebuilt from the official minimap, for the upcoming site entry mode.",
+          "buttonDesc": "Preview of A site rebuilt from the official minimap, to place enemies and train on it.",
           "title": "Ascent · A Site",
-          "intro": "Ascent’s A site, from A Lobby to Heaven, for the upcoming mode where you move to take your entries. Move like in game and compare with the official minimap in the top right.",
+          "intro": "Ascent’s A site, from A Lobby to Heaven. Move like in game and compare with the official minimap in the top right.",
           "accuracy": "Floor plan traced from the official minimap (±14 cm). Heights measured on in-game screenshots (±20 cm); walls and tall crates estimated. The area ends at the red barriers.",
           "callouts": {
             "aLobby": "A Lobby",
@@ -1523,9 +1527,9 @@
         },
         "sunsetB": {
           "button": "Map: Sunset B site",
-          "buttonDesc": "Preview of B site rebuilt from the official minimap, for the upcoming site entry mode.",
+          "buttonDesc": "Preview of B site rebuilt from the official minimap, to place enemies and train on it.",
           "title": "Sunset · B Site",
-          "intro": "Sunset’s B site (patch 9.08 version), from B Main to Boba, for the upcoming mode where you move to take your entries. Move like in game and compare with the official minimap in the top right.",
+          "intro": "Sunset’s B site (patch 9.08 version), from B Main to Boba. Move like in game and compare with the official minimap in the top right.",
           "accuracy": "Floor plan traced automatically from the official minimap (±13 cm). Levels from the minimap shades and the patch 9.08 notes; wall, pillar and crate heights estimated from the official screenshots. The area ends at the red barriers.",
           "callouts": {
             "bBack": "B Back",
@@ -1549,7 +1553,7 @@
         },
         "havenA": {
           "button": "Map: Haven A site",
-          "buttonDesc": "Preview of A site rebuilt from the official minimap, for the upcoming site entry mode.",
+          "buttonDesc": "Preview of A site rebuilt from the official minimap, to place enemies and train on it.",
           "title": "Haven · A Site",
           "intro": "Haven’s A site, from A Lobby to the tower, through A Long and A Sewer. Move like in game and compare with the official minimap in the top right.",
           "accuracy": "Floor plan traced automatically from the official minimap (±13 cm). Heights (tower, A Long ramp, A Sewer stairs, crates) are estimated from in-game screenshots. The area ends at the red barriers.",
@@ -1657,7 +1661,57 @@
     "finderCurrentSensController": "Current controller sensitivity (Base): {{sens}}",
     "crosshairAdd": "Add a crosshair",
     "weaponLeftLabel": "Weapon on the left",
-    "sensHint": "Use the same value as in Valorant."
+    "sensHint": "Use the same value as in Valorant.",
+    "mapEditor": {
+      "button": "Place enemies · {{map}}",
+      "buttonDesc": "Place enemies anywhere on the map, then practice aiming at them.",
+      "defaultName": "My enemies",
+      "title": "Enemies · {{map}}",
+      "intro": "Walk around the map, aim at the ground and click to place an enemy right there. Set your starting point with P, then start the game: you stay at that point and the enemies wait at their spots.",
+      "enemiesHint": "{{count}} enemy(ies) placed, each at its own spot. When you eliminate one, it comes back to its spot.",
+      "help": "Left click: place · Right click: remove · Backspace: undo · P: starting point · N: free fly · Esc: menu",
+      "counts": "{{enemies}}/{{maxEnemies}} enemies",
+      "noclip": "free fly",
+      "clearAll": "Clear all",
+      "toast": {
+        "full": "Maximum number of enemies reached",
+        "spawnSet": "Starting point set here"
+      },
+      "controls": {
+        "move": {
+          "keys": "WASD",
+          "label": "Move (Space: jump, Shift: walk)"
+        },
+        "place": {
+          "keys": "Left click",
+          "label": "Place an enemy where you aim"
+        },
+        "remove": {
+          "keys": "Right click",
+          "label": "Remove the enemy you aim at"
+        },
+        "undo": {
+          "keys": "Backspace",
+          "label": "Remove the last one placed"
+        },
+        "spawn": {
+          "keys": "P",
+          "label": "Set my starting point here, facing this way"
+        },
+        "teleport": {
+          "keys": "1 to 9",
+          "label": "Go to a point on the map"
+        },
+        "fly": {
+          "keys": "N",
+          "label": "Free fly (through walls)"
+        }
+      }
+    },
+    "web": {
+      "install": "Install the app",
+      "contact": "Contact"
+    }
   },
   "playSessions": {
     "title": "Current session",

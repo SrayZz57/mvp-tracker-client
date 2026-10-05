@@ -1,7 +1,18 @@
 // Identifiants des cartes jouables (voir playableMaps.js), sans rien importer :
-// le hub affiche un bouton par carte sans embarquer three.js, chargé
+// le hub affiche une carte par entrée sans embarquer three.js, chargé
 // seulement à l'ouverture de l'aperçu.
-// Désactivées pour la 1.13.0 : pas encore prêtes à être montrées aux joueurs.
-export const ENABLE_PLAYABLE_MAPS = false;
+//
+// Mise en service : un interrupteur par carte. Une carte à `false` reste dans
+// le code (et ses arènes déjà créées restent jouables) mais n'apparaît pas
+// dans le hub. Haven viendra plus tard.
+export const MAP_RELEASE = {
+  ascentA: true,
+  sunsetB: true,
+  havenA: false,
+};
 
-export const PLAYABLE_MAP_IDS = ENABLE_PLAYABLE_MAPS ? ['ascentA', 'sunsetB', 'havenA'] : [];
+// Version web (aimtrainer-web) : aucune carte pour l'instant, quel que soit l'interrupteur
+// ci-dessus. Elle le déclare avec window.mvpWeb avant de charger le hub.
+const hiddenOnWeb = typeof window !== 'undefined' && window.mvpWeb?.hideValorantMaps === true;
+
+export const PLAYABLE_MAP_IDS = hiddenOnWeb ? [] : Object.keys(MAP_RELEASE).filter((id) => MAP_RELEASE[id]);

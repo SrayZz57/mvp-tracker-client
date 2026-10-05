@@ -27,6 +27,8 @@ import { buildMonasteryArena } from './aimArenas.js';
 import { buildAscentArena } from './aimArenaAscent.js';
 import { buildRangeArena } from './aimArenaRange.js';
 import { buildCustomArena } from './arenaEditor/buildCustomArena.js';
+import { PLAYABLE_MAPS } from './playableMaps.js';
+import { createWalker } from './mapWalker.js';
 import { createArena, loadArenas } from './arenaEditor/arenaStore.js';
 import { createSniperSystem, OPERATOR, SNIPER_BEHAVIORS } from './aimSniper.js';
 import { createAgentSystem, AGENT_FLOOR_Y } from './aimBots.js';
@@ -823,7 +825,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     // pixels ramenée à 1 — sur un écran 4K ou à mise à l'échelle Windows, ça
     // divise par 2 à 4 le nombre de pixels à dessiner à chaque image.
     const perfLite = isPerfLiteEnabled();
-    const renderer = new THREE.WebGLRenderer({ antialias: !perfLite });
+    const renderer = new THREE.WebGLRenderer({ antialias: !perfLite, powerPreference: 'high-performance' });
     renderer.setPixelRatio(perfLite ? 1 : Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -836,8 +838,9 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     // Réduit en thème sombre pour une vraie ambiance de salle fermée plutôt
     // que la même scène juste teintée — les deux accents rouge/bleu plus bas
     // restent inchangés, ils font tout le travail d'atmosphère là-dedans.
-    scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x3a4152, isDark ? 0.5 : 1.5));
-    scene.add(new THREE.AmbientLight(0xffffff, isDark ? 0.15 : 0.45));
+    const baseHemi = new THREE.HemisphereLight(0xbfd4ff, 0x3a4152, isDark ? 0.5 : 1.5);
+    const baseAmbient = new THREE.AmbientLight(0xffffff, isDark ? 0.15 : 0.45);
+    scene.add(baseHemi, baseAmbient);
 
     // "Soleil" principal, chaud et franc, avec sa lumière de contre-jour.
     const sun = new THREE.DirectionalLight(0xfff2dc, isDark ? 0.6 : 2.6);
@@ -896,10 +899,26 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       // ce qui n'est pas construit pile au centre de la salle se retrouve
       // derrière son vrai mur, qui lui ne bouge pas). Seule la caméra est
       // placée au point de départ choisi, juste après.
-      buildClassicRoom(arena, { floorY: FLOOR_Y, isDark, wallMat });
       const stored = loadArenas().find((a) => a.id === config.customArenaId) ?? createArena();
-      arenaInfo = buildCustomArena(arena, stored, { floorY: AGENT_FLOOR_Y, isDark });
-      camera.position.set(arenaInfo.spawn.x, 0, arenaInfo.spawn.z);
+      const mapDef = PLAYABLE_MAPS[stored.base] ?? null;
+      if (mapDef) {
+        // Arène posée sur une carte Valorant : la carte remplace la salle, avec
+        // son propre soleil et son propre ciel (comme dans l'aperçu de carte).
+        arenaInfo = buildCustomArena(arena, stored, { floorY: AGENT_FLOOR_Y, isDark, mapDef });
+        [sun, backLight, accentLeft, accentRight].forEach((light) => {
+          light.intensity = 0;
+        });
+        baseHemi.intensity = 0;
+        baseAmbient.intensity = 0;
+        mapDef.light(scene, renderer, arenaInfo.mapInfo, { isDark });
+        if (classicSky) classicSky.visible = false;
+        if (!isDark && mapDef.sky) scene.add(mapDef.sky());
+        scene.fog.density = isDark ? 0.012 : 0.004;
+      } else {
+        buildClassicRoom(arena, { floorY: FLOOR_Y, isDark, wallMat });
+        arenaInfo = buildCustomArena(arena, stored, { floorY: AGENT_FLOOR_Y, isDark });
+      }
+      camera.position.set(arenaInfo.spawn.x, arenaInfo.spawn.y ?? 0, arenaInfo.spawn.z);
       euler.set(0, arenaInfo.spawn.yaw ?? 0, 0);
       camera.quaternion.setFromEuler(euler);
     } else if (MODES[behaviorKey(config)]?.arena === 'monastery') {
@@ -923,6 +942,32 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
       scene.fog.density = isDark ? 0.008 : 0.0032;
     } else {
       buildClassicRoom(arena, { floorY: FLOOR_Y, isDark, wallMat });
+    }
+
+    // Sur une carte Valorant, on se déplace comme dans l'aperçu de carte
+    // (ZQSD, Maj, Espace, Ctrl) ; ailleurs le joueur reste planté sur place.
+    const walker = arenaInfo?.mapDef ? createWalker(arenaInfo.colliders) : null;
+    const walkKeys = new Set();
+    let walkJump = false;
+    let walkCleanup = null;
+    if (walker) {
+      walker.teleport(arenaInfo.spawn.x, AGENT_FLOOR_Y + (arenaInfo.spawn.y ?? 0), arenaInfo.spawn.z);
+      const onWalkKeyDown = (e) => {
+        if (!document.pointerLockElement) return;
+        if (e.code === 'Space' || e.ctrlKey) e.preventDefault();
+        walkKeys.add(e.code);
+        if (e.code === 'Space' && !e.repeat) walkJump = true;
+      };
+      const onWalkKeyUp = (e) => walkKeys.delete(e.code);
+      const onWalkBlur = () => walkKeys.clear();
+      window.addEventListener('keydown', onWalkKeyDown);
+      window.addEventListener('keyup', onWalkKeyUp);
+      window.addEventListener('blur', onWalkBlur);
+      walkCleanup = () => {
+        window.removeEventListener('keydown', onWalkKeyDown);
+        window.removeEventListener('keyup', onWalkKeyUp);
+        window.removeEventListener('blur', onWalkBlur);
+      };
     }
 
     // --- Murs du mode Dodge Flash --------------------------------------------
@@ -1899,6 +1944,21 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
         return true;
       });
 
+      if (walker) {
+        const active = !!document.pointerLockElement;
+        const down = (code) => active && walkKeys.has(code);
+        walker.update(Math.min(0.05, dt / 1000), {
+          forward: (down('KeyW') ? 1 : 0) - (down('KeyS') ? 1 : 0),
+          strafe: (down('KeyD') ? 1 : 0) - (down('KeyA') ? 1 : 0),
+          yaw: euler.y,
+          walk: down('ShiftLeft') || down('ShiftRight'),
+          crouch: down('ControlLeft') || down('ControlRight') || down('KeyC'),
+          jump: walkJump,
+        });
+        walkJump = false;
+        camera.position.set(walker.pos.x, walker.eyeY(), walker.pos.z);
+      }
+
       renderer.render(scene, camera);
       frameId = requestAnimationFrame(animate);
     };
@@ -1918,6 +1978,7 @@ function AimTrainerGame({ config: rawConfig, onExit, onSessionComplete }) {
     handleResize();
 
     return () => {
+      walkCleanup?.();
       cancelAnimationFrame(frameId);
       window.removeEventListener('resize', handleResize);
       disposeScene(scene);

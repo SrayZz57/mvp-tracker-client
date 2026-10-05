@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { notifyAimDataChanged } from './aimSyncEvents.js';
 import { useTranslation } from 'react-i18next';
 import { Trash2, Star, Play, Copy, Check, ClipboardPaste, Hammer } from 'lucide-react';
 import Icon from './Icon.jsx';
@@ -125,6 +126,7 @@ export function loadPresets() {
 
 function savePresets(presets) {
   localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+  notifyAimDataChanged();
 }
 
 // Fenêtre modale (dans la même fenêtre que l'onglet, pas une fenêtre OS

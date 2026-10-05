@@ -753,7 +753,7 @@
     "weaponSection": "Arme",
     "weaponModelLabel": "Modèle d'arme",
     "weaponDefault": "Défaut",
-    "weaponVandal": "Vandal",
+    "weaponVandal": "Kestrel",
     "weaponGlock": "Glock (détaillé)",
     "skinSection": "Skin",
     "skinStandard": "Standard",
@@ -889,7 +889,7 @@
       "phoenix": "Laque pourpre et plumes d’or : des ailes de feu qui se déploient à chaque tir, un bec d’or et des flammèches.",
       "storm": "Blindage parcouru d’éclairs, bobines Tesla reliées par de vrais arcs électriques, bouche en canon à rails.",
       "crown": "Marbre, émail bleu roi et or baroque, pierres précieuses, couronne sur la lunette et pluie de paillettes d’or.",
-      "standard": "La Vandal d’origine : acier gunmetal usiné, polymère sable et noir, gravures et rivets.",
+      "standard": "Le Kestrel d’origine : acier gunmetal usiné, polymère sable et noir, gravures et rivets.",
       "magma": "Obsidienne fissurée où coule la lave, blocs de basalte, bouche en cratère fumant, gouttes de lave et braises.",
       "circuit": "Céramique et graphite, circuits parcourus de données, chargeur de verre à cellules d’énergie, viseur holographique.",
       "celeste": "Un fragment de ciel nocturne : nébuleuse qui scintille, système solaire dans la crosse, supernova à chaque tir.",
@@ -1131,7 +1131,11 @@
       "arenasTitle": "Tes arènes",
       "noArenas": "Aucune arène pour l’instant : ouvre l’éditeur pour construire la tienne.",
       "arenaSummary_one": "{{count}} ennemi placé",
-      "arenaSummary_other": "{{count}} ennemis placés"
+      "arenaSummary_other": "{{count}} ennemis placés",
+      "mapsTitle": "Cartes Valorant",
+      "mapsIntro": "Pose des ennemis exactement où tu veux sur la carte, puis entraîne-toi à les viser en te déplaçant. Tu peux aussi simplement explorer la carte.",
+      "mapPlaceEnemies": "Poser des ennemis",
+      "mapExplore": "Explorer"
     },
     "lobby": {
       "tabs": {
@@ -1333,8 +1337,8 @@
           "label": "Se déplacer (Maj : plus vite)"
         },
         "fly": {
-          "keys": "Espace / C",
-          "label": "Monter / descendre"
+          "keys": "Espace / Ctrl",
+          "label": "Monter / descendre (C marche aussi)"
         },
         "place": {
           "keys": "Clic gauche",
@@ -1410,7 +1414,7 @@
       }
     },
     "mapPreview": {
-      "eyebrow": "Aperçu de carte · bêta",
+      "eyebrow": "Carte Valorant · bêta",
       "play": "Cliquer pour jouer",
       "coords": "Minimap u {{u}} · v {{v}} · hauteur {{h}} m",
       "noclip": "vol libre",
@@ -1427,9 +1431,9 @@
       "maps": {
         "ascentA": {
           "button": "Carte : Ascent site A",
-          "buttonDesc": "Aperçu du site A reproduit d’après la minimap officielle, pour le futur mode d’entrées sur site.",
+          "buttonDesc": "Aperçu du site A reproduit d’après la minimap officielle, pour poser des ennemis et t’entraîner dessus.",
           "title": "Ascent · Site A",
-          "intro": "Le site A d’Ascent, de A Lobby à Heaven, pour le futur mode où l’on se déplace pour faire ses entrées. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
+          "intro": "Le site A d’Ascent, de A Lobby à Heaven. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
           "accuracy": "Plan au sol relevé sur la minimap officielle (±14 cm). Hauteurs mesurées sur des captures du jeu (±20 cm) ; murs et grandes caisses estimés. La zone s’arrête aux barrières rouges.",
           "callouts": {
             "aLobby": "A Lobby",
@@ -1458,9 +1462,9 @@
         },
         "sunsetB": {
           "button": "Carte : Sunset site B",
-          "buttonDesc": "Aperçu du site B reproduit d’après la minimap officielle, pour le futur mode d’entrées sur site.",
+          "buttonDesc": "Aperçu du site B reproduit d’après la minimap officielle, pour poser des ennemis et t’entraîner dessus.",
           "title": "Sunset · Site B",
-          "intro": "Le site B de Sunset (version du patch 9.08), de B Main à Boba, pour le futur mode où l’on se déplace pour faire ses entrées. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
+          "intro": "Le site B de Sunset (version du patch 9.08), de B Main à Boba. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
           "accuracy": "Plan au sol relevé automatiquement sur la minimap officielle (±13 cm). Niveaux d’après les teintes de la minimap et les notes du patch 9.08 ; hauteurs des murs, du pilier et des caisses estimées sur les captures officielles. La zone s’arrête aux barrières rouges.",
           "callouts": {
             "bBack": "B Back",
@@ -1484,7 +1488,7 @@
         },
         "havenA": {
           "button": "Carte : Haven site A",
-          "buttonDesc": "Aperçu du site A reproduit d’après la minimap officielle, pour le futur mode d’entrées sur site.",
+          "buttonDesc": "Aperçu du site A reproduit d’après la minimap officielle, pour poser des ennemis et t’entraîner dessus.",
           "title": "Haven · Site A",
           "intro": "Le site A de Haven, de A Lobby à la tour, par A Long et A Sewer. Déplace-toi comme en jeu et compare avec la minimap officielle en haut à droite.",
           "accuracy": "Plan au sol relevé automatiquement sur la minimap officielle (±13 cm). Les hauteurs (tour, rampe d’A Long, descente d’A Sewer, caisses) sont estimées sur des captures en jeu. La zone s’arrête aux barrières rouges.",
@@ -1592,7 +1596,57 @@
     "finderCurrentSensController": "Sensibilité manette actuelle (Base) : {{sens}}",
     "crosshairAdd": "Ajouter un crosshair",
     "weaponLeftLabel": "Arme à gauche",
-    "sensHint": "Mets la même valeur que dans Valorant."
+    "sensHint": "Mets la même valeur que dans Valorant.",
+    "mapEditor": {
+      "button": "Poser des ennemis · {{map}}",
+      "buttonDesc": "Place des ennemis où tu veux sur la carte, puis entraîne-toi à les viser.",
+      "defaultName": "Mes ennemis",
+      "title": "Ennemis · {{map}}",
+      "intro": "Déplace-toi sur la carte, vise le sol et clique pour poser un ennemi exactement là. Pose ton point de départ avec P, puis lance la partie : tu restes à ce point et les ennemis t’attendent à leurs places.",
+      "enemiesHint": "{{count}} ennemi(s) posé(s), chacun à son emplacement. Quand tu en élimines un, il revient à sa place.",
+      "help": "Clic gauche : poser · Clic droit : retirer · Retour arrière : annuler · P : point de départ · N : vol libre · Échap : menu",
+      "counts": "{{enemies}}/{{maxEnemies}} ennemis",
+      "noclip": "vol libre",
+      "clearAll": "Tout effacer",
+      "toast": {
+        "full": "Nombre maximum d’ennemis atteint",
+        "spawnSet": "Point de départ posé ici"
+      },
+      "controls": {
+        "move": {
+          "keys": "ZQSD",
+          "label": "Se déplacer (Espace : sauter, Maj : marcher)"
+        },
+        "place": {
+          "keys": "Clic gauche",
+          "label": "Poser un ennemi là où tu vises"
+        },
+        "remove": {
+          "keys": "Clic droit",
+          "label": "Retirer l’ennemi visé"
+        },
+        "undo": {
+          "keys": "Retour arrière",
+          "label": "Retirer le dernier posé"
+        },
+        "spawn": {
+          "keys": "P",
+          "label": "Définir mon point de départ ici, dans cette direction"
+        },
+        "teleport": {
+          "keys": "1 à 9",
+          "label": "Aller à un point de la carte"
+        },
+        "fly": {
+          "keys": "N",
+          "label": "Vol libre (traverse les murs)"
+        }
+      }
+    },
+    "web": {
+      "install": "Installer l’app",
+      "contact": "Contact"
+    }
   },
   "playSessions": {
     "title": "Session en cours",

@@ -1699,3 +1699,25 @@
     display: flex;
   }
 }
+
+/* Version web : bouton « Installer l'app » dans la barre du haut. */
+.lb-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 36px;
+  padding: 0 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent-deep));
+  border-radius: 6px;
+  transition: filter 0.15s;
+}
+
+.lb-install:hover {
+  filter: brightness(1.12);
+}

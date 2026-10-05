@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, BarChart3, Boxes, Check, Crosshair, Crown, Flame, Gauge, Gem, Gift, ShoppingBag, LogOut, Palette, Play, Settings as SettingsIcon, SlidersHorizontal, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, BarChart3, Boxes, Check, Crosshair, Crown, Download, Flame, Mail, Gauge, Gem, Gift, ShoppingBag, LogOut, Palette, Play, Settings as SettingsIcon, SlidersHorizontal, Trophy, Volume2, VolumeX } from 'lucide-react';
 import Icon from './Icon.jsx';
 import { MODES, VALORANT_MODE_IDS, WEAPON_MODELS } from './aimTrainerModes.js';
 import { ModeArt } from './ModesScreen.jsx';
@@ -250,6 +250,17 @@ export default function HubLobby({
             <button type="button" className="lb-currency" onMouseEnter={sfx.hover} onClick={() => onNavigate('shop')} title={t('aimTrainer.shop.earnHint')}>
               <Icon icon={Gem} size={15} />
               {shopBalance.toLocaleString()}
+            </button>
+          )}
+          {/* Version web seulement (window.mvpWeb, défini par aimtrainer-web) : lien vers l'app de bureau. */}
+          {window.mvpWeb?.openInstall && (
+            <button type="button" className="lb-install" onClick={window.mvpWeb.openInstall} onMouseEnter={sfx.hover}>
+              <Icon icon={Download} size={15} /> {t('aimTrainer.web.install')}
+            </button>
+          )}
+          {window.mvpWeb?.openContact && (
+            <button type="button" className="lb-icon-btn" onClick={window.mvpWeb.openContact} onMouseEnter={sfx.hover} title={t('aimTrainer.web.contact')}>
+              <Icon icon={Mail} size={16} />
             </button>
           )}
           <button type="button" className="lb-icon-btn" onClick={onToggleMute} title={muted ? t('aimTrainer.hubMuteOff') : t('aimTrainer.hubMuteOn')}>

@@ -176,9 +176,27 @@ export function createAgentSystem({ scene, arena, camera, speed = 1, scale = 1, 
   // La zone est tirée une fois par apparition (pas à chaque essai) : sinon
   // la zone où les essais échouent le moins finirait sur-représentée.
   const pickSpawn = () => {
-    const zone = zones[Math.floor(Math.random() * zones.length)];
+    // Arènes de l'éditeur : chaque zone est un ennemi posé exprès. Si la zone
+    // tirée est déjà occupée (ou hors de vue), on essaie les autres plutôt que
+    // de renvoyer l'ennemi au repli au milieu de la salle.
+    const order = exactSpawns ? [...zones].sort(() => Math.random() - 0.5) : [zones[Math.floor(Math.random() * zones.length)]];
+    for (const zone of order) {
+      const found = trySpawnIn(zone);
+      if (found) return found;
+    }
+    const zone0 = exactSpawns && order[0] ? order[0] : (zones[0] ?? { minX: -6, maxX: 6 });
+    if (exactSpawns && order[0]) {
+      const settings = settingsFor(zone0);
+      return { x: (zone0.minX + zone0.maxX) / 2, z: (zone0.minZ + zone0.maxZ) / 2, baseY: floorY + zone0.y, zone: zone0, settings, scale: settings.scale };
+    }
+    return { x: 0, z: -14, baseY: floorY, zone: zone0, settings: settingsFor(zone0) };
+  };
+
+  const trySpawnIn = (zone) => {
     const settings = settingsFor(zone);
-    for (let attempt = 0; zone && attempt < 60; attempt += 1) {
+    // Un emplacement posé n'accueille qu'un seul ennemi à la fois.
+    if (exactSpawns && zone && agents.some((a) => a.active && !a.dead && a.zone === zone)) return null;
+    for (let attempt = 0; zone && attempt < (exactSpawns ? 25 : 60); attempt += 1) {
       const x = rand(zone.minX, zone.maxX);
       const z = rand(zone.minZ, zone.maxZ);
       const baseY = floorY + zone.y;
@@ -190,11 +208,12 @@ export function createAgentSystem({ scene, arena, camera, speed = 1, scale = 1, 
       if (bodyBlocked(x, z, baseY, settings.bodyRadius, settings.height)) continue;
       if (agents.some((a) => a.active && !a.dead && Math.hypot(a.x - x, a.z - z) < 1.5)) continue;
       const candidate = { x, z, baseY, zone, settings, scale: settings.scale };
-      if (!headVisible(candidate)) continue;
+      // Arène de l'éditeur : un ennemi par emplacement posé, visible ou non du
+      // point de départ (on peut s'y déplacer pour aller le chercher).
+      if (!exactSpawns && !headVisible(candidate)) continue;
       return candidate;
     }
-    const zone0 = zones[0] ?? { minX: -6, maxX: 6 };
-    return { x: 0, z: -14, baseY: floorY, zone: zone0, settings: settingsFor(zone0) };
+    return null;
   };
 
   // Répertoire de comportements tirés au hasard, pondérés, pour éviter un
@@ -308,7 +327,10 @@ export function createAgentSystem({ scene, arena, camera, speed = 1, scale = 1, 
     popups.length = 0;
   };
 
-  const reset = (count, now) => {
+  const reset = (requested, now) => {
+    // Arène de l'éditeur : jamais plus d'ennemis que d'emplacements posés,
+    // sinon les surnuméraires s'empilent tous au même endroit.
+    const count = exactSpawns && zones.length ? Math.min(requested, zones.length) : requested;
     hideAll();
     ensurePool(count);
     agents.slice(0, count).forEach((agent) => spawn(agent, now));

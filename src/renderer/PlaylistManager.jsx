@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { notifyAimDataChanged } from './aimSyncEvents.js';
 import { useTranslation } from 'react-i18next';
 import { Trash2, X, ArrowUp, ArrowDown } from 'lucide-react';
 import Icon from './Icon.jsx';
@@ -22,6 +23,7 @@ export function loadPlaylists() {
 
 function savePlaylists(playlists) {
   localStorage.setItem(PLAYLISTS_STORAGE_KEY, JSON.stringify(playlists));
+  notifyAimDataChanged();
 }
 
 function PlaylistManager({ onClose, onLaunch }) {

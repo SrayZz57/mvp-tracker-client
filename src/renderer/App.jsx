@@ -80,6 +80,7 @@ import { ShareCardIntro, SHARE_CARD_INTRO_KEY } from './ShareProfileCard.jsx';
 import PostMortemModal from './PostMortemModal.jsx';
 import WelcomeScreen from './WelcomeScreen.jsx';
 import LinkRiotAccount from './LinkRiotAccount.jsx';
+import { loadOwnApiKey, saveOwnApiKey } from './profileSecret.js';
 import AccountGreeting from './AccountGreeting.jsx';
 import AccountAuth from './AccountAuth.jsx';
 import SetNewPasswordScreen from './SetNewPasswordScreen.jsx';
@@ -956,7 +957,7 @@ function App() {
     async function loadProfile(attempt = 0) {
       const { data, error } = await supabase
         .from('profiles')
-        .select('riot_name, riot_tag, riot_puuid, display_name, avatar_card_uuid, main_role, main_agent, created_at, henrikdev_api_key, role')
+        .select('riot_name, riot_tag, riot_puuid, display_name, avatar_card_uuid, main_role, main_agent, created_at, role')
         .eq('id', session.user.id)
         .maybeSingle();
       if (cancelled) return;
@@ -980,7 +981,11 @@ function App() {
         }
         return;
       }
-      setProfile(data ?? null);
+      // La clé HenrikDev n'est plus dans `profiles` (lisible par tous les joueurs connectés) :
+      // elle vient de la table privée profile_secrets, et on la remet dans l'objet profil.
+      const apiKey = data ? await loadOwnApiKey(supabase, session.user.id) : null;
+      if (cancelled) return;
+      setProfile(data ? { ...data, henrikdev_api_key: apiKey } : null);
     }
 
     loadProfile();
@@ -1046,7 +1051,9 @@ function App() {
   // utilise la nouvelle clé immédiatement, sans redémarrage.
   const updateApiKey = async (newKey) => {
     const trimmed = newKey.trim();
-    await updateProfile({ henrikdev_api_key: trimmed || null });
+    if (await saveOwnApiKey(supabase, session.user.id, trimmed)) {
+      setProfile((prev) => ({ ...prev, henrikdev_api_key: trimmed || null }));
+    }
     const updatedSettings = { ...settings, apiKey: trimmed };
     setSettings(updatedSettings);
     window.electronAPI.saveSettings(updatedSettings);

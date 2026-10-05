@@ -39,7 +39,7 @@ function SkinCard({ skin, onClick, isWishlisted, isOwned, t }) {
         </div>
       )}
       <div className="skin-card-img-wrap">
-        <img src={skin.displayIcon} alt={skin.name} />
+        <img src={skin.displayIcon} alt={skin.name} loading="lazy" onError={(e) => e.currentTarget.classList.add('is-broken')} />
       </div>
       <p className="skin-card-name">{skin.name}</p>
       <p className="label" style={{ color: skin.tierColor }}>{skin.tierName} — {skin.weaponName}</p>
@@ -158,14 +158,14 @@ function SkinsCatalog({ myId }) {
               placeholder={t('skins.priceMin')}
               value={priceMin}
               onChange={(e) => setPriceMin(e.target.value)}
-              style={{ width: '110px' }}
+              style={{ width: '150px' }}
             />
             <input
               type="number"
               placeholder={t('skins.priceMax')}
               value={priceMax}
               onChange={(e) => setPriceMax(e.target.value)}
-              style={{ width: '110px' }}
+              style={{ width: '150px' }}
             />
           </div>
 

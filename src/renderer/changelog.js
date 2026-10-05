@@ -5,6 +5,30 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.13.1',
+    date: '2026-10-05',
+    items: {
+      fr: [
+        'Historique des parties : pour les parties classées, le RR gagné ou perdu s’affiche à gauche du résultat.',
+        'Aim Trainer sur le web : joue sans rien installer sur train.mvptracker.fr avec le même compte. Tes presets, tes arènes et tes playlists te suivent d’un appareil à l’autre.',
+        'Cartes Valorant : le site A d’Ascent et le site B de Sunset se parcourent comme en jeu, et tu peux y poser des ennemis exactement où tu veux pour t’entraîner dessus, puis jouer.',
+        'Éditeur d’arène : la touche Ctrl fait descendre quand tu voles (C marche toujours).',
+        'Le Vandal devient le Kestrel. Tes skins restent les mêmes.',
+        'Sécurité : ta clé API HenrikDev est maintenant rangée dans un espace privé, et n’est plus lisible par les autres joueurs connectés.',
+        'Pages Skins et Ma collection : mise en page corrigée.',
+      ],
+      en: [
+        'Match history: for ranked games, the RR gained or lost is shown to the left of the result.',
+        'Aim Trainer on the web: play without installing anything at train.mvptracker.fr with the same account. Your presets, arenas and playlists follow you from one device to another.',
+        'Valorant maps: Ascent’s A site and Sunset’s B site can be walked like in game, and you can place enemies exactly where you want to train on them, then play.',
+        'Arena editor: the Ctrl key goes down while you fly (C still works).',
+        'The Vandal becomes the Kestrel. Your skins stay the same.',
+        'Security: your HenrikDev API key is now kept in a private space, and is no longer readable by other signed-in players.',
+        'Skins and My collection pages: layout fixed.',
+      ],
+    },
+  },
+  {
     version: '1.13.0',
     date: '2026-09-30',
     items: {
@@ -46,7 +70,7 @@ export const CHANGELOG = [
         'Stats : nouveau design pour Stats globales (avec ton agent phare et la répartition de tes tirs), Stats par arme, par agent, par map, par rôle et par mode, ainsi que pour la Progression.',
         'Détail d’un match repensé : résultat et score en rounds en haut, joueurs classés par score, kills par arme, et détail round par round qu’on déplie à la demande.',
         'Profil ADN : chaque score a maintenant une infobulle qui explique son calcul. Agressivité (fréquence des premiers duels), Résilience (tes perfs après une défaite) et Polyvalence (les agents que tu maîtrises vraiment) sont recalculées, et les archétypes réécrits en conséquence.',
-        'Aim Trainer : deux armes au choix, le Vandal (par défaut) et le Glock. L’arme « Défaut » est retirée.',
+        'Aim Trainer : deux armes au choix, le Kestrel (par défaut) et le Glock. L’arme « Défaut » est retirée.',
         'Overlay de session : le réactiver pendant que Valorant est ouvert l’affiche maintenant tout de suite, sans passer par le mode déplacement.',
         'Onglet Analyse : le bloc d’auto-évaluation post-match est retiré et le tutoriel mis à jour.',
       ],
@@ -54,7 +78,7 @@ export const CHANGELOG = [
         'Stats: new design for Global stats (with your top agent and shot distribution), Weapon, Agent, Map, Role and Mode stats, and for Progression.',
         'Match details redesigned: result and round score at the top, players ranked by score, kills by weapon, and a round-by-round breakdown you can expand on demand.',
         'DNA Profile: each score now has a tooltip explaining how it is calculated. Aggression (how often you take opening duels), Resilience (your performance after a loss) and Versatility (agents you truly master) are recalculated, and the archetypes rewritten accordingly.',
-        'Aim Trainer: two weapons to choose from, the Vandal (default) and the Glock. The “Default” weapon is removed.',
+        'Aim Trainer: two weapons to choose from, the Kestrel (default) and the Glock. The “Default” weapon is removed.',
         'Session overlay: turning it back on while Valorant is open now shows it right away, without going through move mode.',
         'Analysis tab: the post-match self-assessment block is removed and the tutorial updated.',
       ],

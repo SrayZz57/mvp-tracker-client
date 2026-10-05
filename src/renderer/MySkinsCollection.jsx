@@ -151,7 +151,7 @@ function MySkinsCollection({ myId }) {
                 style={{ borderColor: skin.tierColor, '--tier-color': skin.tierColor }}
               >
                 <div className="skin-card-img-wrap" onClick={() => setSelectedSkin(skin)}>
-                  <img src={skin.displayIcon} alt={skin.name} />
+                  <img src={skin.displayIcon} alt={skin.name} loading="lazy" onError={(e) => e.currentTarget.classList.add('is-broken')} />
                 </div>
                 <p className="skin-card-name">{skin.name}</p>
                 <p className="label" style={{ color: skin.tierColor }}>{skin.tierName} — {skin.weaponName}</p>

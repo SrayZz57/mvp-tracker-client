@@ -1,7 +1,7 @@
 // Tests du format des arènes de l'éditeur. Lancer :  npm test
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ARENA_LIMITS, boxFootprint, createArena, createBox, createEnemy, decodeArenaCode, encodeArenaCode, loadArenas, sanitizeArena, saveArenas } from './arenaStore.js';
+import { ARENA_LIMITS, boxFootprint, createArena, createBox, createEnemy, decodeArenaCode, encodeArenaCode, loadArenas, loadArenasOf, saveArenasOf, arenaLaunchConfig, sanitizeArena, saveArenas } from './arenaStore.js';
 import { BOX_STYLE_IDS, DEFAULT_BOX_STYLE } from './boxStyles.js';
 
 const memoryStorage = () => {
@@ -48,7 +48,7 @@ test('nombre de box plafonné', () => {
 
 test('le point de départ reste sur le terrain', () => {
   const arena = sanitizeArena({ floor: { w: 20, d: 20 }, spawn: { x: 100, z: -100 } });
-  assert.deepEqual(arena.spawn, { x: 10, z: -10, yaw: 0 });
+  assert.deepEqual(arena.spawn, { x: 10, z: -10, y: 0, yaw: 0 });
 });
 
 test('emprise au sol d\'une box tournée', () => {
@@ -96,4 +96,38 @@ test('code de partage : aller-retour fidèle, texte non reconnu ou corrompu renv
   assert.equal(back.enemies[0].style, 'jiggle');
   assert.equal(decodeArenaCode('pas un code'), null);
   assert.equal(decodeArenaCode('MVPARENA1:%%%pas du base64%%%'), null);
+});
+
+test('arène sur une carte Valorant : base, hauteur de départ et étendue conservées', () => {
+  const arena = createArena('Ascent', 'ascentA');
+  arena.enemies.push(createEnemy({ x: 90, z: -120, y: 1.7 }));
+  arena.spawn = { x: 60, z: 80, y: 1.7, yaw: 1 };
+  const back = sanitizeArena(JSON.parse(JSON.stringify(arena)));
+  assert.equal(back.base, 'ascentA');
+  assert.deepEqual(back.enemies[0], { ...arena.enemies[0] });
+  assert.deepEqual(back.spawn, arena.spawn);
+  assert.equal(decodeArenaCode(encodeArenaCode(arena)).base, 'ascentA');
+  // Une base inconnue retombe sur la salle classique, dont l'étendue est bornée.
+  const classic = sanitizeArena({ ...arena, base: 'nimporte' });
+  assert.equal(classic.base, 'classic');
+  assert.ok(Math.abs(classic.enemies[0].x) <= 40);
+});
+
+test('chaque éditeur ne réécrit que ses arènes', () => {
+  const storage = memoryStorage();
+  const classic = createArena('Salle');
+  const sunset = createArena('Sunset', 'sunsetB');
+  assert.ok(saveArenas([classic, sunset], storage));
+  assert.ok(saveArenasOf('classic', [{ ...classic, name: 'Salle 2' }], storage));
+  assert.equal(loadArenasOf('sunsetB', storage)[0].name, 'Sunset');
+  assert.equal(loadArenasOf('classic', storage)[0].name, 'Salle 2');
+  assert.ok(saveArenasOf('sunsetB', [], storage));
+  assert.equal(loadArenas(storage).length, 1);
+});
+
+test('sur une carte, tous les ennemis posés sont là en même temps', () => {
+  const arena = createArena('Haven', 'havenA');
+  for (let i = 0; i < 9; i += 1) arena.enemies.push(createEnemy({ x: i }));
+  assert.equal(arenaLaunchConfig(arena).targetCount, 9);
+  assert.equal(arenaLaunchConfig(createArena('Salle')).targetCount, 3);
 });

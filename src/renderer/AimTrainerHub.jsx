@@ -203,6 +203,7 @@ import {
 import { buildDailyChallenge } from './aimChallenge.js';
 import CustomModeConfig, { loadPresets, presetValues } from './CustomModeConfig.jsx';
 import { arenaLaunchConfig, loadArenas } from './arenaEditor/arenaStore.js';
+import { startAimSync } from './aimSync.js';
 import { AIM_MODE, sanitizeControllerConfig } from './input/controllerProfiles.js';
 import { useGamepadMenuNav } from './input/useGamepadMenuNav.js';
 import PlaylistManager, { loadPlaylists } from './PlaylistManager.jsx';
@@ -230,6 +231,7 @@ const ShopScreen = lazy(() => import('./shop/ShopScreen.jsx'));
 const DailyRewardScreen = lazy(() => import('./shop/DailyRewardScreen.jsx'));
 // Éditeur d'arène : three.js et ses poignées, chargés à l'ouverture seulement.
 const ArenaEditor = lazy(() => import('./arenaEditor/ArenaEditor.jsx'));
+const MapEnemyEditor = lazy(() => import('./arenaEditor/MapEnemyEditor.jsx'));
 // Aperçu du site A d'Ascent (futur mode d'entrées sur site), même principe.
 const MapExplorer = lazy(() => import('./MapExplorer.jsx'));
 
@@ -680,6 +682,7 @@ function AimTrainerHub({ config: initialRawConfig }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agents.length]);
   const [screen, setScreen] = useState('menu'); // menu | modes | stats | settings
+  const [mapEditorId, setMapEditorId] = useState('ascentA'); // carte ouverte dans la pose d'ennemis
   const [mapPreviewId, setMapPreviewId] = useState('ascentA'); // carte ouverte dans l'aperçu (voir playableMaps.js)
   // Quel héros (parmi heroAgents) sert de fond à l'accueil : change au survol
   // d'une entrée du menu plutôt que d'afficher les 4 en même temps — un seul
@@ -714,6 +717,8 @@ function AimTrainerHub({ config: initialRawConfig }) {
   const [showPatrolPicker, setShowPatrolPicker] = useState(false);
   const [showCustomConfig, setShowCustomConfig] = useState(false);
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+  // Incrémenté quand la synchronisation du compte a changé des arènes, presets ou playlists locaux.
+  const [syncVersion, setSyncVersion] = useState(0);
   const [modesCategory, setModesCategory] = useState(null); // null = les trois cartes
   const [showSkinPicker, setShowSkinPicker] = useState(false);
   // Conteneur pour la navigation au D-pad/stick gauche dans les menus (voir
@@ -745,6 +750,30 @@ function AimTrainerHub({ config: initialRawConfig }) {
   useEffect(() => {
     window.electronAPI.listCrosshairs().then(setCrosshairs);
   }, []);
+
+  // Arènes, presets et playlists suivent le compte (PC <-> web). On n'écrase rien
+  // pendant qu'un écran d'édition est ouvert : les changements du compte sont
+  // reportés à la fermeture (voir l'effet suivant).
+  const editingRef = useRef(false);
+  editingRef.current = screen === 'editor' || screen === 'map-editor' || showCustomConfig || showPlaylistManager;
+  const aimSyncRef = useRef(null);
+  useEffect(() => {
+    if (!myId) return undefined;
+    const sync = startAimSync(myId, {
+      canPull: () => !editingRef.current,
+      // Version web : les arènes posées sur les cartes Valorant restent sur le compte, invisibles ici.
+      acceptItem: (kind, item) => !(window.mvpWeb?.hideValorantMaps && kind === 'arena' && item.base && item.base !== 'classic'),
+      onChange: () => setSyncVersion((v) => v + 1),
+    });
+    aimSyncRef.current = sync;
+    return () => {
+      sync.stop();
+      aimSyncRef.current = null;
+    };
+  }, [myId]);
+  useEffect(() => {
+    if (!editingRef.current) aimSyncRef.current?.requestSync(1500);
+  }, [screen, showCustomConfig, showPlaylistManager]);
 
   useEffect(() => {
     if (myId) loadFriendsLeaderboard(myId, config.mode).then(setFriendsBoard);
@@ -1015,10 +1044,10 @@ function AimTrainerHub({ config: initialRawConfig }) {
   );
   const valorantModeEntries = useMemo(() => VALORANT_MODE_IDS.map((id) => [id, MODES[id]]), []);
   // Relu à chaque fermeture des fenêtres qui les modifient.
-  const customPresets = useMemo(() => loadPresets(), [showCustomConfig, showPlaylistManager, modesCategory]);
+  const customPresets = useMemo(() => loadPresets(), [showCustomConfig, showPlaylistManager, modesCategory, syncVersion]);
   // `screen` en plus : les arènes se créent dans l'éditeur (un écran, pas une
   // fenêtre), il faut relire au retour vers 'modes' pour voir les changements.
-  const customArenas = useMemo(() => loadArenas(), [showCustomConfig, modesCategory, screen]);
+  const customArenas = useMemo(() => loadArenas(), [showCustomConfig, modesCategory, screen, syncVersion]);
   // Visuels de la carte « Valorant » : la carte Ascent (arène Belvédère) et Jett.
   const valorantModeImages = useMemo(
     () => {
@@ -1495,23 +1524,45 @@ function AimTrainerHub({ config: initialRawConfig }) {
                     <strong>{t('aimTrainer.modesHub.arenaEditorTitle')}</strong>
                     <span>{t('aimTrainer.modesHub.arenaEditorDesc')}</span>
                   </button>
-                  {PLAYABLE_MAP_IDS.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className="mc-action"
-                      onMouseEnter={playHoverSfx}
-                      onClick={() => {
-                        setMapPreviewId(id);
-                        setScreen('map-preview');
-                      }}
-                    >
-                      <span className="mc-icon"><Icon icon={MapIcon} size={18} /></span>
-                      <strong>{t(`aimTrainer.mapPreview.maps.${id}.button`)}</strong>
-                      <span>{t(`aimTrainer.mapPreview.maps.${id}.buttonDesc`)}</span>
-                    </button>
-                  ))}
                 </div>
+
+                {PLAYABLE_MAP_IDS.length > 0 && (
+                  <>
+                    <h3 className="mc-section-title">{t('aimTrainer.modesHub.mapsTitle')}</h3>
+                    <p className="mc-empty">{t('aimTrainer.modesHub.mapsIntro')}</p>
+                    <div className="mc-maps">
+                      {PLAYABLE_MAP_IDS.map((id) => (
+                        <div key={id} className="mc-map">
+                          <span className="mc-icon"><Icon icon={MapIcon} size={18} /></span>
+                          <strong>{t(`aimTrainer.mapPreview.maps.${id}.title`)}</strong>
+                          <div className="mc-map-actions">
+                            <button
+                              type="button"
+                              onMouseEnter={playHoverSfx}
+                              onClick={() => {
+                                setMapEditorId(id);
+                                setScreen('map-editor');
+                              }}
+                            >
+                              <Icon icon={Hammer} size={15} /> {t('aimTrainer.modesHub.mapPlaceEnemies')}
+                            </button>
+                            <button
+                              type="button"
+                              className="mc-map-secondary"
+                              onMouseEnter={playHoverSfx}
+                              onClick={() => {
+                                setMapPreviewId(id);
+                                setScreen('map-preview');
+                              }}
+                            >
+                              {t('aimTrainer.modesHub.mapExplore')}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 <h3 className="mc-section-title">{t('aimTrainer.modesHub.presetsTitle')}</h3>
                 {customPresets.length === 0 ? (
@@ -1718,6 +1769,18 @@ function AimTrainerHub({ config: initialRawConfig }) {
             <ArenaEditor
               t={t}
               settings={{ sens: config.sens, fov: config.fov, theme: config.theme, controller: config.controller }}
+              onPlay={(customArena) => launch({ mode: 'custom', ...arenaLaunchConfig(customArena) })}
+            />
+          </Suspense>
+        )}
+
+        {screen === 'map-editor' && (
+          <Suspense fallback={null}>
+            <MapEnemyEditor
+              key={mapEditorId}
+              t={t}
+              mapId={mapEditorId}
+              settings={{ sens: config.sens, fov: config.fov, theme: config.theme }}
               onPlay={(customArena) => launch({ mode: 'custom', ...arenaLaunchConfig(customArena) })}
             />
           </Suspense>

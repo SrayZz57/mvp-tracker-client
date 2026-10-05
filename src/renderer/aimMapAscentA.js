@@ -9,7 +9,6 @@ import {
   fanCobbleCanvas,
   greyStoneCanvas,
   sandCanvas,
-  gardenGroundCanvas,
   grassCanvas,
   plywoodCrateCanvas,
   greenCrateCanvas,
@@ -56,7 +55,7 @@ export const toWorld = (u, v) => ({ x: (u - U0) * PX, z: (v - V0) * PX });
 export const toMinimap = (x, z) => ({ u: x / PX + U0, v: z / PX + V0 });
 
 const TERRACE = 1.55; // plateforme du site (zone de plant), 8 marches au-dessus de la place
-const HEAVEN = 3.75; // Rafters (Heaven) et ses couloirs
+const HEAVEN = 4.25; // Rafters (Heaven) et ses couloirs
 const HEAVEN_SLAB = 0.22; // épaisseur du plancher de Heaven au-dessus de Hell
 export const ASCENT_A_LEVELS = { ground: 0, terrace: TERRACE, heaven: HEAVEN };
 
@@ -81,15 +80,6 @@ const GROUND = [
   { r: [377, 245, 435, 367], mat: 'sand' }, // Tree (A Link)
   { r: [435, 331, 449, 350], mat: 'cobble' }, // Tree → Cubby
   { r: [449, 317, 505, 376], mat: 'cobble' }, // Mid Cubby (escalier vers Mid coupé)
-  { r: [368, 280, 377, 301], mat: 'cobble' }, // Tree → Garden
-  { r: [290, 272, 369, 309], mat: 'gravel' }, // Garden
-  { r: [313, 309, 369, 323], mat: 'gravel' },
-  { r: [276, 304, 313, 379], mat: 'gravel' },
-  { r: [320, 257, 361, 272], mat: 'gravel' },
-  { r: [361, 268, 369, 272], mat: 'gravel' },
-  { r: [314, 259, 320, 272], mat: 'gravel' }, // mur en biais au nord de Garden, en marches de 5 px
-  { r: [309, 263, 314, 272], mat: 'gravel' },
-  { r: [304, 267, 309, 272], mat: 'gravel' },
   { r: [148, 335, 276, 379], mat: 'stone' }, // couloir bas côté défenseurs (coupé)
 ];
 
@@ -98,6 +88,7 @@ const TERRACE_RECT = [273, 81, 369, 222]; // zone de plant (jaune sur la minimap
 const HELL = [
   [238, 112, 273, 172],
   [238, 172, 257, 190],
+  [238, 94, 257, 112], // poche du côté droit, derrière le mur, symétrique de celle du sud
 ];
 const HEAVEN_RECTS = [
   [235, 81, 273, 231], // Rafters (Heaven), tout le long du site
@@ -118,21 +109,15 @@ const CHEEKS = [
   [369, 133, 398, 137],
   [369, 168, 398, 172],
 ];
-// Jardinières en pente le long des murs de Garden (dégradé sur la minimap).
-const PLANTERS = [
-  { r: [326, 258, 361, 272], low: 0.25, high: 1.2 },
-  { r: [326, 309, 369, 322], low: 0.25, high: 1.2 },
-];
-
 // Caisses et gros objets. `y` = niveau de pose, `h` = hauteur.
 const PROPS = [
   { id: 'generator', r: [306, 187, 346, 200], y: TERRACE, h: 3.1, kind: 'generator' },
   { id: 'defaultBlock', r: [317, 117, 328, 129], y: TERRACE, h: 1.65, kind: 'blocks' },
   { id: 'defaultCrate', r: [313, 130, 324, 142], y: TERRACE, h: 1.77, kind: 'greenCrate' },
-  { id: 'siteNW', r: [276, 81, 289, 94], y: TERRACE, h: 2.0, kind: 'blocks' },
-  { id: 'siteNWsmall', r: [275, 95, 282, 101], y: TERRACE, h: 0.9, kind: 'blocks' },
+  { id: 'siteNW', r: [273, 81, 286, 94], y: TERRACE, h: 1.7, kind: 'blocks' }, // assez basse pour monter dessus en sautant depuis la petite
+  { id: 'siteNWsmall', r: [273, 94, 280, 100], y: TERRACE, h: 0.9, kind: 'blocks' }, // marchepied, collée à Heaven et à la face sud de la grande
   { id: 'siteTallCrate', r: [343, 81, 356, 94], y: TERRACE, h: 3.6, kind: 'crate' },
-  { id: 'heavenCrate', r: [256, 81, 268, 95], y: HEAVEN, h: 2.2, kind: 'crate' },
+  { id: 'heavenCrate', r: [261, 81, 273, 95], y: HEAVEN, h: 2.2, kind: 'crate' },
   { id: 'plazaBlocks', r: [411, 81, 440, 93], y: 0, h: 2.2, kind: 'blocks' },
   { id: 'plazaCovered', r: [411, 93, 440, 108], y: 0, h: 1.3, kind: 'tarp' },
   { id: 'lobbyA', r: [527, 234, 540, 247], y: 0, h: 1.3, kind: 'crate' },
@@ -140,7 +125,6 @@ const PROPS = [
   { id: 'lobbyB', r: [626, 234, 641, 247], y: 0, h: 1.6, kind: 'crate' },
   { id: 'lobbyBsmall', r: [633, 247, 641, 254], y: 0, h: 0.9, kind: 'crate' },
   { id: 'lobbyC', r: [584, 294, 598, 307], y: 0, h: 1.4, kind: 'crate' },
-  { id: 'gardenBox', r: [290, 273, 298, 282], y: 0, h: 1.2, kind: 'crate' },
   { id: 'corridorBox', r: [262, 337, 275, 350], y: 0, h: 1.3, kind: 'crate' },
 ];
 
@@ -171,7 +155,6 @@ const CALLOUTS = [
   { id: 'aRafters', r: [235, 81, 273, 231], minY: 2.6 },
   { id: 'aWindow', r: [233, 264, 290, 315], minY: 2.6 },
   { id: 'defenderSide', r: [140, 231, 276, 385] },
-  { id: 'aGarden', r: [276, 257, 369, 385] },
   { id: 'aSite', r: [273, 81, 441, 238] },
   { id: 'aTree', r: [368, 238, 449, 368] },
   { id: 'midCubby', r: [449, 317, 506, 385] },
@@ -190,7 +173,6 @@ export const ASCENT_A_SPAWNS = [
   { id: 'heaven', u: 265, v: 151, y: HEAVEN, face: [1, 0] },
   { id: 'hell', u: 250, v: 142, y: TERRACE, face: [1, 0] },
   { id: 'tree', u: 405, v: 330, y: 0, face: [0, -1] },
-  { id: 'garden', u: 300, v: 330, y: 0, face: [1, -0.4] },
   { id: 'defenders', u: 200, v: 357, y: 0, face: [1, 0] },
 ];
 
@@ -217,7 +199,6 @@ export function buildAscentSiteA(root, { floorY = 0, isDark = false } = {}) {
     cobble: withBump(fanCobbleCanvas(), 6, { roughness: 0.9 }),
     tiles: withBump(siteTilesCanvas(), 2.6, { roughness: 0.85 }),
     sand: flat(sandCanvas(), 4),
-    gravel: withBump(gardenGroundCanvas(), 3),
     grass: flat(grassCanvas(), 2.5, { roughness: 1 }),
     coping: withBump(copingCanvas(), 2.4, { roughness: 0.8 }),
     trim: std({ color: 0xeadfcd, roughness: 0.85 }),
@@ -278,17 +259,14 @@ export function buildAscentSiteA(root, { floorY = 0, isDark = false } = {}) {
   // Fond de Hell : rideau de garage clair.
   push(new THREE.PlaneGeometry(PX * 44, 2.3), M.shutter, mtx(X(238) + 0.02, Y(TERRACE + 1.15), Z(142), Math.PI / 2), { ao: false });
 
-  // Garde-corps de Heaven côté site ; échafaudage et bâches seulement là où
-  // les captures en montrent (le milieu du balcon reste dégagé).
-  // Assez bas pour sauter par-dessus et descendre sur le site, comme en jeu.
-  block([271.2, 81, 273, 222], HEAVEN, HEAVEN + 0.85, M.coping);
+  // Pas de rebord le long de Heaven (retiré à la demande) ; échafaudage et
+  // bâches seulement là où les captures en montrent.
   block([272.6, 81, 273.2, 222], HEAVEN - 0.5, HEAVEN, M.wood, { solid: false });
   [
     [174, 221, 0.1, 2.5], // grande bâche au sud de Heaven (masque une partie du site)
-    [99, 111, 0.3, 1.5],
   ].forEach(([va, vb, y0, y1]) => {
     for (let v = va; v <= vb + 0.1; v += (vb - va) / Math.max(1, Math.round((vb - va) / 14))) {
-      block([272.2, v - 0.4, 273, v + 0.4], HEAVEN + 0.85, HEAVEN + 2.7, M.rail, { solid: false });
+      block([272.2, v - 0.4, 273, v + 0.4], HEAVEN, HEAVEN + 2.7, M.rail, { solid: false });
     }
     block([272.2, va, 273, vb], HEAVEN + 2.6, HEAVEN + 2.7, M.rail, { solid: false });
     const len = (vb - va) * PX;
@@ -333,11 +311,6 @@ export function buildAscentSiteA(root, { floorY = 0, isDark = false } = {}) {
   // Rampe couverte entre Heaven et le couloir bas des défenseurs.
   slopeBlock(RAMP.r, -0.5, RAMP.from, RAMP.to, 'v', M.steps);
   slopeSolids(RAMP.r, -0.5, RAMP.from, RAMP.to, 'v', 0.12);
-
-  PLANTERS.forEach(({ r, low, high }) => {
-    slopeBlock(r, -0.5, low, high, 'u', M.grass);
-    slopeSolids(r, -0.5, low, high, 'u');
-  });
 
   // --- Ouvertures : linteaux au-dessus des passages -----------------------------
   // Arche d'A Main vers le site : ouverture de 4,2 m, haute d'environ 7,5 m
@@ -390,7 +363,6 @@ export function buildAscentSiteA(root, { floorY = 0, isDark = false } = {}) {
   }
   block([392, 235, 418, 245], 3.6, 7, M.cream); // porte A
   block([518, 259, 527, 283], 3.4, 9, M.cream); // Lobby → A Main
-  block([368, 280, 377, 301], 3.4, 7, M.cream); // Tree → Garden
   block([435, 331, 449, 350], 3.4, 7, M.cream); // Tree → Cubby
   // Porte A relevée (ouverte), côté place.
   push(new THREE.PlaneGeometry((418 - 392) * PX, 3.2), M.door, mtx(X(405), Y(5.2), Z(235) - 0.03, Math.PI), { ao: false });

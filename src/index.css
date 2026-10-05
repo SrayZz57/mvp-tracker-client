@@ -14325,7 +14325,7 @@ input[type='color'] {
   /* Dernière colonne à largeur fixe : en `auto`, elle changeait avec le texte du
      badge de résultat (Victoire (13-8), Sans équipe...), et comme chaque ligne est
      sa propre grille, l'agent et le K/D glissaient d'une ligne à l'autre. */
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 110px minmax(0, 1.6fr) 150px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 110px minmax(0, 1.6fr) 240px;
   align-items: center;
   gap: 1rem;
   padding: 0.3rem 1.1rem 0.3rem 1rem;
@@ -14416,6 +14416,36 @@ input[type='color'] {
   transform: skewX(-12deg);
 }
 
+/* Variation de RR (parties classées) à gauche du résultat, sur la même ligne. */
+.mh-result {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.mh-result .result-badge {
+  flex: 0 1 150px;
+  width: 150px;
+}
+
+.mh-rr {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mh-rr-up {
+  color: var(--good);
+}
+
+.mh-rr-down {
+  color: var(--accent);
+}
+
 .match-day-header {
   font-size: 0.7rem;
   letter-spacing: 0.14em;
@@ -14424,7 +14454,7 @@ input[type='color'] {
 
 @media (max-width: 1100px) {
   .mh-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 90px 150px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 90px 230px;
   }
 
   .mh-hits {
@@ -15319,7 +15349,7 @@ button.sidebar-section-label {
   padding-right: 0.3rem;
 }
 
-.skin-card {
+.skin-viewer-list .skin-card {
   --cut: 12px;
   position: relative;
   display: flex;
@@ -15337,7 +15367,7 @@ button.sidebar-section-label {
 }
 
 /* Liseré de la couleur de rareté, comme dans les jeux. */
-.skin-card::before {
+.skin-viewer-list .skin-card::before {
   content: '';
   position: absolute;
   left: 0;
@@ -15347,31 +15377,31 @@ button.sidebar-section-label {
   background: var(--rarity);
 }
 
-.skin-card:hover {
+.skin-viewer-list .skin-card:hover {
   filter: brightness(1.15);
 }
 
-.skin-card.active {
+.skin-viewer-list .skin-card.active {
   background: linear-gradient(160deg, color-mix(in srgb, var(--rarity) 22%, var(--surface-alt)), var(--surface-alt) 70%);
   outline: 1px solid var(--rarity);
   outline-offset: -1px;
 }
 
-.skin-card img {
+.skin-viewer-list .skin-card img {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: #12151c;
 }
 
-.skin-card-name {
+.skin-viewer-list .skin-card-name {
   font-family: var(--font-display);
   font-size: 0.95rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.skin-card-rarity {
+.skin-viewer-list .skin-card-rarity {
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -15379,7 +15409,7 @@ button.sidebar-section-label {
   color: var(--rarity);
 }
 
-.skin-card-equipped {
+.skin-viewer-list .skin-card-equipped {
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
@@ -19063,4 +19093,20 @@ button.sidebar-section-label {
 
 .overlay-hotkey-error {
   color: var(--accent);
+}
+
+/* Catalogue des skins et Ma collection : image de secours quand celle de l'API manque. */
+.skin-card-img-wrap {
+  min-height: 80px;
+}
+
+.skin-card-img-wrap img.is-broken {
+  visibility: hidden;
+}
+
+.skin-card-img-wrap:has(img.is-broken)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 70%);
 }

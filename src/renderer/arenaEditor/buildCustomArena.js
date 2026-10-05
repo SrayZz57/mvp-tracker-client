@@ -15,7 +15,23 @@ import { BOX_STYLES } from './boxStyles.js';
 // l'origine du moteur — tout ce qui avait été construit loin du point de
 // départ se retrouvait donc derrière son vrai mur, invisible. Inutile : la
 // salle est la même des deux côtés, il suffit de ne rien déplacer.)
-export function buildCustomArena(group, arenaData, { floorY, isDark }) {
+//
+// Arène sur une carte Valorant (arenaData.base) : `mapDef` (PLAYABLE_MAPS) est
+// passé par l'appelant, qui construit la carte à la place de la salle. Ses
+// pavés servent de décor solide aux ennemis et à leur ligne de vue.
+export function buildCustomArena(group, arenaData, { floorY, isDark, mapDef = null }) {
+  if (mapDef) {
+    const mapInfo = mapDef.build(group, { floorY, isDark });
+    return {
+      colliders: mapInfo.solids,
+      floorY,
+      botZones: botZonesFor(arenaData.enemies),
+      bounds: mapInfo.bounds,
+      spawn: arenaData.spawn,
+      mapDef,
+      mapInfo,
+    };
+  }
   const tint = (hex) => (isDark ? new THREE.Color(hex).multiplyScalar(0.55) : new THREE.Color(hex));
   const materials = Object.fromEntries(
     Object.entries(BOX_STYLES).map(([id, s]) => [

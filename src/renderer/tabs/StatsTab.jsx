@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import Icon from '../Icon.jsx';
@@ -41,6 +41,7 @@ import WeaponDetailModal from '../WeaponDetailModal.jsx';
 import LineChart from '../charts/LineChart.jsx';
 import CountUp from '../CountUp.jsx';
 import LoadingState from '../LoadingState.jsx';
+import { rrByMatch } from '../matchRr.js';
 
 const MATCH_HISTORY_PAGE_SIZE = 10;
 
@@ -77,6 +78,22 @@ function StatsTab({ settings, matches, rank, loading }) {
   const currentTier = rank ? rankTiers.get(rank.tierId) : null;
   const peakTier = rank ? rankTiers.get(rank.peakTierId) : null;
   const [selectedMatch, setSelectedMatch] = useState(null);
+  // Variation de RR par partie classée : lue dans l'historique de rang (même source
+  // et même cache de 15 min que le bloc « Progression du rang »).
+  const [mmrHistory, setMmrHistory] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    window.electronAPI
+      .getMmrHistory({ force: false })
+      .then((result) => {
+        if (!cancelled) setMmrHistory(result?.history ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const rrOfMatch = useMemo(() => rrByMatch(matches, mmrHistory), [matches, mmrHistory]);
   const [selectedMap, setSelectedMap] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [selectedWeapon, setSelectedWeapon] = useState(null);
@@ -515,9 +532,17 @@ function StatsTab({ settings, matches, rank, loading }) {
                         </>
                       )}
                     </span>
-                    <span className={`result-badge ${resultClass}`}>
-                      {displayLabel}
-                      {score && ` (${score})`}
+                    <span className="mh-result">
+                      <span className={`result-badge ${resultClass}`}>
+                        {displayLabel}
+                        {score && ` (${score})`}
+                      </span>
+                      {rrOfMatch.has(match.metadata?.matchid) && (
+                        <span className={`mh-rr ${rrOfMatch.get(match.metadata.matchid) >= 0 ? 'mh-rr-up' : 'mh-rr-down'}`}>
+                          {rrOfMatch.get(match.metadata.matchid) >= 0 ? '+' : '−'}
+                          {Math.abs(rrOfMatch.get(match.metadata.matchid))} RR
+                        </span>
+                      )}
                     </span>
                   </div>
                 </Fragment>

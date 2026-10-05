@@ -93,7 +93,7 @@ const PROPS = [
   { r: [224, 391, 240, 409], y: UP, h: 1.35, kind: 'metal' }, // caisse métallique de la plateforme
   { r: [176, 447, 192, 464], y: 0, h: 1.25, kind: 'crate' }, // jardinière en bois au pied du pilier : avec le bac, marchepied vers la plateforme
   { r: [192, 447, 201, 457], y: 0, h: 0.7, kind: 'recycle' },
-  { r: [304, 476, 321, 516], y: 0, h: 1.15, kind: 'cart' }, // l'objet au milieu de Market
+  { r: [304, 476, 321, 516], y: 0, h: 2.0, kind: 'cart' }, // l'objet au milieu de Market
   { r: [136, 608, 153, 624], y: 0, h: 2.2, kind: 'crate' }, // hall de B Main : guichet « Tickets »
   { r: [103, 672, 120, 688], y: 0, h: 1.0, kind: 'crate' },
   { r: [282, 634, 298, 678], y: 0, h: 1.0, kind: 'cart' },

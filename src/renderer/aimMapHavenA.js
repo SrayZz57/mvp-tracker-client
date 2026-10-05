@@ -39,9 +39,12 @@ const SEWER_ROOM = [455, 341, 520, 440]; // au niveau DEEP
 const SEWER = [474, 249, 504, 341]; // tunnel
 const SEWER_ALCOVES = [455, 311, 510, 341]; // renfoncements de part et d'autre, en bas du tunnel
 const SEWER_CLIMB = [474, 249, 504, 311]; // montée, de DEEP (sud) au site (nord)
+const SITE_EAST = [473, 173, 536, 235];
 // Niveau du sol rapporté ; null : pas de sol rapporté (fond de carte à DEEP, ou pente).
 const levelAt = (u, v) => {
   if ([SEWER, SEWER_ALCOVES, LONG_RAMP, SEWER_CORRIDOR, SEWER_ROOM].some((rect) => inside(u, v, rect))) return null;
+  // La partie est du site (jusqu'à u = 536) reste de plain-pied : sans ça, une marche de 1,5 m coupait le sol.
+  if (inside(u, v, SITE_EAST)) return 0;
   return u >= 520 ? LOW : 0;
 };
 // Hell : sous le plancher de Heaven, ouvert sur le site par une porte.
@@ -61,9 +64,10 @@ const RAMP = { r: [225, 190, 258, 305], risers: 24 };
 // Caisses (contours de la minimap). Hauteurs estimées sur les captures.
 const PROPS = [
   { r: [336, 88, 350, 103], h: 2.6, kind: 'crate' }, // double pile à l'angle nord-ouest du site
-  { r: [457, 158, 473, 190], h: 2.6, kind: 'crate' }, // double pile à l'entrée du site
-  { r: [473, 174, 488, 190], h: 1.3, kind: 'smallCrate' }, // caisse simple accolée
-  { r: [458, 237, 471, 250], h: 1.3, kind: 'smallCrate' },
+  // Les trois caisses de l'entrée du site ont la même taille (16 × 16 px, 2,6 m).
+  { r: [457, 174, 473, 190], h: 2.6, kind: 'crate' },
+  { r: [473, 174, 489, 190], h: 2.6, kind: 'crate' }, // accolée à la première
+  { r: [458, 234, 474, 250], h: 2.6, kind: 'crate' },
   { r: [274, 204, 287, 217], h: 1.3, kind: 'smallCrate' },
   { r: [597, 166, 613, 184], y: LOW, h: 1.3, kind: 'smallCrate' }, // A Long
   { r: [655, 270, 677, 284], y: LOW, h: 1.3, kind: 'smallCrate' },
@@ -141,11 +145,12 @@ export function buildHavenSiteA(root, { floorY = 0, isDark = false } = {}) {
       { r: HAVEN_A_ROI, h: 8, material: M.wall },
       { r: [225, 60, 350, 300], h: 10.5, material: M.wallPale }, // tour
       { r: [432, 190, 600, 300], h: 6, material: M.wallPale },
-      { r: [450, 256, 550, 436], h: 6, material: M.whiteBrick, interior: true }, // murs d'A Sewer : brique blanche
+      { r: [450, 256, 550, 436], h: 8, material: M.whiteBrick, interior: true }, // murs d'A Sewer : brique blanche
     ],
     dress: (r, z) => {
       if (z.interior) {
         block(r, DEEP - 0.5, 0, M.whiteBrick); // le mur descend jusqu'au sol bas
+        block(r, z.h, z.h + 0.3, M.roof, { solid: false, inset: -0.45, ao: false }); // débord de toit : le mur est fermé en haut
         return;
       }
       block(r, DEEP - 0.5, 0, M.base); // assise, jusqu'au fond des parties basses
@@ -186,8 +191,10 @@ export function buildHavenSiteA(root, { floorY = 0, isDark = false } = {}) {
   for (let v = SEWER[1]; v < SEWER[3]; v += 12) {
     const vb = Math.min(v + 12, SEWER[3]);
     const y = Math.max(floorAt(v), floorAt(vb)) + 2.9; // 2,9 m sous plafond au point le plus haut du tronçon
-    block([SEWER_ALCOVES[0], v, SEWER_ALCOVES[2], vb], y + 0.12, y + 0.4, M.wood);
-    block([SEWER_ALCOVES[0], v, SEWER_ALCOVES[2], v + 1.4], y - 0.1, y + 0.12, M.beam, { solid: false }); // poutre
+    // Seule la salle basse a des renfoncements de part et d'autre ; plus haut, le plafond reste dans le tunnel (sinon il dépasse des murs).
+    const [cu0, cu1] = vb > SEWER_ALCOVES[1] ? [SEWER_ALCOVES[0], SEWER_ALCOVES[2]] : [SEWER[0], SEWER[2]];
+    block([cu0, v, cu1, vb], y + 0.12, y + 0.4, M.wood);
+    block([cu0, v, cu1, v + 1.4], y - 0.1, y + 0.12, M.beam, { solid: false }); // poutre
     [SEWER[0], SEWER[2] - 1.4].forEach((u) => block([u, v, u + 1.4, v + 1.4], floorAt(vb), y, M.beam, { solid: false })); // poteaux
     block([SEWER[0] + 1.6, v + 6, SEWER[0] + 2.6, v + 7], y - 0.75, y - 0.6, M.bulb, { solid: false, ao: false });
   }

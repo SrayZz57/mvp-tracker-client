@@ -732,3 +732,55 @@
   }
 }
 
+
+/* Cartes Valorant : une carte par ligne, deux actions (poser des ennemis, explorer). */
+.mc-maps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.mc-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cat);
+}
+
+.mc-map .mc-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.mc-map-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mc-map-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: var(--cat);
+  border: 1px solid var(--cat);
+}
+
+.mc-map-actions .mc-map-secondary {
+  color: var(--text);
+  background: transparent;
+  border-color: var(--border);
+}
+
+.mc-map-actions button:hover {
+  filter: brightness(1.12);
+}

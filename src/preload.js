@@ -35,13 +35,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getNetworkStatus: () => ipcRenderer.invoke('network:get-status'),
   getPingSamples: (puuid) => ipcRenderer.invoke('network:get-ping-samples', puuid),
   syncMatches: (payload) => ipcRenderer.invoke('sync:matches', payload),
-  // Overlay de session quotidienne (victoires/défaites, HS%, K/D du jour,
-  // voir main.js) — HenrikDev uniquement, un toggle "Mon compte" séparé.
+  // Stats de la session du jour (victoires/défaites, HS%, K/D), calculées par
+  // main.js et publiées vers le téléphone — la fenêtre d'overlay correspondante
+  // a été remplacée par l'overlay des rangs de la partie.
   getTiltNotificationsEnabled: () => ipcRenderer.invoke('tilt-notifications:get-enabled'),
   setTiltNotificationsEnabled: (enabled) => ipcRenderer.invoke('tilt-notifications:set-enabled', enabled),
   getDailyOverlayEnabled: () => ipcRenderer.invoke('daily-overlay:get-enabled'),
   setDailyOverlayEnabled: (enabled) => ipcRenderer.invoke('daily-overlay:set-enabled', enabled),
-  getDailyOverlayStats: () => ipcRenderer.invoke('daily-overlay:get-stats'),
   onDailyOverlayStats: (callback) => {
     const listener = (_event, stats) => callback(stats);
     ipcRenderer.on('daily-overlay:stats', listener);
@@ -55,21 +55,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendMobilePush: (payload) => ipcRenderer.invoke('mobile-push:send', payload),
   getDailyOverlayExcludedModes: () => ipcRenderer.invoke('daily-overlay:get-excluded-modes'),
   setDailyOverlayExcludedModes: (modeIds) => ipcRenderer.invoke('daily-overlay:set-excluded-modes', modeIds),
-  getDailyOverlayHotkey: () => ipcRenderer.invoke('daily-overlay:get-hotkey'),
-  setDailyOverlayHotkey: (accelerator) => ipcRenderer.invoke('daily-overlay:set-hotkey', accelerator),
-  getDailyOverlaySize: () => ipcRenderer.invoke('daily-overlay:get-size'),
-  setDailyOverlaySize: (percent) => ipcRenderer.invoke('daily-overlay:set-size', percent),
-  onDailyOverlaySize: (callback) => {
-    const listener = (_event, percent) => callback(percent);
-    ipcRenderer.on('daily-overlay:size', listener);
-    return () => ipcRenderer.removeListener('daily-overlay:size', listener);
+  // Un raccourci par overlay : id 'ranks' ou 'buy' (voir OVERLAY_HOTKEYS dans main.js).
+  getOverlayHotkey: (id) => ipcRenderer.invoke('overlay-hotkey:get', id),
+  setOverlayHotkey: (id, accelerator) => ipcRenderer.invoke('overlay-hotkey:set', id, accelerator),
+  // Overlay des rangs de la partie (opt-in, API locale du client Riot — voir main.js).
+  getMatchRanksOverlayEnabled: () => ipcRenderer.invoke('match-ranks-overlay:get-enabled'),
+  setMatchRanksOverlayEnabled: (enabled) => ipcRenderer.invoke('match-ranks-overlay:set-enabled', enabled),
+  getMatchRanksOverlayData: () => ipcRenderer.invoke('match-ranks-overlay:get-data'),
+  onMatchRanksOverlayData: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('match-ranks-overlay:data', listener);
+    return () => ipcRenderer.removeListener('match-ranks-overlay:data', listener);
   },
-  getDailyOverlayDragMode: () => ipcRenderer.invoke('daily-overlay:get-drag-mode'),
-  setDailyOverlayDragMode: (enabled) => ipcRenderer.invoke('daily-overlay:set-drag-mode', enabled),
-  onDailyOverlayDragMode: (callback) => {
-    const listener = (_event, enabled) => callback(enabled);
-    ipcRenderer.on('daily-overlay:drag-mode', listener);
-    return () => ipcRenderer.removeListener('daily-overlay:drag-mode', listener);
+  // Overlay d'achat du premier round (opt-in, API locale du client Riot — voir main.js).
+  getBuyOverlayEnabled: () => ipcRenderer.invoke('buy-overlay:get-enabled'),
+  setBuyOverlayEnabled: (enabled) => ipcRenderer.invoke('buy-overlay:set-enabled', enabled),
+  getBuyOverlayData: () => ipcRenderer.invoke('buy-overlay:get-data'),
+  onBuyOverlayData: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('buy-overlay:data', listener);
+    return () => ipcRenderer.removeListener('buy-overlay:data', listener);
   },
   getDeviceId: () => ipcRenderer.invoke('network:get-device-id'),
   openAimTrainer: (config) => ipcRenderer.invoke('aim-trainer:open', config),

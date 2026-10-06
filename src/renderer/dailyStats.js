@@ -48,8 +48,9 @@ export function resolveSessionDay(matches, previousDayKey) {
 // des pourcentages par match, pour ne pas sur-pondérer les matchs avec peu
 // de kills).
 //
-// `excludedModeIds` : modes choisis par l'utilisateur (voir
-// DailyOverlaySettings.jsx) à exclure EN PLUS du filtre automatique déjà
+// `excludedModeIds` : modes choisis par l'utilisateur (réglage enregistré,
+// plus modifiable depuis l'app depuis la suppression de l'overlay de session)
+// à exclure EN PLUS du filtre automatique déjà
 // appliqué par excludeDeathmatch (deathmatch, parties perso, Escalade,
 // Combat à mort par équipe — jamais de vraie victoire/défaite dans ces
 // modes, exclus systématiquement, pas configurable).

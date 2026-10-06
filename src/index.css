@@ -2625,7 +2625,7 @@ button {
     background 0.2s var(--ease-out);
 }
 
-button:hover:not(:disabled):not(.weekly-notch):not(.account-auth-google-button):not(.account-auth-discord-button):not(.danger-zone-button) {
+button:hover:not(:disabled):not(.weekly-notch):not(.account-auth-google-button):not(.account-auth-discord-button):not(.danger-zone-button):not(.pm-option):not(.pm-later) {
   border-color: rgba(255, 70, 85, 0.55);
   background: linear-gradient(180deg, #2c3240, var(--surface-hi));
   box-shadow: var(--edge-light-strong), 0 4px 14px rgba(0, 0, 0, 0.3);
@@ -5904,6 +5904,82 @@ li {
   flex: 1;
 }
 
+/* Messages envoyés (onglet « Envoyer une notification ») */
+.notify-sent-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.notify-sent {
+  margin-top: 1.75rem;
+}
+
+.notify-sent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notify-sent-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.notify-sent-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.notify-sent-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.notify-sent-title {
+  font-size: 0.92rem;
+}
+
+.notify-sent-to,
+.notify-sent-inactive {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.notify-sent-to.personal {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.notify-sent-body {
+  margin: 0.3rem 0 0.2rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.notify-sent-date {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
 .notify-admin-recipient {
   margin: 0.5rem 0 1rem;
 }
@@ -8490,10 +8566,14 @@ input[type='color'] {
   color: var(--accent);
 }
 
+/* Double check post-match : bannière du match (art de la map, portrait de
+   l'agent, résultat) puis questions en contrôles segmentés. Même matière que
+   les cartes de l'app (dégradé, liseré d'arête) plutôt qu'un bloc plat. */
 .postmortem-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: radial-gradient(70% 60% at 50% 40%, rgba(255, 70, 85, 0.08), transparent 70%), rgba(4, 5, 8, 0.74);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8502,60 +8582,463 @@ input[type='color'] {
 }
 
 .postmortem-modal {
-  width: 420px;
-  max-width: 90vw;
-  max-height: 85vh;
+  position: relative;
+  width: 540px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-x: hidden;
   overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, var(--surface) 0%, #12151d 100%);
+  box-shadow: var(--elev-3), var(--edge-light-strong);
+  animation: modal-card-pop-in 0.28s var(--ease-out);
 }
 
-.postmortem-question {
-  margin-top: 1rem;
+/* --- Bannière ------------------------------------------------------------ */
+.pm-hero {
+  position: relative;
+  height: 168px;
+  overflow: hidden;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
 }
 
-.postmortem-question p {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+.pm-hero-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: saturate(0.85);
+  transform: scale(1.04);
+  animation: pm-hero-drift 12s ease-out both;
 }
 
-.postmortem-answers {
+@keyframes pm-hero-drift {
+  from { transform: scale(1.12); }
+  to { transform: scale(1.04); }
+}
+
+/* Lisibilité du texte à gauche + teinte du résultat en bas */
+.pm-hero-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(10, 12, 17, 0.96) 0%, rgba(10, 12, 17, 0.75) 45%, rgba(10, 12, 17, 0.1) 100%),
+    linear-gradient(0deg, rgba(10, 12, 17, 0.9) 0%, transparent 55%);
+}
+
+.pm-hero.win .pm-hero-shade {
+  box-shadow: inset 0 -2px 0 var(--good), inset 0 -40px 50px -30px rgba(61, 220, 132, 0.25);
+}
+
+.pm-hero.loss .pm-hero-shade {
+  box-shadow: inset 0 -2px 0 var(--accent), inset 0 -40px 50px -30px rgba(255, 70, 85, 0.28);
+}
+
+.pm-hero-agent {
+  position: absolute;
+  right: -40px;
+  top: -18px;
+  height: 260px;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.6));
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 92%);
+  mask-image: linear-gradient(180deg, #000 55%, transparent 92%);
+  animation: pm-agent-in 0.5s var(--ease-out) 0.05s both;
+}
+
+@keyframes pm-agent-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.pm-hero-content {
+  position: relative;
+  height: 100%;
   display: flex;
-  gap: 0.5rem;
-}
-
-.postmortem-answers button {
-  flex: 1;
-}
-
-.postmortem-actions {
-  display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+  padding: 1rem 1.3rem 0.95rem;
 }
 
-.postmortem-result {
-  margin-top: 0.75rem;
-  padding: 0.85rem;
-  border-radius: 10px;
-  border-left: 3px solid var(--border);
+.pm-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 70, 85, 0.35);
+  background: rgba(255, 70, 85, 0.12);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-hover);
+}
+
+.pm-hero-result {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+}
+
+.pm-hero-label {
+  font-family: var(--font-hero);
+  font-size: 2.6rem;
+  line-height: 0.9;
+  letter-spacing: 0.03em;
+  color: var(--text);
+}
+
+.pm-hero.win .pm-hero-label {
+  color: var(--good);
+  text-shadow: 0 0 22px rgba(61, 220, 132, 0.35);
+}
+
+.pm-hero.loss .pm-hero-label {
+  color: var(--accent);
+  text-shadow: 0 0 22px var(--accent-glow);
+}
+
+.pm-hero-score {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pm-hero-score b {
+  color: var(--text);
+}
+
+.pm-hero-score i {
+  margin: 0 0.3rem;
+  font-style: normal;
+  color: var(--text-dim);
+}
+
+.pm-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.pm-hero-meta img {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
   background: var(--surface-alt);
 }
 
-.postmortem-result.correct {
-  border-left-color: #3ddc84;
+/* --- Questions ----------------------------------------------------------- */
+.pm-body {
+  padding: 1rem 1.3rem 1.2rem;
 }
 
-.postmortem-result.close {
+.pm-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pm-intro p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.pm-count {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.pm-count b {
+  color: var(--text);
+}
+
+.pm-progress {
+  height: 3px;
+  margin: 0.6rem 0 0.4rem;
+  border-radius: 2px;
+  background: var(--surface-hi);
+  overflow: hidden;
+}
+
+.pm-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent));
+  box-shadow: 0 0 10px var(--accent-glow);
+  transition: width 0.35s var(--ease-out);
+}
+
+.pm-question {
+  padding: 0.85rem 0 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.pm-question:has(+ .pm-actions) {
+  border-bottom: none;
+}
+
+.pm-question-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.6rem;
+  color: var(--text-dim);
+  transition: color 0.2s var(--ease-out);
+}
+
+.pm-question.answered .pm-question-head {
+  color: var(--accent);
+}
+
+.pm-question-num {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.pm-question-head p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+/* Contrôle segmenté : un rail sombre, l'option choisie s'allume à sa couleur */
+.pm-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg-deep);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Ces boutons ont leur propre survol : ils sont exclus de la règle globale
+   button:hover:not(...) (voir la liste des :not() de cette règle). */
+.pm-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.4rem;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pm-option:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+.pm-option.good.selected {
+  background: rgba(61, 220, 132, 0.15);
+  border-color: rgba(61, 220, 132, 0.55);
+  color: var(--good);
+  box-shadow: 0 0 14px rgba(61, 220, 132, 0.2), var(--edge-light);
+}
+
+.pm-option.mid.selected {
+  background: rgba(255, 184, 77, 0.15);
+  border-color: rgba(255, 184, 77, 0.55);
+  color: var(--warning);
+  box-shadow: 0 0 14px rgba(255, 184, 77, 0.2), var(--edge-light);
+}
+
+.pm-option.bad.selected {
+  background: var(--accent-soft);
+  border-color: rgba(255, 70, 85, 0.6);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(255, 70, 85, 0.25), var(--edge-light);
+}
+
+.pm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pm-actions.end {
+  justify-content: flex-end;
+}
+
+.pm-later {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.pm-later:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+.pm-submit {
+  min-width: 170px;
+}
+
+/* --- Bilan --------------------------------------------------------------- */
+.pm-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-bottom: 0.3rem;
+}
+
+.pm-verdict-num {
+  font-family: var(--font-hero);
+  font-size: 2.8rem;
+  line-height: 1;
+  color: var(--text);
+}
+
+.pm-verdict-num small {
+  font-size: 1.4rem;
+  color: var(--text-dim);
+}
+
+.pm-verdict-label {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pm-result {
+  margin-top: 0.7rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-alt);
+  box-shadow: var(--edge-light);
+  animation: card-rise-in 0.35s var(--ease-out) both;
+}
+
+.pm-result:nth-of-type(3) {
+  animation-delay: 0.06s;
+}
+
+.pm-result:nth-of-type(4) {
+  animation-delay: 0.12s;
+}
+
+.pm-result.correct {
+  border-left-color: var(--good);
+}
+
+.pm-result.close {
   border-left-color: var(--warning);
 }
 
-.postmortem-result.incorrect {
+.pm-result.incorrect {
   border-left-color: var(--accent);
 }
 
-.postmortem-result-title {
+.pm-result-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 600;
-  margin-bottom: 0.3rem;
+  color: var(--text-dim);
+}
+
+.pm-result-head span {
+  flex: 1;
+  color: var(--text);
+}
+
+.pm-result.correct .pm-result-state {
+  color: var(--good);
+}
+
+.pm-result.close .pm-result-state {
+  color: var(--warning);
+}
+
+.pm-result.incorrect .pm-result-state {
+  color: var(--accent);
+}
+
+.pm-compare {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+  margin: 0.7rem 0 0.55rem;
+}
+
+.pm-compare-arrow {
+  align-self: center;
+  color: var(--text-dim);
+}
+
+.pm-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-deep);
+  font-weight: 700;
+}
+
+.pm-pill small {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.pm-pill.good {
+  color: var(--good);
+  border-color: rgba(61, 220, 132, 0.4);
+}
+
+.pm-pill.mid {
+  color: var(--warning);
+  border-color: rgba(255, 184, 77, 0.4);
+}
+
+.pm-pill.bad {
+  color: var(--accent);
+  border-color: rgba(255, 70, 85, 0.4);
+}
+
+.pm-result-detail {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
 }
 
 .trophy-grid {
@@ -9965,19 +10448,6 @@ input[type='color'] {
 
 .account-toggle-hint {
   margin: -0.4rem 0 0.75rem;
-}
-
-.account-overlay-size-row {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin: 0.75rem 0;
-  font-size: 0.9rem;
-}
-
-.account-overlay-size-row input[type='range'] {
-  flex: 1;
-  max-width: 180px;
 }
 
 .switch {
@@ -12111,203 +12581,6 @@ input[type='color'] {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
-}
-
-/* =========================================================================
-   OVERLAY DE SESSION QUOTIDIENNE (fenêtre séparée, en haut à droite)
-   Deux lignes — un en-tête discret (pastille vivante + "SESSION"), puis 3
-   statistiques bien lisibles. Reste affichée toute la session, contrairement
-   aux autres overlays qui n'apparaissent que brièvement.
-   ========================================================================= */
-.overlay-daily {
-  margin: 10px;
-  padding: 0.6rem 0.9rem 0.7rem;
-  border-radius: var(--r-lg);
-  border: 1px solid var(--accent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--bg-deep) 88%), color-mix(in srgb, var(--bg-deep) 90%, transparent));
-  box-shadow: var(--elev-2);
-  backdrop-filter: blur(6px);
-  width: fit-content;
-}
-
-/* Mode déplacement (activé depuis Mon compte, jamais pendant une vraie
-   partie — voir setDailyOverlayDragMode dans main.js) : toute la carte
-   devient une zone de glisser-déposer native de la fenêtre, avec un liseré
-   qui indique clairement qu'elle est manipulable. */
-.overlay-daily-draggable {
-  -webkit-app-region: drag;
-  cursor: move;
-  border-color: #ffd166;
-  box-shadow: var(--elev-2), 0 0 0 2px color-mix(in srgb, #ffd166 40%, transparent);
-}
-
-.overlay-daily-drag-hint {
-  margin-left: auto;
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #ffd166;
-  text-transform: none;
-}
-
-.overlay-daily-head {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.45rem;
-}
-
-/* Même pulsation que le reste de l'app (agent-select-pulse) — cohérent avec
-   les autres indicateurs "en direct". */
-.overlay-daily-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: agent-select-pulse 1.6s ease-in-out infinite;
-  animation-play-state: var(--decor-anim-state, running);
-}
-
-.overlay-daily-label {
-  font-family: var(--font-display);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.overlay-daily-stats {
-  display: flex;
-  align-items: stretch;
-  gap: 0.9rem;
-}
-
-.overlay-daily-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  padding-right: 0.9rem;
-  border-right: 1px solid var(--border);
-}
-
-.overlay-daily-cell:last-child {
-  padding-right: 0;
-  border-right: none;
-}
-
-.overlay-daily-value {
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--text);
-}
-
-.overlay-daily-unit {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-dim);
-  margin-left: 0.05em;
-}
-
-.overlay-daily-wins {
-  color: #3ddc84;
-}
-
-.overlay-daily-losses {
-  color: #ff5c5c;
-}
-
-.overlay-daily-sep {
-  color: var(--text-dim);
-  font-weight: 500;
-  margin: 0 0.15em;
-}
-
-.overlay-daily-caption {
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-
-/* =========================================================================
-   RÉGLAGES DE L'OVERLAY DE SESSION (modale DANS l'app, voir
-   DailyOverlaySettings.jsx) — même base que .modal-card (SkinDetailModal),
-   juste plus étroite : pas besoin de la largeur pensée pour une bannière de
-   skin.
-   ========================================================================= */
-.daily-settings-card {
-  max-width: 460px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.daily-settings-preview {
-  width: 100%;
-  max-width: 320px;
-  margin: 0 auto 0.5rem;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  box-shadow: var(--elev-2);
-}
-
-.daily-settings-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-}
-
-.daily-settings-text {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-.daily-settings-modes {
-  margin-top: 0.4rem;
-  padding: 0.75rem;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  background: var(--surface-alt);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 220px;
-  overflow-y: auto;
-}
-
-.daily-settings-mode-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.88rem;
-  cursor: pointer;
-}
-
-.daily-settings-save {
-  margin-top: 0.5rem;
-  align-self: flex-start;
-  padding: 0.6rem 1.4rem;
-  border-radius: var(--r-md);
-  border: none;
-  background: var(--accent);
-  color: var(--bg-deep);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.daily-settings-save:hover {
-  filter: brightness(1.08);
 }
 
 /* =========================================================================
@@ -19110,3 +19383,431 @@ button.sidebar-section-label {
   inset: 0;
   background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 70%);
 }
+/* =========================================================================
+   OVERLAY DES RANGS DE LA PARTIE (voir MatchRanksOverlay.jsx)
+   Fenêtre transparente, clics ignorés, en haut à droite à la place de l'ancien
+   overlay de session. Deux panneaux en verre dépoli — l'équipe (vert), puis les
+   adversaires (rouge) — avec un liseré de la couleur de l'équipe. Seules
+   animations : l'entrée (une fois) et la barre de temps des adversaires,
+   toutes deux compositées. --team : couleur de l'équipe.
+   ========================================================================= */
+
+/* Fenêtre overlay : jamais de barre de défilement. Sans ça, la fenêtre
+   transparente affichait les barres de la page par-dessus le jeu dès que le
+   contenu dépassait de quelques pixels. */
+html:has(body.overlay-window),
+body.overlay-window,
+body.overlay-window #root {
+  overflow: hidden;
+}
+
+body.overlay-window::-webkit-scrollbar,
+html:has(body.overlay-window)::-webkit-scrollbar {
+  display: none;
+}
+
+.overlay-ranks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 10px;
+}
+
+.overlay-ranks-panel {
+  --team: var(--good);
+  position: relative;
+  padding: 0.55rem 0.6rem 0.4rem 0.8rem;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--team) 10%, transparent), transparent 55%),
+    rgba(9, 11, 16, 0.86);
+  box-shadow: var(--elev-2);
+  backdrop-filter: blur(10px);
+  animation: overlay-ranks-in 0.3s var(--ease-out) both;
+}
+
+.overlay-ranks-panel.enemy {
+  --team: var(--accent);
+  animation-delay: 0.06s;
+}
+
+/* Liseré de l'équipe sur le bord gauche */
+.overlay-ranks-panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--team);
+  box-shadow: 0 0 12px var(--team);
+}
+
+@keyframes overlay-ranks-in {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+.overlay-ranks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+
+.overlay-ranks-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--team);
+}
+
+.overlay-ranks-count {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+.overlay-ranks-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overlay-ranks-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.2rem 0.25rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  animation: overlay-ranks-in 0.25s var(--ease-out) both;
+  animation-delay: calc(0.1s + var(--i, 0) * 0.04s);
+}
+
+.overlay-ranks-row + .overlay-ranks-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.overlay-ranks-row.me {
+  background: color-mix(in srgb, var(--team) 14%, transparent);
+}
+
+.overlay-ranks-agent {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-alt);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.overlay-ranks-agent img {
+  width: 100%;
+  height: 100%;
+}
+
+.overlay-ranks-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.overlay-ranks-name small {
+  margin-left: 0.2rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.overlay-ranks-you {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--team) 25%, transparent);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.overlay-ranks-name.muted {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+.overlay-ranks-row.hidden-player {
+  opacity: 0.7;
+}
+
+.overlay-ranks-tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 96px;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.overlay-ranks-tier img {
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+
+.overlay-ranks-tier.unranked {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.overlay-ranks-tier.unranked img {
+  opacity: 0.45;
+}
+
+/* Barre de temps des adversaires : vidée par une animation de transform
+   (composée), pas par un setInterval qui re-rendrait le composant. */
+/* Suggestions d'agent : même panneau, teinte or, une ligne de raison sous le nom */
+.overlay-ranks-panel.suggest {
+  --team: var(--hue-gold);
+  animation-delay: 0.04s;
+}
+
+.overlay-ranks-row.suggestion {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+}
+
+.overlay-ranks-reason {
+  display: block;
+  margin: 0.05rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overlay-ranks-gap {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hue-gold) 20%, transparent);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hue-gold);
+  white-space: nowrap;
+}
+
+.overlay-ranks-timer {
+  height: 2px;
+  margin: 0.3rem 0 0.1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.overlay-ranks-timer span {
+  display: block;
+  height: 100%;
+  background: var(--team);
+  transform-origin: left;
+  animation: overlay-ranks-drain linear forwards;
+}
+
+@keyframes overlay-ranks-drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* =========================================================================
+   OVERLAY D'ACHAT DU PREMIER ROUND (voir BuyOverlay.jsx)
+   Fenêtre transparente, clics ignorés, en bas à gauche. Même matière que
+   l'overlay des rangs : verre dépoli, liseré d'accent à gauche, entrée animée
+   une fois, barre de temps composée.
+   ========================================================================= */
+.overlay-buy {
+  position: relative;
+  width: calc(100% - 20px);
+  margin: 10px;
+  padding: 0.65rem 0.7rem 0.55rem 0.9rem;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(90deg, rgba(255, 200, 87, 0.1), transparent 55%),
+    rgba(9, 11, 16, 0.86);
+  box-shadow: var(--elev-2);
+  backdrop-filter: blur(10px);
+  animation: overlay-ranks-in 0.3s var(--ease-out) both;
+}
+
+.overlay-buy::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--hue-gold);
+  box-shadow: 0 0 12px var(--hue-gold);
+}
+
+.overlay-buy-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.overlay-buy-agent {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-alt);
+}
+
+.overlay-buy-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.overlay-buy-label {
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hue-gold);
+}
+
+.overlay-buy-agent-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.overlay-buy-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 200, 87, 0.14);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--hue-gold);
+}
+
+.overlay-buy-list {
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overlay-buy-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.3rem 0.1rem;
+  animation: overlay-ranks-in 0.25s var(--ease-out) both;
+  animation-delay: calc(0.1s + var(--i, 0) * 0.05s);
+}
+
+.overlay-buy-item + .overlay-buy-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.overlay-buy-item-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+
+/* Les armes sont larges : on leur laisse la place de se lire */
+.overlay-buy-item-icon.weapon {
+  width: 64px;
+}
+
+.overlay-buy-item-kind {
+  width: 30px;
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.overlay-buy-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.overlay-buy-count {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.overlay-buy-note {
+  margin: 0.45rem 0 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.overlay-buy-timer {
+  height: 2px;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.overlay-buy-timer span {
+  display: block;
+  height: 100%;
+  background: var(--hue-gold);
+  transform-origin: left;
+  animation: overlay-ranks-drain linear forwards;
+}
+

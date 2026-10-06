@@ -54,7 +54,13 @@
       "confirmEveryone": "Envoyer ce message à TOUS les joueurs ?",
       "send": "Envoyer",
       "sending": "Envoi...",
-      "sent": "Message envoyé à : {{to}}"
+      "sent": "Message envoyé à : {{to}}",
+      "sentListTitle": "Messages envoyés",
+      "sentListEmpty": "Aucun message envoyé pour l'instant.",
+      "remove": "Retirer ce message",
+      "removeConfirm": "Retirer ce message de la boîte de notifications ? Il disparaît pour les joueurs concernés dès qu'ils rechargent l'app.",
+      "removeFailed": "Impossible de retirer ce message (droits insuffisants ?).",
+      "undo": "Annuler l'envoi"
     }
   },
   "tournaments": {
@@ -2869,6 +2875,10 @@
     "resultTitle": "Perception vs réalité",
     "resultHeading": "{{question}} — tu as répondu \"{{answer}}\"",
     "close": "Fermer",
+    "promptHint": "Réponds avant de voir tes vraies stats : 3 questions, 10 secondes.",
+    "summaryLabel": "ressentis justes sur ce match",
+    "yourFeeling": "Ton ressenti",
+    "reality": "Réalité",
     "questions": {
       "overall": "Tu penses avoir bien joué ce match ?",
       "duels": "Tu penses avoir gagné tes duels ?",
@@ -3007,7 +3017,7 @@
     "settingsTitle": "Réglages généraux",
     "settingsHint": "Connecté avec ton compte MVP Tracker — ton Riot ID lié reste indépendant de ce compte.",
     "settingsAccountTitle": "Compte lié",
-    "settingsOverlayTitle": "Overlay de session quotidienne",
+    "settingsOverlayTitle": "Overlays",
     "settingsAppTitle": "Application",
     "settingsSecurityTitle": "Sécurité et compte",
     "emailLabel": "Adresse mail",
@@ -3016,12 +3026,8 @@
     "riotIdMismatch": "Ce Riot ID appartient à un autre compte Valorant — pas au tien. Vérifie l'orthographe, ou contacte-nous si tu penses que c'est une erreur.",
     "apiKeyLabel": "Clé API HenrikDev",
     "apiKeyMissing": "Non renseignée",
-    "dailyOverlayLabel": "Overlay de session quotidienne",
-    "dailyOverlayHint": "Petite ligne en haut à droite pendant que Valorant tourne : victoires/défaites, % de headshots et K/D du jour, via HenrikDev (jamais l'API locale du client). Remise à zéro chaque jour.",
-    "dailyOverlaySettingsButton": "Choisir les modes exclus du score",
-    "dailyOverlaySizeLabel": "Taille de l'overlay",
-    "dailyOverlayMovingLabel": "Déplacer l'overlay",
-    "dailyOverlayMovingHint": "Active pour faire glisser l'overlay où tu veux à l'écran (hors partie), puis désactive pour verrouiller sa position. Toujours désactivé automatiquement dès qu'une partie démarre.",
+    "dailyOverlayLabel": "Session en direct sur le téléphone",
+    "dailyOverlayHint": "Envoie à l'app mobile tes victoires/défaites, ton % de headshots et ton K/D du jour pendant que Valorant tourne, via HenrikDev. Remise à zéro chaque jour.",
     "updateLabel": "Mises à jour",
     "updateHint": "Vérifie si une nouvelle version de MVP Tracker est disponible.",
     "updateCheck": "Chercher une mise à jour",
@@ -3038,6 +3044,8 @@
     "autoLaunchHint": "L'app se lance en arrière-plan à l'allumage du PC, réduite dans la barre système (icône près de l'horloge) — le ping et la détection de tilt continuent sans garder la fenêtre ouverte.",
     "tiltNotificationsLabel": "Notifications de tilt",
     "tiltNotificationsHint": "Une notification Windows s'affiche quand une série de défaites ou une baisse de perf est détectée pendant que tu joues. Désactive si tu préfères le voir seulement dans l'onglet Tilt.",
+    "matchRanksLabel": "Overlay des rangs de la partie",
+    "matchRanksHint": "Affiche le rang de tes coéquipiers pendant la sélection d'agent, puis celui des adversaires pendant 45 secondes une fois la partie lancée. Les joueurs en mode streamer ne sont jamais affichés.",
     "signOut": "Se déconnecter",
     "replayOnboarding": "Revoir le tutoriel",
     "forgotPassword": "Mot de passe oublié ?",
@@ -3076,15 +3084,19 @@
     "chooseFavoriteAgent": "Choisir ton agent fétiche",
     "perfLiteLabel": "Mode économique",
     "perfLiteHint": "Réduit les animations et les effets de flou pour alléger l'app sur un PC modeste. Activé automatiquement sur les PC peu puissants ; tu peux le changer ici.",
-    "dailyOverlayHotkeyLabel": "Raccourci pour masquer l'overlay",
-    "dailyOverlayHotkeyHint": "Appuie sur ce raccourci, même en pleine partie, pour cacher l'overlay de session, et à nouveau pour le remettre. Clique sur le bouton puis tape la combinaison voulue (Retour arrière pour désactiver, Échap pour annuler).",
     "dailyOverlayHotkeyPress": "Appuie sur les touches…",
     "dailyOverlayHotkeyNone": "Aucun",
     "dailyOverlayHotkeyReset": "Raccourci par défaut",
     "dailyOverlayHotkeyErrors": {
       "in_use": "Ce raccourci est déjà utilisé par une autre application. Choisis-en un autre.",
       "invalid": "Raccourci non valide : ajoute Ctrl, Alt ou Maj (une touche F seule est acceptée)."
-    }
+    },
+    "buyOverlayLabel": "Overlay d'achat du premier round",
+    "buyOverlayHint": "Affiche en bas à gauche l'achat conseillé pour ton agent pendant la phase d'achat du premier round (800 crédits), puis disparaît.",
+    "matchRanksHotkeyLabel": "Raccourci de l'overlay des rangs",
+    "matchRanksHotkeyHint": "Appuie sur ce raccourci, même en pleine partie, pour afficher l'overlay des rangs, et à nouveau pour le retirer. Une fois les 45 secondes des adversaires passées, il ne réaffiche que ton équipe. Clique sur le bouton puis tape la combinaison voulue (Retour arrière pour désactiver, Échap pour annuler).",
+    "buyOverlayHotkeyLabel": "Raccourci de l'overlay d'achat",
+    "buyOverlayHotkeyHint": "Appuie sur ce raccourci, même en pleine partie, pour afficher l'achat conseillé pour ton agent, et à nouveau pour le retirer. Clique sur le bouton puis tape la combinaison voulue (Retour arrière pour désactiver, Échap pour annuler)."
   },
   "heatmap": {
     "title": "Heatmap",
@@ -3223,21 +3235,16 @@
       "verylong": "Très longue (35m+)"
     }
   },
-  "dailyOverlay": {
-    "title": "Session",
-    "winShort": "V",
-    "lossShort": "D",
-    "hsShort": "HS",
-    "kdShort": "K/D",
-    "dragHint": "Glisse-moi"
-  },
-  "dailyOverlaySettings": {
-    "title": "Overlay de session",
-    "close": "Fermer",
-    "intro": "Cette petite fenêtre s'affiche en haut à droite pendant que Valorant tourne : tes victoires/défaites, ton % de headshots et ton K/D du jour, recalculés toutes les 5 minutes.",
-    "autoExcludeNote": "Les modes sans vraie victoire/défaite (Deathmatch, Escalade, parties perso...) sont toujours exclus automatiquement. Coche ici d'autres modes à exclure aussi, par exemple Spike Rush.",
-    "noModesYet": "Tes modes de jeu apparaîtront ici après ta première partie — tu pourras revenir modifier ce réglage depuis Mon compte à tout moment.",
-    "save": "Enregistrer"
+  "matchRanksOverlay": {
+    "allies": "Ton équipe",
+    "enemies": "Adversaires",
+    "hiddenPlayer": "Joueur masqué",
+    "unranked": "Sans rang",
+    "you": "Toi",
+    "suggestTitle": "Suggestions d'agent",
+    "suggestPersonal": "{{winrate}} % de victoires ici · {{games}} parties",
+    "suggestCommunity": "Recommandé sur cette map",
+    "suggestGap": "Rôle manquant"
   },
   "onboarding": {
     "welcomeTitle": "Bienvenue sur MVP Tracker !",
@@ -3526,5 +3533,17 @@
     "copy": "Copier l'image",
     "copied": "Image copiée",
     "error": "Impossible de créer l'image. Réessaie dans un instant."
+  },
+  "buyOverlay": {
+    "title": "Achat du premier round",
+    "weapon": "Arme",
+    "shield": "Bouclier",
+    "lightShield": "Bouclier léger",
+    "keepClassic": "Garde le Classic",
+    "ability": "Capacité",
+    "notes": {
+      "astraStars": "Place tes étoiles selon la map — tu choisis lesquelles.",
+      "chamberBullets": "Pas de Ghost : mets le reste du budget en balles de Chasseur de têtes."
+    }
   }
 }

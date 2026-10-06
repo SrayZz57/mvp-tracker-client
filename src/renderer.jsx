@@ -27,7 +27,8 @@ import { E2EEProvider } from './renderer/E2EEContext.jsx';
 // principale, même quand l'utilisateur ne les ouvre jamais dans la session.
 const App = lazy(() => import('./renderer/App.jsx'));
 const AimTrainerHub = lazy(() => import('./renderer/AimTrainerHub.jsx'));
-const DailyOverlay = lazy(() => import('./renderer/DailyOverlay.jsx'));
+const MatchRanksOverlay = lazy(() => import('./renderer/MatchRanksOverlay.jsx'));
+const BuyOverlay = lazy(() => import('./renderer/BuyOverlay.jsx'));
 
 applyPerfLite();
 
@@ -92,10 +93,17 @@ function Root() {
       </Suspense>
     );
   }
-  if (view === 'daily-overlay') {
+  if (view === 'buy-overlay') {
     return (
       <Suspense fallback={null}>
-        <DailyOverlay />
+        <BuyOverlay />
+      </Suspense>
+    );
+  }
+  if (view === 'match-ranks-overlay') {
+    return (
+      <Suspense fallback={null}>
+        <MatchRanksOverlay />
       </Suspense>
     );
   }

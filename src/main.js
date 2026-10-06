@@ -45,6 +45,8 @@ import {
 } from './services/db.js';
 import { isValorantRunning, pingOnce, isValorantGameRunning } from './services/network.js';
 import { syncMatches } from './services/matchSync.js';
+import { getLiveMatch, getSessionState, startLoadWatch, findMatchLoaded, getAgentCatalog, getMapName, resetLocalSession } from './services/valorantLocal.js';
+import { suggestAgents } from './renderer/agentSuggestion.js';
 import { getCachedMatchesAsync } from './services/matchesReader.js';
 import { updateElectronApp } from 'update-electron-app';
 import { captureEvent, captureException, shutdown as shutdownTelemetry } from './services/telemetry.js';
@@ -1386,204 +1388,13 @@ setInterval(() => {
   if (dailyOverlayLastRunning) checkTiltAndNotify();
 }, 120000);
 
-// --- Overlay de session quotidienne (victoires/défaites, HS%, K/D) --------
-// Alimenté uniquement par HenrikDev (jamais l'API locale du client, retirée
-// en 1.10.6) — aucune capture d'écran ni OCR nécessaire ici (contrairement à
-// l'ancien overlay d'achat auto, mis de côté et retiré du code pour être
-// repris plus tard proprement). Fenêtre transparente, sans bordure,
-// click-through par défaut, ne fonctionne qu'en Sans bordure/Fenêtré.
-let dailyOverlayWindow = null;
-let dailyOverlayTopmostInterval = null;
+// --- Stats de la session du jour (envoyées à l'app mobile) ------------------
+// La fenêtre « overlay de session » a été supprimée : sa place est prise par
+// l'overlay des rangs de la partie (voir plus bas). Le calcul des stats du jour
+// reste ici parce qu'il alimente toujours le téléphone (table live_session,
+// voir App.jsx), derrière le même réglage (dailyOverlayEnabled). Alimenté
+// uniquement par HenrikDev, jamais par l'API locale du client.
 const dailyOverlayState = { dayKey: null };
-
-// Taille de base (100%) — voir dailyOverlayDimensions(), réglable depuis Mon
-// compte (dailyOverlaySize, store, en %).
-const DAILY_OVERLAY_BASE_WIDTH = 380;
-const DAILY_OVERLAY_BASE_HEIGHT = 110;
-
-function dailyOverlayDimensions() {
-  const percent = store.get('dailyOverlaySize') ?? 100;
-  return {
-    width: Math.round((DAILY_OVERLAY_BASE_WIDTH * percent) / 100),
-    height: Math.round((DAILY_OVERLAY_BASE_HEIGHT * percent) / 100),
-  };
-}
-
-function dailyOverlayDefaultPosition(width, height) {
-  // En haut à droite par défaut : loin du centre de l'écran où se concentre
-  // l'action, et de la minimap (généralement en bas) et de la boutique
-  // (haut-gauche). Écrasé par une position sauvegardée si l'utilisateur a
-  // déjà déplacé la fenêtre (voir dailyOverlayPosition, store).
-  const display = screen.getPrimaryDisplay().workArea;
-  return { x: display.x + display.width - width - 16, y: display.y + 16 };
-}
-
-// Mode "déplacement" : la fenêtre devient temporairement interactive et
-// glissable (voir setDailyOverlayDragMode) pour permettre à l'utilisateur de
-// la repositionner depuis Mon compte — jamais pendant une vraie partie (voir
-// le garde-fou dans la boucle de détection plus bas). `focusable: false` par
-// défaut est le vrai correctif du souci de blocage caméra remonté par des
-// utilisateurs : une fenêtre non-focusable, même toujours au premier plan,
-// ne peut jamais voler le focus clavier/souris au jeu — seule
-// setIgnoreMouseEvents ne suffisait apparemment pas.
-let dailyOverlayDragMode = false;
-
-function createDailyOverlay() {
-  const { width, height } = dailyOverlayDimensions();
-
-  dailyOverlayWindow = new BrowserWindow({
-    width,
-    height,
-    show: false,
-    frame: false,
-    transparent: true,
-    hasShadow: false,
-    resizable: false,
-    focusable: dailyOverlayDragMode,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
-
-  // 'screen-saver' : seul niveau confirmé s'afficher réellement par-dessus
-  // Valorant en test (l'ancien overlay d'achat, avant qu'on passe à
-  // 'floating' pour la perf — jamais revérifié visuellement après ce
-  // changement). Priorité à la visibilité d'abord, on reviendra sur un
-  // niveau plus léger une fois confirmé que ça s'affiche.
-  dailyOverlayWindow.setAlwaysOnTop(true, 'screen-saver');
-  if (dailyOverlayDragMode) {
-    dailyOverlayWindow.setIgnoreMouseEvents(false);
-  } else {
-    dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
-  }
-
-  const saved = store.get('dailyOverlayPosition');
-  const pos = saved ?? dailyOverlayDefaultPosition(width, height);
-  dailyOverlayWindow.setPosition(pos.x, pos.y);
-
-  // Ne persiste la position que pendant un déplacement volontaire — un
-  // setPosition() programmatique (ci-dessus, ou un futur redimensionnement)
-  // ne doit jamais être interprété comme "l'utilisateur a bougé la fenêtre".
-  dailyOverlayWindow.on('moved', () => {
-    if (!dailyOverlayDragMode || !dailyOverlayWindow) return;
-    const [x, y] = dailyOverlayWindow.getPosition();
-    store.set('dailyOverlayPosition', { x, y });
-  });
-
-  const query = 'view=daily-overlay';
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    dailyOverlayWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
-  } else {
-    dailyOverlayWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {
-      search: query,
-    });
-  }
-
-  dailyOverlayWindow.webContents.on('console-message', (_e, _level, message) => {
-    console.log('[daily-overlay]', message);
-  });
-  dailyOverlayWindow.webContents.on('did-fail-load', (_e, code, description) => {
-    console.error(`[daily-overlay] échec de chargement de la page (${code} ${description})`);
-  });
-  dailyOverlayWindow.webContents.on('render-process-gone', (_e, details) => {
-    console.error('[daily-overlay] process de rendu arrêté :', details.reason);
-  });
-
-  dailyOverlayWindow.showInactive();
-  if (dailyOverlayUserHidden) dailyOverlayWindow.hide();
-  if (!dailyOverlayTopmostInterval) {
-    dailyOverlayTopmostInterval = setInterval(() => {
-      try {
-        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed() && !dailyOverlayUserHidden) {
-          dailyOverlayWindow.moveTop();
-        }
-      } catch {
-        clearInterval(dailyOverlayTopmostInterval);
-        dailyOverlayTopmostInterval = null;
-      }
-    }, 3000);
-  }
-}
-
-function closeDailyOverlay() {
-  clearInterval(dailyOverlayTopmostInterval);
-  dailyOverlayTopmostInterval = null;
-  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
-    try {
-      dailyOverlayWindow.close();
-    } catch {
-      // déjà détruite entre le check et l'appel — rien à faire de plus.
-    }
-  }
-  dailyOverlayWindow = null;
-}
-
-// Aperçu figé envoyé quand on active le mode déplacement hors partie (aucune
-// vraie stat disponible à ce moment-là) — juste de quoi voir la fenêtre pour
-// la faire glisser, jamais persisté nulle part.
-const DAILY_OVERLAY_PREVIEW_STATS = { dayKey: 'preview', matchesPlayed: 1, wins: 3, losses: 1, kd: 1.24, hsPercent: 53 };
-
-// Dernières vraies stats calculées — la fenêtre overlay les redemande elle-même
-// une fois montée (voir daily-overlay:get-stats). Envoyer uniquement au
-// 'did-finish-load' ne suffit plus : DailyOverlay est chargé en React.lazy
-// (renderer.jsx), son composant et son écouteur IPC n'existent donc qu'APRÈS
-// ce signal — le message partait dans le vide et l'overlay restait invisible
-// (impossible à déplacer hors partie, et absent en jeu jusqu'au refresh suivant).
-let dailyOverlayLatestStats = null;
-
-ipcMain.handle('daily-overlay:get-stats', () =>
-  dailyOverlayLatestStats ?? (dailyOverlayDragMode ? DAILY_OVERLAY_PREVIEW_STATS : null),
-);
-
-// Active/désactive le mode déplacement — voir le commentaire sur
-// dailyOverlayDragMode plus haut. Toujours forcé à `false` dès qu'une vraie
-// partie démarre (voir la boucle de détection plus bas) : ne doit jamais
-// rester interactif pendant que l'utilisateur joue.
-function setDailyOverlayDragMode(enabled) {
-  dailyOverlayDragMode = enabled;
-  console.log(`[daily-overlay] mode déplacement ${enabled ? 'activé' : 'désactivé'} (jeu détecté : ${dailyOverlayLastRunning})`);
-
-  if (enabled) {
-    const needsPreview = !dailyOverlayWindow || dailyOverlayWindow.isDestroyed();
-    if (needsPreview) createDailyOverlay();
-    dailyOverlayWindow.setFocusable(true);
-    dailyOverlayWindow.setIgnoreMouseEvents(false);
-    dailyOverlayWindow.webContents.send('daily-overlay:drag-mode', true);
-    if (needsPreview) {
-      dailyOverlayWindow.webContents.once('did-finish-load', () => {
-        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
-          dailyOverlayWindow.webContents.send('daily-overlay:stats', DAILY_OVERLAY_PREVIEW_STATS);
-        }
-      });
-    }
-    return;
-  }
-
-  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
-    dailyOverlayWindow.setFocusable(false);
-    dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
-    dailyOverlayWindow.webContents.send('daily-overlay:drag-mode', false);
-    // Hors partie, pas de raison de laisser tourner une fenêtre juste
-    // affichée pour le repositionnement.
-    if (!dailyOverlayLastRunning) closeDailyOverlay();
-  }
-}
-
-ipcMain.handle('daily-overlay:get-drag-mode', () => dailyOverlayDragMode);
-ipcMain.handle('daily-overlay:set-drag-mode', (_event, enabled) => setDailyOverlayDragMode(enabled));
-
-ipcMain.handle('daily-overlay:get-size', () => store.get('dailyOverlaySize') ?? 100);
-ipcMain.handle('daily-overlay:set-size', (_event, percent) => {
-  store.set('dailyOverlaySize', percent);
-  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
-    const { width, height } = dailyOverlayDimensions();
-    dailyOverlayWindow.setSize(width, height);
-    dailyOverlayWindow.webContents.send('daily-overlay:size', percent);
-  }
-});
 
 ipcMain.handle('tilt-notifications:get-enabled', () => store.get('tiltNotificationsEnabled') ?? true);
 ipcMain.handle('tilt-notifications:set-enabled', (_event, enabled) => store.set('tiltNotificationsEnabled', enabled));
@@ -1592,18 +1403,16 @@ ipcMain.handle('daily-overlay:get-enabled', () => store.get('dailyOverlayEnabled
 
 ipcMain.handle('daily-overlay:set-enabled', (_event, enabled) => {
   store.set('dailyOverlayEnabled', enabled);
-  if (!enabled) closeDailyOverlay();
-  // Réactivé pendant que le jeu tourne : la fenêtre n'est sinon créée qu'au
-  // prochain lancement du jeu (transition fermé→lancé), donc rien n'apparaissait
-  // tant qu'on n'ouvrait pas le mode déplacement (qui, lui, crée la fenêtre).
-  else if (dailyOverlayLastRunning) refreshDailyOverlay();
+  // Réactivé pendant que le jeu tourne : le calcul ne repartirait sinon qu'au
+  // prochain lancement du jeu (transition fermé→lancé).
+  if (enabled && dailyOverlayLastRunning) refreshDailyOverlay();
 });
 
 // Modes à exclure du score du jour, en plus des modes sans vraie
 // victoire/défaite déjà exclus automatiquement (voir dailyStats.js/
-// computeDailyStats). Réglable via une modale DANS l'app principale (voir
-// DailyOverlaySettings.jsx, App.jsx) — pas de fenêtre séparée côté main.js,
-// juste ces deux handlers pour lire/écrire le choix dans electron-store.
+// computeDailyStats). La modale qui permettait de le régler a été supprimée
+// avec l'overlay de session : le dernier choix enregistré reste appliqué aux
+// stats envoyées au téléphone, ces deux handlers restent pour le lire/l'écrire.
 ipcMain.handle('daily-overlay:get-excluded-modes', () => store.get('dailyOverlayExcludedModes') ?? []);
 
 ipcMain.handle('daily-overlay:set-excluded-modes', (_event, modeIds) => {
@@ -1628,7 +1437,6 @@ async function pushDailyOverlayStats(puuid, settings) {
     const stats = computeDailyStats(allMatches, settings.name, settings.tag, dailyOverlayState.dayKey, excludedModes);
     const t2 = Date.now();
     console.log('[daily-overlay] stats calculées', stats);
-    dailyOverlayLatestStats = stats;
     // Le process principal n'a pas la session Supabase (elle vit dans le
     // renderer) : on lui passe les stats pour qu'il les publie vers le téléphone.
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1636,23 +1444,6 @@ async function pushDailyOverlayStats(puuid, settings) {
     }
     console.log(`[daily-overlay] timing: getCachedMatches=${t1 - t0}ms compute=${t2 - t1}ms TOTAL=${t2 - t0}ms`);
 
-    if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) {
-      console.log('[daily-overlay] création de la fenêtre');
-      createDailyOverlay();
-      // loadURL/loadFile est asynchrone : envoyer tout de suite risquait de
-      // perdre le message si la page (et son écouteur IPC) n'avait pas fini
-      // de charger — le tout premier envoi partait dans le vide (constaté
-      // en test le 2026-09-16 : "stats envoyées" loggé AVANT même la
-      // connexion vite de la fenêtre). On attend que la page soit prête.
-      dailyOverlayWindow.webContents.once('did-finish-load', () => {
-        if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) return;
-        dailyOverlayWindow.webContents.send('daily-overlay:stats', stats);
-        console.log('[daily-overlay] stats envoyées à la fenêtre (après chargement)');
-      });
-    } else {
-      dailyOverlayWindow.webContents.send('daily-overlay:stats', stats);
-      console.log('[daily-overlay] stats envoyées à la fenêtre');
-    }
   } catch (err) {
     console.error('[daily-overlay] échec de mise à jour des stats', err);
   }
@@ -1689,6 +1480,645 @@ async function refreshDailyOverlay() {
   }
 }
 
+// --- Overlay des rangs de la partie (OPT-IN, API locale du client Riot) ------
+// Rangs des coéquipiers dès la sélection d'agent, puis ceux des adversaires
+// pendant 45 s une fois la sélection passée. Désactivé par défaut : il repose
+// sur l'API non officielle du client (voir services/valorantLocal.js) et la
+// politique Riot restreint l'affichage de données de joueurs en direct. Le
+// joueur l'active lui-même dans les réglages.
+//
+// Performance, par construction :
+//   - ne tourne QUE si l'option est active ET que le process du jeu tourne
+//     (même signal que l'overlay de session, voir le setInterval plus bas) ;
+//   - boucle de setTimeout (jamais deux polls en même temps) ;
+//   - la fenêtre est PRÉCHARGÉE (cachée, aucune animation, ~0 % CPU) tant que le
+//     jeu tourne, puis détruite à sa fermeture : la créer au dernier moment
+//     (chargement de tout le renderer) retardait l'affichage de plusieurs
+//     secondes au début de la sélection d'agent. Coût : de la mémoire, pas de CPU ;
+//   - un seul envoi IPC par changement réel de contenu.
+//
+// Cadence de vérification (une petite requête glz à chaque fois) :
+//   file d'attente / menus   2 s    — pour voir la sélection dès qu'elle commence
+//   sélection en cours       1 s
+//   tous verrouillés         0,5 s  — la fin de sélection (= adversaires) est proche
+//   adversaires affichés     2 s
+//   overlay terminé          12 s   — il ne reste qu'à détecter la fin du match
+const MATCH_RANKS_POLL_MS = 2000;
+// Encore plus fin pendant la sélection : c'est là qu'on attend la bascule vers la
+// partie (la sélection dure ~90 s, soit ~90 petites requêtes, une par seconde).
+const MATCH_RANKS_SELECT_POLL_MS = 1000;
+const MATCH_RANKS_LOCKED_POLL_MS = 500;
+const MATCH_RANKS_IDLE_POLL_MS = 2000;
+const MATCH_RANKS_SLOW_POLL_MS = 12000;
+const MATCH_RANKS_ENEMY_VISIBLE_MS = 45000;
+const MATCH_RANKS_WIDTH = 320;
+const MATCH_RANKS_HEIGHT = 640;
+
+const matchRanks = {
+  window: null,
+  timer: null,
+  polling: false,
+  matchId: null,
+  // Instant où l'on a vu la partie démarrer (fin de la sélection d'agent) : les
+  // 45 s des adversaires se comptent à partir de là.
+  gameStartedAt: null,
+  // Overlay déjà terminé pour ce match : on ne le rouvre pas, on attend le suivant.
+  finished: false,
+  lastPayloadJson: null,
+  latestPayload: null,
+  // Dernier contenu affiché pour ce match, conservé après la fin automatique des 45 s :
+  // le raccourci clavier peut le réafficher.
+  lastPayload: null,
+  lastLoggedState: null,
+  lastSummary: null,
+  lastPhase: null,
+  // Suggestions d'agent (sélection seulement) : calculées en tâche de fond, reprises
+  // au poll suivant. La clé évite de recalculer tant que rien n'a changé.
+  suggestions: [],
+  suggestionsKey: null,
+  suggestionsPending: false,
+  // Masqué par le raccourci clavier de cet overlay (voir toggleMatchRanksOverlay),
+  // remis à zéro à chaque match.
+  userHidden: false,
+};
+
+function matchRanksEnabled() {
+  return store.get('matchRanksOverlayEnabled') === true;
+}
+
+// À la place de l'ancien overlay de session : toujours en haut à droite de
+// l'écran principal, loin du centre où se concentre l'action. On ne reprend PAS
+// l'ancienne position déplacée à la main (dailyOverlayPosition) : cette fenêtre
+// n'a pas de mode déplacement, un ancien placement ne pourrait plus se corriger.
+function matchRanksPosition() {
+  const area = screen.getPrimaryDisplay().workArea;
+  return { x: area.x + area.width - MATCH_RANKS_WIDTH - 16, y: area.y + 16 };
+}
+
+function createMatchRanksOverlay() {
+  const position = matchRanksPosition();
+  const win = new BrowserWindow({
+    width: MATCH_RANKS_WIDTH,
+    height: MATCH_RANKS_HEIGHT,
+    x: position.x,
+    y: position.y,
+    show: false,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    // Non focusable + clics ignorés : cette fenêtre ne doit JAMAIS voler le
+    // focus ni la souris au jeu (même leçon que l'overlay de session).
+    focusable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+  });
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setIgnoreMouseEvents(true, { forward: true });
+
+  const query = 'view=match-ranks-overlay';
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
+  } else {
+    win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), { search: query });
+  }
+  win.webContents.on('did-fail-load', (_e, code, description) => {
+    console.error(`[match-ranks] échec de chargement de la page (${code} ${description})`);
+  });
+  win.on('closed', () => {
+    if (matchRanks.window === win) matchRanks.window = null;
+  });
+
+  // Créée CACHÉE : elle est montrée quand il y a quelque chose à afficher.
+  matchRanks.window = win;
+  return win;
+}
+
+// Précharge la fenêtre (cachée) pour qu'elle soit prête à la première sélection.
+function ensureMatchRanksWindow() {
+  if (!matchRanks.window || matchRanks.window.isDestroyed()) createMatchRanksOverlay();
+  return matchRanks.window;
+}
+
+function showMatchRanksOverlay() {
+  const win = matchRanks.window;
+  if (!win || win.isDestroyed() || matchRanks.userHidden) return;
+  if (!win.isVisible()) win.showInactive();
+  win.moveTop();
+}
+
+// Fin d'affichage pour ce match : la fenêtre est cachée et vidée, PAS détruite
+// (elle resservira à la prochaine sélection sans rechargement).
+function closeMatchRanksOverlay() {
+  matchRanks.lastPayloadJson = null;
+  matchRanks.latestPayload = null;
+  const win = matchRanks.window;
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('match-ranks-overlay:data', null);
+  win.hide();
+}
+
+// Jeu fermé ou option coupée : là, on libère vraiment la fenêtre.
+function destroyMatchRanksOverlay() {
+  const win = matchRanks.window;
+  matchRanks.window = null;
+  matchRanks.lastPayloadJson = null;
+  matchRanks.latestPayload = null;
+  matchRanks.lastPayload = null;
+  if (win && !win.isDestroyed()) {
+    try {
+      win.close();
+    } catch {
+      // déjà détruite entre le check et l'appel.
+    }
+  }
+}
+
+// Suggestions d'agent : ton winrate PERSONNEL sur cette map (si assez de parties) sinon
+// l'avis communautaire agent/map, avec un bonus pour le rôle qu'aucun coéquipier ne
+// couvre (voir agentSuggestion.js). Ne regarde que les agents déjà choisis par
+// l'équipe : jamais d'information sur les adversaires. Le calcul lit l'historique en
+// base, donc il se fait en tâche de fond ; le poll suivant (≤ 1 s) affiche le résultat.
+async function computeAgentSuggestions(live) {
+  const me = live.players.find((p) => p.isMe);
+  const settings = store.get('valorantSettings');
+  const [mapName, catalog] = await Promise.all([getMapName(live.mapId), getAgentCatalog()]);
+  if (!mapName || !catalog) return [];
+
+  // Les stats perso ne valent que si le compte connecté au jeu est le compte lié :
+  // sinon on retombe sur l'avis communautaire (matchs vides) plutôt que d'afficher
+  // le winrate d'un autre compte.
+  const linked = currentPuuid();
+  const samePlayer = !!settings?.name && (!linked || me?.puuid === linked);
+  let matches = [];
+  if (samePlayer) {
+    matches = excludeDeathmatch(patchSelfIdentity(await getCachedMatchesAsync(linked ?? me.puuid, 300), linked ?? me.puuid, settings.name, settings.tag));
+  }
+
+  const teammateAgentNames = live.players
+    .filter((p) => p.team === 'ally' && !p.isMe && p.agentId)
+    .map((p) => catalog.nameById.get(p.agentId.toLowerCase()));
+
+  return suggestAgents({
+    matches,
+    name: settings?.name ?? '',
+    tag: settings?.tag ?? '',
+    mapName,
+    teammateAgentNames,
+    agentRoles: catalog.roles,
+    max: 3,
+  });
+}
+
+function refreshAgentSuggestions(live) {
+  const me = live.players.find((p) => p.isMe);
+  // Hors sélection, ou agent déjà verrouillé : plus rien à suggérer.
+  if (live.phase !== 'select' || !me || me.selectionState === 'locked' || !live.mapId) {
+    matchRanks.suggestions = [];
+    matchRanks.suggestionsKey = null;
+    return;
+  }
+  const key = [live.matchId, live.mapId, ...live.players.filter((p) => p.team === 'ally' && !p.isMe).map((p) => p.agentId ?? '-')].join('|');
+  if (key === matchRanks.suggestionsKey || matchRanks.suggestionsPending) return;
+  matchRanks.suggestionsKey = key;
+  matchRanks.suggestionsPending = true;
+  computeAgentSuggestions(live)
+    .then((list) => {
+      matchRanks.suggestions = list;
+      // Une ligne par recalcul (jamais de pseudo) : « 0 » veut dire map sans données
+      // ou catalogue injoignable, pas un bug d'affichage.
+      console.log(`[match-ranks] suggestions d'agent : ${list.length}${list.length ? ` (${list.map((s) => `${s.agent}/${s.source}`).join(', ')})` : ''}`);
+    })
+    .catch((err) => {
+      console.error('[match-ranks] suggestions d\'agent échouées :', err.message);
+      matchRanks.suggestions = [];
+    })
+    .finally(() => {
+      matchRanks.suggestionsPending = false;
+    });
+}
+
+// Ce qui part vers la fenêtre : jamais de puuid, et jamais de pseudo ni de rang
+// pour un joueur masqué (mode streamer) — déjà neutralisés dans valorantLocal.js,
+// re-vérifiés ici parce que c'est la dernière frontière avant l'affichage.
+function matchRanksPayload(live, showEnemies) {
+  const toRow = (p) => ({
+    isMe: p.isMe,
+    hidden: p.hidden,
+    name: p.hidden ? null : p.name,
+    tag: p.hidden ? null : p.tag,
+    agentId: p.agentId,
+    tier: p.hidden ? null : p.tier,
+  });
+  const allies = live.players.filter((p) => p.team === 'ally').map(toRow);
+  const enemies = showEnemies ? live.players.filter((p) => p.team === 'enemy').map(toRow) : [];
+  return {
+    phase: live.phase,
+    allies,
+    enemies,
+    // Seulement pendant le choix : une fois verrouillé, ou la sélection terminée, plus de conseil.
+    suggestions: live.phase === 'select' && !showEnemies ? matchRanks.suggestions : [],
+    enemiesEndsAt: showEnemies && matchRanks.gameStartedAt ? matchRanks.gameStartedAt + MATCH_RANKS_ENEMY_VISIBLE_MS : null,
+  };
+}
+
+function pushMatchRanksPayload(payload) {
+  const json = JSON.stringify(payload);
+  if (json === matchRanks.lastPayloadJson && matchRanks.window && !matchRanks.window.isDestroyed()) return;
+  matchRanks.lastPayloadJson = json;
+  matchRanks.latestPayload = payload;
+  matchRanks.lastPayload = payload;
+  ensureMatchRanksWindow();
+  // Montrée AVANT l'envoi : une fenêtre cachée ne peint pas, le contenu n'apparaîtrait
+  // qu'au prochain affichage. Elle est vide jusque-là, donc rien n'est visible.
+  showMatchRanksOverlay();
+  matchRanks.window.webContents.send('match-ranks-overlay:data', payload);
+}
+
+// Retourne le délai avant le prochain poll.
+function handleLiveMatch(live) {
+  if (live.matchId !== matchRanks.matchId) {
+    // Passage sélection → partie du MÊME match : même si Riot changeait d'id entre
+    // pregame et core-game, ce n'est pas un nouveau match (sinon les adversaires
+    // réapparaîtraient pour 45 s de plus).
+    const sameMatchNextPhase = live.phase === 'game' && matchRanks.lastPhase === 'select';
+    matchRanks.matchId = live.matchId;
+    if (!sameMatchNextPhase) {
+      matchRanks.gameStartedAt = null;
+      matchRanks.finished = false;
+      matchRanks.lastPayloadJson = null;
+      matchRanks.lastPayload = null;
+      matchRanks.userHidden = false;
+    }
+  }
+  matchRanks.lastPhase = live.phase;
+  refreshAgentSuggestions(live);
+  if (matchRanks.finished) return MATCH_RANKS_SLOW_POLL_MS;
+
+  // Pas d'équipes (Combat à mort...) : chacun est sa propre équipe (1 allié =
+  // soi, tous les autres « adversaires »), un overlay alliés / adversaires n'a
+  // aucun sens. On ne filtre QUE ce cas : une partie perso à un seul joueur
+  // (1 allié, 0 adversaire) doit s'afficher, c'est aussi comme ça qu'on teste.
+  const allyCount = live.players.filter((p) => p.team === 'ally').length;
+  const enemyCount = live.players.filter((p) => p.team === 'enemy').length;
+  if (allyCount < 2 && enemyCount > 1) {
+    matchRanks.finished = true;
+    closeMatchRanksOverlay();
+    return MATCH_RANKS_SLOW_POLL_MS;
+  }
+
+  // Les adversaires apparaissent dans les données dès que la sélection est
+  // TERMINÉE (voir valorantLocal.js : dans pregame, ~5 s avant la partie) : c'est
+  // ce moment-là, pas la phase « game », qui lance les 45 s.
+  const enemiesAvailable = enemyCount > 0;
+  if (enemiesAvailable) {
+    if (!matchRanks.gameStartedAt) matchRanks.gameStartedAt = Date.now();
+    if (Date.now() - matchRanks.gameStartedAt >= MATCH_RANKS_ENEMY_VISIBLE_MS) {
+      matchRanks.finished = true;
+      closeMatchRanksOverlay();
+      return MATCH_RANKS_SLOW_POLL_MS;
+    }
+  }
+
+  // Une ligne de diagnostic quand le contenu change (jamais de pseudo ni de
+  // puuid) : permet de voir d'où vient un « sans rang » ou un adversaire absent.
+  const side = (team) => live.players.filter((p) => p.team === team);
+  const summary = ['ally', 'enemy']
+    .map((team) => `${team === 'ally' ? 'alliés' : 'adversaires'} ${side(team).length} (rang ${side(team).filter((p) => p.tier > 0).length}, masqués ${side(team).filter((p) => p.hidden).length})`)
+    .join(' · ');
+  if (`${live.phase} ${live.mode} ${summary}` !== matchRanks.lastSummary) {
+    matchRanks.lastSummary = `${live.phase} ${live.mode} ${summary}`;
+    console.log(`[match-ranks] ${live.phase}, file ${live.mode ?? '?'} : ${summary}`);
+  }
+
+  pushMatchRanksPayload(matchRanksPayload(live, enemiesAvailable));
+  // Vérification fine tant qu'on attend les adversaires (sélection en cours),
+  // encore plus fine une fois tout le monde verrouillé.
+  if (live.phase === 'select' && !enemiesAvailable) {
+    return live.allLocked ? MATCH_RANKS_LOCKED_POLL_MS : MATCH_RANKS_SELECT_POLL_MS;
+  }
+  return MATCH_RANKS_POLL_MS;
+}
+
+// --- Overlay d'achat du premier round (OPT-IN, même API locale) --------------
+// Propose l'achat du round pistolet pour l'agent du joueur, en bas à gauche
+// (tableau curé : pistolRoundBuys.js). L'agent vient de la même lecture que
+// l'overlay des rangs ; le DÉBUT du round 1 vient du journal du jeu : la ligne
+// « [Match Load Times] » écrite à la fin de l'écran de chargement (voir
+// findMatchLoaded). La présence « INGAME » ne convient pas : elle démarre dès le
+// chargement, ~13 s trop tôt (mesuré). Ça évite la capture d'écran + OCR de
+// l'ancienne version (jimp, tesseract, 3 Mo de données, jugée peu fiable).
+//
+// Même réserve que l'overlay des rangs : API non officielle, et la politique
+// Riot interdit les overlays qui donnent en direct des données qui changent le
+// comportement du joueur. Désactivé par défaut, activé par le joueur dans les réglages.
+//
+// La fenêtre est créée (cachée) dès la sélection d'agent : son chargement prend
+// plusieurs secondes et se fait pendant que le joueur choisit son agent.
+const BUY_OVERLAY_VISIBLE_MS = 45000;
+const BUY_OVERLAY_WIDTH = 340;
+const BUY_OVERLAY_HEIGHT = 400;
+// Files où le round 1 donne 800 crédits et une phase d'achat (pas Spike Rush,
+// Combat à mort... où tout est fourni ou aléatoire).
+const BUY_OVERLAY_QUEUES = new Set(['competitive', 'unrated', 'swiftplay', 'premier']);
+
+const buyOverlay = {
+  window: null,
+  matchId: null,
+  lastPhase: null,
+  // Début du round 1 (fin du chargement) : les 45 s se comptent à partir de là.
+  shownAt: null,
+  // Première fois qu'on voit la partie (chargement commencé) : sert de sécurité si
+  // la ligne du journal n'apparaît jamais.
+  gameSeenAt: null,
+  finished: false,
+  latestPayload: null,
+  // Dernier contenu montré, et dernier agent vu pour ce match (affichage manuel).
+  lastPayload: null,
+  agentId: null,
+  // Masqué par le raccourci clavier de cet overlay (remis à zéro à chaque match).
+  userHidden: false,
+  lastSessionLog: null,
+};
+
+function buyOverlayEnabled() {
+  return store.get('buyOverlayEnabled') === true;
+}
+
+function liveFeaturesEnabled() {
+  return matchRanksEnabled() || buyOverlayEnabled();
+}
+
+// Bas à gauche de l'écran principal, au-dessus de la barre des tâches.
+function createBuyOverlay() {
+  const area = screen.getPrimaryDisplay().workArea;
+  const win = new BrowserWindow({
+    width: BUY_OVERLAY_WIDTH,
+    height: BUY_OVERLAY_HEIGHT,
+    x: area.x + 16,
+    y: area.y + area.height - BUY_OVERLAY_HEIGHT - 16,
+    show: false,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    // Mêmes garde-fous que les autres overlays : jamais de focus ni de clics volés au jeu.
+    focusable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+  });
+  win.setAlwaysOnTop(true, 'screen-saver');
+  win.setIgnoreMouseEvents(true, { forward: true });
+
+  const query = 'view=buy-overlay';
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
+  } else {
+    win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), { search: query });
+  }
+  win.webContents.on('did-fail-load', (_e, code, description) => {
+    console.error(`[buy-overlay] échec de chargement de la page (${code} ${description})`);
+  });
+  win.on('closed', () => {
+    if (buyOverlay.window === win) buyOverlay.window = null;
+  });
+  buyOverlay.window = win;
+  return win;
+}
+
+function destroyBuyOverlay() {
+  const win = buyOverlay.window;
+  buyOverlay.window = null;
+  buyOverlay.latestPayload = null;
+  if (win && !win.isDestroyed()) {
+    try {
+      win.close();
+    } catch {
+      // déjà détruite entre le check et l'appel.
+    }
+  }
+}
+
+function showBuyOverlay(payload) {
+  buyOverlay.latestPayload = payload;
+  buyOverlay.lastPayload = payload;
+  if (!buyOverlay.window || buyOverlay.window.isDestroyed()) createBuyOverlay();
+  const win = buyOverlay.window;
+  // Montrée AVANT l'envoi : une fenêtre cachée ne peint pas (voir pushMatchRanksPayload).
+  if (!buyOverlay.userHidden && !win.isVisible()) win.showInactive();
+  if (!buyOverlay.userHidden) win.moveTop();
+  win.webContents.send('buy-overlay:data', payload);
+}
+
+function resetBuyOverlayMatch(matchId) {
+  destroyBuyOverlay();
+  buyOverlay.matchId = matchId;
+  buyOverlay.shownAt = null;
+  buyOverlay.gameSeenAt = null;
+  buyOverlay.finished = false;
+  buyOverlay.lastSessionLog = null;
+  buyOverlay.lastPayload = null;
+  buyOverlay.agentId = null;
+  buyOverlay.userHidden = false;
+  // Curseur en fin de journal : seul le chargement de CE match compte.
+  if (matchId) startLoadWatch();
+}
+
+function finishBuyOverlay() {
+  buyOverlay.finished = true;
+  destroyBuyOverlay();
+}
+
+// Si la ligne « Match Load Times » n'apparaissait jamais (format du journal modifié
+// par un patch), on montre l'overlay quand même au bout de ce délai : un chargement
+// dure ~15 à 20 s (mesuré), 35 s laisse une grande marge.
+const BUY_OVERLAY_FALLBACK_MS = 35000;
+
+// Retourne le délai avant le prochain poll.
+async function handleBuyOverlay(live) {
+  if (live.matchId !== buyOverlay.matchId) {
+    // Passage sélection → partie du MÊME match : pas un nouveau match, même si
+    // Riot changeait d'id (sinon la fenêtre préparée serait détruite pour rien).
+    const sameMatchNextPhase = live.phase === 'game' && buyOverlay.lastPhase === 'select';
+    if (sameMatchNextPhase) buyOverlay.matchId = live.matchId;
+    else resetBuyOverlayMatch(live.matchId);
+  }
+  buyOverlay.lastPhase = live.phase;
+  // Dernier agent connu : le raccourci peut afficher l'achat à la demande (round 13...).
+  const selfNow = live.players.find((p) => p.isMe);
+  if (selfNow?.agentId) buyOverlay.agentId = selfNow.agentId;
+  if (buyOverlay.finished) return MATCH_RANKS_SLOW_POLL_MS;
+
+  if (!BUY_OVERLAY_QUEUES.has(live.mode)) {
+    finishBuyOverlay();
+    return MATCH_RANKS_SLOW_POLL_MS;
+  }
+
+  // Sélection : on prépare la fenêtre (cachée), rien d'autre à faire.
+  if (!buyOverlay.shownAt && (!buyOverlay.window || buyOverlay.window.isDestroyed())) createBuyOverlay();
+  if (live.phase !== 'game') return MATCH_RANKS_POLL_MS;
+
+  const me = live.players.find((p) => p.isMe);
+  if (!me?.agentId) return MATCH_RANKS_POLL_MS;
+
+  if (!buyOverlay.shownAt) {
+    if (!buyOverlay.gameSeenAt) buyOverlay.gameSeenAt = Date.now();
+
+    // Tant que le chargement n'est pas fini, rien à demander à Riot : on regarde
+    // seulement la fin du journal (quelques octets).
+    const loaded = findMatchLoaded(live.matchId);
+    const fallbackDue = Date.now() - buyOverlay.gameSeenAt >= BUY_OVERLAY_FALLBACK_MS;
+    if (!loaded && !fallbackDue) return MATCH_RANKS_SELECT_POLL_MS;
+
+    // Chargement terminé : on vérifie que c'est bien le round 1 (score 0-0).
+    const session = await getSessionState();
+    const sessionLabel = session ? `${session.sessionLoopState} ${session.allyScore}-${session.enemyScore}` : 'indisponible';
+    if (sessionLabel !== buyOverlay.lastSessionLog) {
+      buyOverlay.lastSessionLog = sessionLabel;
+      console.log(`[buy-overlay] chargement ${loaded ? 'terminé (journal)' : 'présumé terminé (sécurité)'}, session : ${sessionLabel}`);
+    }
+    const roundsPlayed = session ? (session.allyScore ?? 0) + (session.enemyScore ?? 0) : 0;
+    if (roundsPlayed > 0 || (!loaded && session?.sessionLoopState !== 'INGAME')) {
+      // App lancée en cours de match, ou round 1 déjà passé : rien à proposer.
+      if (roundsPlayed > 0) finishBuyOverlay();
+      return roundsPlayed > 0 ? MATCH_RANKS_SLOW_POLL_MS : MATCH_RANKS_SELECT_POLL_MS;
+    }
+
+    // Les 45 s partent de la FIN DU CHARGEMENT (heure du journal), pas de notre poll.
+    const startedAt = loaded ? Math.min(loaded.loadedAt, Date.now()) : Date.now();
+    if (Date.now() - startedAt >= BUY_OVERLAY_VISIBLE_MS) {
+      finishBuyOverlay();
+      return MATCH_RANKS_SLOW_POLL_MS;
+    }
+    buyOverlay.shownAt = startedAt;
+    showBuyOverlay({ agentId: me.agentId, endsAt: startedAt + BUY_OVERLAY_VISIBLE_MS });
+    return MATCH_RANKS_POLL_MS;
+  }
+
+  // Affiché : fin après 45 s, ou dès que le round 2 commence.
+  const session = await getSessionState();
+  const roundsPlayed = session ? (session.allyScore ?? 0) + (session.enemyScore ?? 0) : 0;
+  if (roundsPlayed > 0 || Date.now() - buyOverlay.shownAt >= BUY_OVERLAY_VISIBLE_MS) {
+    finishBuyOverlay();
+    return MATCH_RANKS_SLOW_POLL_MS;
+  }
+  return MATCH_RANKS_POLL_MS;
+}
+
+async function pollMatchRanks() {
+  matchRanks.timer = null;
+  if (!matchRanks.polling) return;
+
+  // File d'attente / menus : on regarde toutes les 2 s pour voir la sélection dès
+  // qu'elle commence (12 s auparavant : jusqu'à 12 s de retard au début).
+  let nextDelay = MATCH_RANKS_IDLE_POLL_MS;
+  try {
+    const live = await getLiveMatch();
+    if (!matchRanks.polling) return; // coupé pendant l'attente réseau
+    // Un log par CHANGEMENT d'état (pas par poll) : le module échoue en silence
+    // par conception, sans ça impossible de savoir pourquoi rien ne s'affiche.
+    const stateLabel = `${live.state}${live.phase ? `/${live.phase}` : ''}${live.reason ? ` (${live.reason})` : ''}`;
+    if (stateLabel !== matchRanks.lastLoggedState) {
+      matchRanks.lastLoggedState = stateLabel;
+      console.log(`[match-ranks] état : ${stateLabel}`);
+    }
+    if (live.state === 'ok') {
+      // Une seule lecture, partagée : chaque fonction n'agit que si son option est active.
+      const delays = [];
+      if (matchRanksEnabled()) delays.push(handleLiveMatch(live));
+      if (buyOverlayEnabled()) delays.push(await handleBuyOverlay(live));
+      if (delays.length > 0) nextDelay = Math.min(...delays);
+    } else if (live.state === 'idle') {
+      // Match terminé : l'état est remis à zéro pour détecter le suivant.
+      matchRanks.matchId = null;
+      matchRanks.lastPhase = null;
+      matchRanks.gameStartedAt = null;
+      matchRanks.finished = false;
+      // Jamais les suggestions du match précédent au début du suivant.
+      matchRanks.suggestions = [];
+      matchRanks.suggestionsKey = null;
+      matchRanks.lastPayload = null;
+      matchRanks.userHidden = false;
+      closeMatchRanksOverlay();
+      buyOverlay.lastPhase = null;
+      resetBuyOverlayMatch(null);
+    }
+    // 'unavailable' (client fermé, blip d'API) : on ne touche à rien — un raté
+    // ponctuel ne doit pas faire croire à un nouveau match ni fermer l'overlay.
+    if (live.state === 'unavailable') nextDelay = MATCH_RANKS_SELECT_POLL_MS * 4;
+  } catch (err) {
+    console.error('[match-ranks] poll échoué :', err.message);
+  }
+  if (matchRanks.polling) matchRanks.timer = setTimeout(pollMatchRanks, nextDelay);
+}
+
+function startMatchRanksPolling() {
+  if (matchRanks.polling || !liveFeaturesEnabled()) return;
+  console.log('[match-ranks] suivi de la partie démarré');
+  matchRanks.polling = true;
+  if (matchRanksEnabled()) ensureMatchRanksWindow();
+  matchRanks.timer = setTimeout(pollMatchRanks, 2000);
+}
+
+function stopMatchRanksPolling() {
+  if (matchRanks.timer) clearTimeout(matchRanks.timer);
+  matchRanks.timer = null;
+  if (!matchRanks.polling && !matchRanks.window) return;
+  console.log('[match-ranks] suivi de la partie arrêté');
+  matchRanks.polling = false;
+  matchRanks.matchId = null;
+  matchRanks.gameStartedAt = null;
+  matchRanks.finished = false;
+  destroyMatchRanksOverlay();
+  buyOverlay.lastPhase = null;
+  resetBuyOverlayMatch(null);
+  // Plus aucun jeton ni pseudo gardé en mémoire une fois le suivi coupé.
+  resetLocalSession();
+}
+
+ipcMain.handle('match-ranks-overlay:get-enabled', () => matchRanksEnabled());
+
+ipcMain.handle('match-ranks-overlay:set-enabled', (_event, enabled) => {
+  if (!enabled) {
+    store.set('matchRanksOverlayEnabled', false);
+    if (liveFeaturesEnabled()) destroyMatchRanksOverlay();
+    else stopMatchRanksPolling();
+    return { ok: true };
+  }
+  store.set('matchRanksOverlayEnabled', true);
+  if (dailyOverlayLastRunning) {
+    startMatchRanksPolling();
+    ensureMatchRanksWindow();
+  }
+  return { ok: true };
+});
+
+ipcMain.handle('buy-overlay:get-enabled', () => buyOverlayEnabled());
+
+ipcMain.handle('buy-overlay:set-enabled', (_event, enabled) => {
+  if (!enabled) {
+    store.set('buyOverlayEnabled', false);
+    if (liveFeaturesEnabled()) destroyBuyOverlay();
+    else stopMatchRanksPolling();
+    return { ok: true };
+  }
+  store.set('buyOverlayEnabled', true);
+  if (dailyOverlayLastRunning) startMatchRanksPolling();
+  return { ok: true };
+});
+
+// Même piège que match-ranks-overlay:get-data : la fenêtre se monte après l'envoi.
+ipcMain.handle('buy-overlay:get-data', () => buyOverlay.latestPayload);
+
+// La fenêtre redemande ses données une fois montée : elle est chargée en
+// React.lazy, un envoi fait avant que son écouteur existe partirait dans le vide
+// (même piège que daily-overlay:get-stats).
+ipcMain.handle('match-ranks-overlay:get-data', () => matchRanks.latestPayload);
+
 // Se déclenche DÈS le lancement du JEU, sans attendre le prochain cycle de
 // checkTiltAndNotify (jusqu'à 2 min) — un check plus fréquent (même cadence
 // que pollMatchActive) détecte la transition et lance un premier
@@ -1701,57 +2131,116 @@ async function refreshDailyOverlay() {
 // d'avoir lancé une partie.
 let dailyOverlayLastRunning = false;
 
-// Masquage volontaire par raccourci clavier (voir toggleDailyOverlayVisibility) : la
-// fenêtre reste en mémoire et continue de recevoir les stats, elle est juste cachée.
-// Remis à zéro à la fermeture du jeu, pour retrouver l'overlay à la partie suivante.
-let dailyOverlayUserHidden = false;
-let registeredOverlayHotkey = null;
-
-function toggleDailyOverlayVisibility() {
-  dailyOverlayUserHidden = !dailyOverlayUserHidden;
-  if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) return;
-  if (dailyOverlayUserHidden) {
-    dailyOverlayWindow.hide();
-  } else {
-    dailyOverlayWindow.showInactive();
-    dailyOverlayWindow.moveTop();
+// Raccourcis clavier : UN par overlay (rangs, achat), chacun affiche l'overlay s'il est
+// caché et le retire s'il est affiché. « Retirer » masque la fenêtre pour le reste du
+// match (le contenu continue d'arriver dessous) ; « afficher » remet le contenu en
+// cours, ou le dernier contenu montré. Remis à zéro à chaque match et à la fermeture
+// du jeu.
+//
+// RÈGLE : les rangs des ADVERSAIRES ne sont montrés que pendant la fenêtre de 45 s qui
+// suit la sélection d'agent. Une fois cette fenêtre terminée (`finished`), le raccourci
+// ne réaffiche QUE l'équipe du joueur : il ne doit jamais servir à consulter les rangs
+// adverses à la demande en plein match (information masquée par le jeu).
+function toggleMatchRanksOverlay() {
+  if (!matchRanksEnabled()) return;
+  const win = matchRanks.window;
+  if (win && !win.isDestroyed() && win.isVisible()) {
+    matchRanks.userHidden = true;
+    win.hide();
+    return;
   }
+  const last = matchRanks.latestPayload ?? matchRanks.lastPayload;
+  if (!last) return; // rien à montrer entre deux matchs : pas de fenêtre vide
+  const payload = matchRanks.finished ? { ...last, enemies: [], enemiesEndsAt: null, suggestions: [] } : last;
+  matchRanks.userHidden = false;
+  ensureMatchRanksWindow();
+  matchRanks.latestPayload = payload;
+  showMatchRanksOverlay();
+  matchRanks.window.webContents.send('match-ranks-overlay:data', payload);
 }
+
+function toggleBuyOverlay() {
+  if (!buyOverlayEnabled()) return;
+  const win = buyOverlay.window;
+  if (win && !win.isDestroyed() && win.isVisible()) {
+    buyOverlay.userHidden = true;
+    win.hide();
+    return;
+  }
+  // Sans contenu déjà montré, l'achat de l'agent actuel (pas de barre de temps).
+  const payload =
+    buyOverlay.latestPayload ?? buyOverlay.lastPayload ?? (buyOverlay.agentId ? { agentId: buyOverlay.agentId, endsAt: null } : null);
+  if (!payload) return;
+  buyOverlay.userHidden = false;
+  showBuyOverlay(payload);
+}
+
+const OVERLAY_HOTKEYS = {
+  ranks: {
+    storeKey: 'matchRanksOverlayHotkey',
+    // Avant la séparation, un seul raccourci masquait les overlays : on le reprend
+    // pour les rangs plutôt que de perdre le réglage du joueur.
+    legacyKey: 'dailyOverlayHotkey',
+    defaultAccelerator: DEFAULT_OVERLAY_HOTKEY,
+    toggle: toggleMatchRanksOverlay,
+    registered: null,
+  },
+  buy: {
+    storeKey: 'buyOverlayHotkey',
+    legacyKey: null,
+    defaultAccelerator: 'Ctrl+Alt+B',
+    toggle: toggleBuyOverlay,
+    registered: null,
+  },
+};
 
 // undefined en base = jamais réglé (raccourci par défaut) ; '' = désactivé par le joueur.
-function currentOverlayHotkey() {
-  const saved = store.get('dailyOverlayHotkey');
-  return saved === undefined ? DEFAULT_OVERLAY_HOTKEY : saved;
+function currentOverlayHotkey(id) {
+  const config = OVERLAY_HOTKEYS[id];
+  const saved = store.get(config.storeKey);
+  if (saved !== undefined) return saved;
+  const legacy = config.legacyKey ? store.get(config.legacyKey) : undefined;
+  return legacy !== undefined ? legacy : config.defaultAccelerator;
 }
 
-function registerOverlayHotkey(accelerator) {
-  if (registeredOverlayHotkey) {
-    globalShortcut.unregister(registeredOverlayHotkey);
-    registeredOverlayHotkey = null;
+function registerOverlayHotkey(id, accelerator) {
+  const config = OVERLAY_HOTKEYS[id];
+  if (config.registered) {
+    globalShortcut.unregister(config.registered);
+    config.registered = null;
   }
   if (!accelerator) return { ok: true };
   try {
-    // register() renvoie false quand une autre application a déjà pris ce raccourci.
-    if (!globalShortcut.register(accelerator, toggleDailyOverlayVisibility)) return { ok: false, error: 'in_use' };
+    // register() renvoie false quand une autre application — ou l'autre overlay — a
+    // déjà pris ce raccourci.
+    if (!globalShortcut.register(accelerator, config.toggle)) return { ok: false, error: 'in_use' };
   } catch {
     return { ok: false, error: 'invalid' };
   }
-  registeredOverlayHotkey = accelerator;
+  config.registered = accelerator;
   return { ok: true };
 }
 
-ipcMain.handle('daily-overlay:get-hotkey', () => ({ accelerator: currentOverlayHotkey(), defaultAccelerator: DEFAULT_OVERLAY_HOTKEY }));
+function registerAllOverlayHotkeys() {
+  Object.keys(OVERLAY_HOTKEYS).forEach((id) => registerOverlayHotkey(id, currentOverlayHotkey(id)));
+}
 
-ipcMain.handle('daily-overlay:set-hotkey', (_event, accelerator) => {
+ipcMain.handle('overlay-hotkey:get', (_event, id) => {
+  if (!OVERLAY_HOTKEYS[id]) return { accelerator: '', defaultAccelerator: '' };
+  return { accelerator: currentOverlayHotkey(id), defaultAccelerator: OVERLAY_HOTKEYS[id].defaultAccelerator };
+});
+
+ipcMain.handle('overlay-hotkey:set', (_event, id, accelerator) => {
+  if (!OVERLAY_HOTKEYS[id]) return { ok: false, error: 'invalid' };
   if (accelerator !== '' && !isValidAccelerator(accelerator)) return { ok: false, error: 'invalid' };
-  const previous = registeredOverlayHotkey;
-  const result = registerOverlayHotkey(accelerator);
+  const previous = OVERLAY_HOTKEYS[id].registered;
+  const result = registerOverlayHotkey(id, accelerator);
   if (!result.ok) {
     // On garde l'ancien raccourci plutôt que de se retrouver sans aucun.
-    registerOverlayHotkey(previous);
+    registerOverlayHotkey(id, previous);
     return result;
   }
-  store.set('dailyOverlayHotkey', accelerator);
+  store.set(OVERLAY_HOTKEYS[id].storeKey, accelerator);
   return { ok: true, accelerator };
 });
 
@@ -1763,25 +2252,14 @@ function scheduleDailyOverlayRefresh() {
 setInterval(async () => {
   const running = await isValorantGameRunning();
 
-  // Garde-fou : jamais interactif/déplaçable une fois en partie, même si le
-  // mode déplacement avait été laissé actif par erreur (fenêtre fermée sans
-  // repasser par le toggle, par exemple). Uniquement sur la transition
-  // fermé→lancé (pas à chaque tick tant que `running` reste vrai) : sinon un
-  // glissement volontaire en cours pendant que le jeu est déjà ouvert se
-  // faisait couper dès que ce setInterval retombait sur `running`, ramenant
-  // l'overlay à sa dernière position persistée si le clic n'était pas
-  // relâché à temps.
-  if (running && !dailyOverlayLastRunning && dailyOverlayDragMode) {
-    console.log('[daily-overlay] partie détectée, verrouillage forcé du mode déplacement');
-    setDailyOverlayDragMode(false);
-  }
-
   if (running && !dailyOverlayLastRunning) {
     scheduleDailyOverlayRefresh();
+    startMatchRanksPolling();
   } else if (!running && dailyOverlayLastRunning) {
     console.log('[daily-overlay] Valorant fermé, arrêt du suivi');
-    closeDailyOverlay();
-    dailyOverlayUserHidden = false;
+    stopMatchRanksPolling();
+    matchRanks.userHidden = false;
+    buyOverlay.userHidden = false;
     // Le tilt repart de zéro à chaque fermeture du jeu : sans ça, l'alerte déjà
     // envoyée (notified) bloquait toute nouvelle alerte à la session suivante, et
     // le dernier match mémorisé faisait traiter le premier match de la nouvelle
@@ -1966,7 +2444,7 @@ ipcMain.handle('goals:delete', (_event, id) => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   cleanupOldSquirrelVersions();
-  registerOverlayHotkey(currentOverlayHotkey());
+  registerAllOverlayHotkeys();
 
   // Content-Security-Policy — uniquement en production packagée : le serveur
   // de dev Vite a besoin d'unsafe-eval pour le rechargement à chaud, inutile

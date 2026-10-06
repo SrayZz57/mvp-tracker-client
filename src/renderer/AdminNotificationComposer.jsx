@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Trash2 } from 'lucide-react';
 import { supabase } from './supabaseClient.js';
+import Icon from './Icon.jsx';
 
 const MAX_RESULTS = 8;
+// Derniers messages affichés dans la liste « envoyés ».
+const SENT_LIMIT = 30;
+// `!recipient_id` : announcements a deux liens vers profiles (created_by et
+// recipient_id), PostgREST refuse la jointure sans savoir lequel suivre.
+const RECIPIENT = 'recipient:profiles!recipient_id(display_name, riot_name, riot_tag)';
 
 function displayName(profile) {
   return profile.display_name || `${profile.riot_name ?? '?'}#${profile.riot_tag ?? '?'}`;
@@ -26,6 +33,50 @@ function AdminNotificationComposer({ myId }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [sentTo, setSentTo] = useState(null);
+  // Dernier message envoyé (pour « Annuler l'envoi » juste après) et liste des envoyés.
+  const [lastSent, setLastSent] = useState(null); // { id }
+  const [sentList, setSentList] = useState([]);
+  const [sentLoading, setSentLoading] = useState(true);
+  const [removingId, setRemovingId] = useState(null);
+
+  async function loadSent() {
+    const columns = 'id, title, body, is_active, created_at';
+    let { data, error: loadError } = await supabase
+      .from('announcements')
+      .select(`${columns}, recipient_id, ${RECIPIENT}`)
+      .order('created_at', { ascending: false })
+      .limit(SENT_LIMIT);
+    if (loadError) {
+      // Migration recipient_id pas encore passée : on liste sans les destinataires.
+      ({ data } = await supabase.from('announcements').select(columns).order('created_at', { ascending: false }).limit(SENT_LIMIT));
+    }
+    setSentList(data ?? []);
+    setSentLoading(false);
+  }
+
+  useEffect(() => {
+    loadSent();
+  }, []);
+
+  // Retire un message de la cloche d'annonces. Sans ligne renvoyée, la base a refusé
+  // la suppression (droits) sans lever d'erreur : on le dit plutôt que de faire croire
+  // que c'est fait.
+  async function removeMessage(id, { confirm = true } = {}) {
+    if (confirm && !window.confirm(t('admin.notify.removeConfirm'))) return;
+    setRemovingId(id);
+    setError(null);
+    const { data, error: deleteError } = await supabase.from('announcements').delete().eq('id', id).select('id');
+    setRemovingId(null);
+    if (deleteError || !data || data.length === 0) {
+      setError(deleteError?.message ?? t('admin.notify.removeFailed'));
+      return;
+    }
+    if (lastSent?.id === id) {
+      setLastSent(null);
+      setSentTo(null);
+    }
+    loadSent();
+  }
 
   async function handleSearch(e) {
     e.preventDefault();
@@ -57,13 +108,18 @@ function AdminNotificationComposer({ myId }) {
     setSending(true);
     setError(null);
     setSentTo(null);
-    const { error: insertError } = await supabase.from('announcements').insert({
+    setLastSent(null);
+    const { data: inserted, error: insertError } = await supabase
+      .from('announcements')
+      .insert({
       title: title.trim(),
       body: body.trim(),
       image_url: imageUrl.trim() || null,
       created_by: myId,
       recipient_id: audience === 'player' ? recipient.id : null,
-    });
+      })
+      .select('id')
+      .single();
     setSending(false);
     if (insertError) {
       setError(insertError.message);
@@ -71,6 +127,8 @@ function AdminNotificationComposer({ myId }) {
     }
 
     setSentTo(audience === 'player' ? displayName(recipient) : t('admin.notify.everyone'));
+    if (inserted?.id) setLastSent({ id: inserted.id });
+    loadSent();
     setTitle('');
     setBody('');
     setImageUrl('');
@@ -156,12 +214,62 @@ function AdminNotificationComposer({ myId }) {
         </label>
 
         {error && <p className="error-banner">{error}</p>}
-        {sentTo && <p className="label">{t('admin.notify.sent', { to: sentTo })}</p>}
+        {sentTo && (
+          <p className="label notify-sent-banner">
+            {t('admin.notify.sent', { to: sentTo })}
+            {lastSent && (
+              <button
+                type="button"
+                className="account-forgot-password"
+                disabled={removingId === lastSent.id}
+                onClick={() => removeMessage(lastSent.id, { confirm: false })}
+              >
+                {t('admin.notify.undo')}
+              </button>
+            )}
+          </p>
+        )}
 
         <button type="submit" disabled={sending || !canSend}>
           {sending ? t('admin.notify.sending') : t('admin.notify.send')}
         </button>
       </form>
+
+      <section className="admin-section notify-sent">
+        <h2>{t('admin.notify.sentListTitle')}</h2>
+        {sentLoading ? (
+          <p className="label">{t('admin.announcements.loading')}</p>
+        ) : sentList.length === 0 ? (
+          <p className="label">{t('admin.notify.sentListEmpty')}</p>
+        ) : (
+          <ul className="notify-sent-list">
+            {sentList.map((message) => (
+              <li key={message.id} className="notify-sent-item">
+                <div className="notify-sent-main">
+                  <div className="notify-sent-head">
+                    <strong className="notify-sent-title">{message.title}</strong>
+                    <span className={`notify-sent-to${message.recipient_id ? ' personal' : ''}`}>
+                      {message.recipient_id && message.recipient ? displayName(message.recipient) : t('admin.notify.everyone')}
+                    </span>
+                    {!message.is_active && <span className="notify-sent-inactive">{t('admin.announcements.inactive')}</span>}
+                  </div>
+                  <p className="notify-sent-body">{message.body}</p>
+                  <span className="notify-sent-date">{new Date(message.created_at).toLocaleString()}</span>
+                </div>
+                <button
+                  type="button"
+                  className="strategy-tool icon-only danger"
+                  title={t('admin.notify.remove')}
+                  disabled={removingId === message.id}
+                  onClick={() => removeMessage(message.id)}
+                >
+                  <Icon icon={Trash2} size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

@@ -1,7 +1,9 @@
-// Raccourci global qui masque / réaffiche l'overlay de session. On convertit un
+// Raccourcis globaux qui affichent / retirent les overlays (rangs, achat). On convertit un
 // événement clavier en « accélérateur » Electron ("Ctrl+Alt+O", "F8"...), le
 // format attendu par globalShortcut côté processus principal.
 
+// Raccourci par défaut de l'overlay des rangs (celui de l'ancien overlay de session) ;
+// l'overlay d'achat a le sien (voir OVERLAY_HOTKEYS dans main.js).
 export const DEFAULT_OVERLAY_HOTKEY = 'Ctrl+Alt+O';
 
 const MODIFIER_CODES = new Set(['ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);

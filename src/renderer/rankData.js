@@ -1,30 +1,53 @@
 import { useEffect, useState } from 'react';
 
-let tiersCache = null;
+// Un cache par langue : sans argument, mêmes noms qu'avant (anglais, langue par
+// défaut de l'API) ; l'overlay des rangs demande la langue de l'app.
+const tiersCaches = new Map(); // langue -> Promise<Map>
 
-async function loadCompetitiveTiers() {
-  if (tiersCache) return tiersCache;
-  const response = await fetch('https://valorant-api.com/v1/competitivetiers');
-  const json = await response.json();
-  const latestEpisode = json.data[json.data.length - 1];
-  tiersCache = new Map(
-    latestEpisode.tiers.map((tier) => [
-      tier.tier,
-      // `name` s'ajoute aux champs existants (icône, couleur) : l'API locale
-      // du client ne renvoie qu'un NUMÉRO de palier pour les coéquipiers en
-      // sélection d'agent, il faut donc pouvoir le traduire en nom lisible.
-      { icon: tier.largeIcon, color: `#${tier.color.slice(0, 6)}`, name: tier.tierName },
-    ]),
-  );
-  return tiersCache;
+function loadCompetitiveTiers(language) {
+  const key = language ?? 'default';
+  if (!tiersCaches.has(key)) {
+    const url = `https://valorant-api.com/v1/competitivetiers${language ? `?language=${language}` : ''}`;
+    tiersCaches.set(
+      key,
+      fetch(url)
+        .then((response) => response.json())
+        .then((json) => {
+          const latestEpisode = json.data[json.data.length - 1];
+          return new Map(
+            latestEpisode.tiers.map((tier) => [
+              tier.tier,
+              // `name` s'ajoute aux champs existants (icône, couleur) : l'API locale
+              // du client ne renvoie qu'un NUMÉRO de palier pour les coéquipiers en
+              // sélection d'agent, il faut donc pouvoir le traduire en nom lisible.
+              { icon: tier.largeIcon, color: `#${tier.color.slice(0, 6)}`, name: tier.tierName },
+            ]),
+          );
+        })
+        .catch((error) => {
+          // Un échec réseau ne doit pas rester en cache pour toute la session.
+          tiersCaches.delete(key);
+          throw error;
+        }),
+    );
+  }
+  return tiersCaches.get(key);
 }
 
-export function useRankTiers() {
+export function useRankTiers(language) {
   const [tiers, setTiers] = useState(new Map());
 
   useEffect(() => {
-    loadCompetitiveTiers().then(setTiers);
-  }, []);
+    let cancelled = false;
+    loadCompetitiveTiers(language)
+      .then((loaded) => {
+        if (!cancelled) setTiers(loaded);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   return tiers;
 }

@@ -236,7 +236,8 @@
     "retry": "Réessayer",
     "changelog": "Nouveautés",
     "changelogTitle": "Voir les nouveautés",
-    "announcementsTitle": "Annonces"
+    "announcementsTitle": "Annonces",
+    "henrikServerError": "HenrikDev (le service qui fournit tes stats) rencontre un problème en ce moment. Ça ne vient ni de ton compte ni de l'app : réessaie dans quelques minutes."
   },
   "terms": {
     "title": "Conditions générales d'utilisation",
@@ -3017,7 +3018,7 @@
     "settingsTitle": "Réglages généraux",
     "settingsHint": "Connecté avec ton compte MVP Tracker — ton Riot ID lié reste indépendant de ce compte.",
     "settingsAccountTitle": "Compte lié",
-    "settingsOverlayTitle": "Overlays",
+    "settingsOverlayTitle": "Session en direct",
     "settingsAppTitle": "Application",
     "settingsSecurityTitle": "Sécurité et compte",
     "emailLabel": "Adresse mail",
@@ -3044,8 +3045,6 @@
     "autoLaunchHint": "L'app se lance en arrière-plan à l'allumage du PC, réduite dans la barre système (icône près de l'horloge) — le ping et la détection de tilt continuent sans garder la fenêtre ouverte.",
     "tiltNotificationsLabel": "Notifications de tilt",
     "tiltNotificationsHint": "Une notification Windows s'affiche quand une série de défaites ou une baisse de perf est détectée pendant que tu joues. Désactive si tu préfères le voir seulement dans l'onglet Tilt.",
-    "matchRanksLabel": "Overlay des rangs de la partie",
-    "matchRanksHint": "Affiche le rang de tes coéquipiers pendant la sélection d'agent, puis celui des adversaires pendant 45 secondes une fois la partie lancée. Les joueurs en mode streamer ne sont jamais affichés.",
     "signOut": "Se déconnecter",
     "replayOnboarding": "Revoir le tutoriel",
     "forgotPassword": "Mot de passe oublié ?",
@@ -3083,20 +3082,7 @@
     "choosePhoto": "Choisir une photo de profil",
     "chooseFavoriteAgent": "Choisir ton agent fétiche",
     "perfLiteLabel": "Mode économique",
-    "perfLiteHint": "Réduit les animations et les effets de flou pour alléger l'app sur un PC modeste. Activé automatiquement sur les PC peu puissants ; tu peux le changer ici.",
-    "dailyOverlayHotkeyPress": "Appuie sur les touches…",
-    "dailyOverlayHotkeyNone": "Aucun",
-    "dailyOverlayHotkeyReset": "Raccourci par défaut",
-    "dailyOverlayHotkeyErrors": {
-      "in_use": "Ce raccourci est déjà utilisé par une autre application. Choisis-en un autre.",
-      "invalid": "Raccourci non valide : ajoute Ctrl, Alt ou Maj (une touche F seule est acceptée)."
-    },
-    "buyOverlayLabel": "Overlay d'achat du premier round",
-    "buyOverlayHint": "Affiche en bas à gauche l'achat conseillé pour ton agent pendant la phase d'achat du premier round (800 crédits), puis disparaît.",
-    "matchRanksHotkeyLabel": "Raccourci de l'overlay des rangs",
-    "matchRanksHotkeyHint": "Appuie sur ce raccourci, même en pleine partie, pour afficher l'overlay des rangs, et à nouveau pour le retirer. Une fois les 45 secondes des adversaires passées, il ne réaffiche que ton équipe. Clique sur le bouton puis tape la combinaison voulue (Retour arrière pour désactiver, Échap pour annuler).",
-    "buyOverlayHotkeyLabel": "Raccourci de l'overlay d'achat",
-    "buyOverlayHotkeyHint": "Appuie sur ce raccourci, même en pleine partie, pour afficher l'achat conseillé pour ton agent, et à nouveau pour le retirer. Clique sur le bouton puis tape la combinaison voulue (Retour arrière pour désactiver, Échap pour annuler)."
+    "perfLiteHint": "Réduit les animations et les effets de flou pour alléger l'app sur un PC modeste. Activé automatiquement sur les PC peu puissants ; tu peux le changer ici."
   },
   "heatmap": {
     "title": "Heatmap",
@@ -3234,17 +3220,6 @@
       "long": "Longue (20-35m)",
       "verylong": "Très longue (35m+)"
     }
-  },
-  "matchRanksOverlay": {
-    "allies": "Ton équipe",
-    "enemies": "Adversaires",
-    "hiddenPlayer": "Joueur masqué",
-    "unranked": "Sans rang",
-    "you": "Toi",
-    "suggestTitle": "Suggestions d'agent",
-    "suggestPersonal": "{{winrate}} % de victoires ici · {{games}} parties",
-    "suggestCommunity": "Recommandé sur cette map",
-    "suggestGap": "Rôle manquant"
   },
   "onboarding": {
     "welcomeTitle": "Bienvenue sur MVP Tracker !",
@@ -3533,17 +3508,5 @@
     "copy": "Copier l'image",
     "copied": "Image copiée",
     "error": "Impossible de créer l'image. Réessaie dans un instant."
-  },
-  "buyOverlay": {
-    "title": "Achat du premier round",
-    "weapon": "Arme",
-    "shield": "Bouclier",
-    "lightShield": "Bouclier léger",
-    "keepClassic": "Garde le Classic",
-    "ability": "Capacité",
-    "notes": {
-      "astraStars": "Place tes étoiles selon la map — tu choisis lesquelles.",
-      "chamberBullets": "Pas de Ghost : mets le reste du budget en balles de Chasseur de têtes."
-    }
   }
 }

@@ -236,7 +236,8 @@
     "retry": "Retry",
     "changelog": "What's new",
     "changelogTitle": "See what's new",
-    "announcementsTitle": "Announcements"
+    "announcementsTitle": "Announcements",
+    "henrikServerError": "HenrikDev (the service that provides your stats) is having a problem right now. It's not your account or the app: try again in a few minutes."
   },
   "terms": {
     "title": "Terms of use",
@@ -3017,7 +3018,7 @@
     "settingsTitle": "General settings",
     "settingsHint": "Signed in with your MVP Tracker account — your linked Riot ID stays independent from this account.",
     "settingsAccountTitle": "Linked account",
-    "settingsOverlayTitle": "Overlays",
+    "settingsOverlayTitle": "Live session",
     "settingsAppTitle": "Application",
     "settingsSecurityTitle": "Security and account",
     "emailLabel": "Email address",
@@ -3044,8 +3045,6 @@
     "autoLaunchHint": "The app launches in the background when your PC starts, minimized to the system tray (icon near the clock) — ping and tilt detection keep running without a window open.",
     "tiltNotificationsLabel": "Tilt notifications",
     "tiltNotificationsHint": "A Windows notification pops up when a losing streak or a performance dip is detected while you play. Turn off if you'd rather just check the Tilt tab yourself.",
-    "matchRanksLabel": "Match ranks overlay",
-    "matchRanksHint": "Shows your teammates' ranks during agent select, then the opponents' ranks for 45 seconds once the match starts. Players in streamer mode are never shown.",
     "signOut": "Sign out",
     "replayOnboarding": "Replay the tutorial",
     "forgotPassword": "Forgot your password?",
@@ -3083,20 +3082,7 @@
     "choosePhoto": "Choose a profile photo",
     "chooseFavoriteAgent": "Choose your favorite agent",
     "perfLiteLabel": "Low-resource mode",
-    "perfLiteHint": "Reduces animations and blur effects to make the app lighter on a modest PC. Turned on automatically on low-powered PCs; you can change it here.",
-    "dailyOverlayHotkeyPress": "Press the keys…",
-    "dailyOverlayHotkeyNone": "None",
-    "dailyOverlayHotkeyReset": "Default shortcut",
-    "dailyOverlayHotkeyErrors": {
-      "in_use": "This shortcut is already used by another application. Pick a different one.",
-      "invalid": "Invalid shortcut: add Ctrl, Alt or Shift (a lone F key is accepted)."
-    },
-    "buyOverlayLabel": "First-round buy overlay",
-    "buyOverlayHint": "Shows, in the bottom-left corner, the suggested buy for your agent during the first round buy phase (800 credits), then disappears.",
-    "matchRanksHotkeyLabel": "Ranks overlay shortcut",
-    "matchRanksHotkeyHint": "Press this shortcut, even mid-game, to show the ranks overlay, and again to hide it. Once the opponents' 45 seconds are over, it only shows your team again. Click the button then type the combination you want (Backspace to disable, Esc to cancel).",
-    "buyOverlayHotkeyLabel": "Buy overlay shortcut",
-    "buyOverlayHotkeyHint": "Press this shortcut, even mid-game, to show the suggested buy for your agent, and again to hide it. Click the button then type the combination you want (Backspace to disable, Esc to cancel)."
+    "perfLiteHint": "Reduces animations and blur effects to make the app lighter on a modest PC. Turned on automatically on low-powered PCs; you can change it here."
   },
   "heatmap": {
     "title": "Heatmap",
@@ -3234,17 +3220,6 @@
       "long": "Long (20-35m)",
       "verylong": "Very long (35m+)"
     }
-  },
-  "matchRanksOverlay": {
-    "allies": "Your team",
-    "enemies": "Opponents",
-    "hiddenPlayer": "Hidden player",
-    "unranked": "Unranked",
-    "you": "You",
-    "suggestTitle": "Agent suggestions",
-    "suggestPersonal": "{{winrate}}% win rate here · {{games}} games",
-    "suggestCommunity": "Recommended on this map",
-    "suggestGap": "Missing role"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to MVP Tracker!",
@@ -3533,17 +3508,5 @@
     "copy": "Copy image",
     "copied": "Image copied",
     "error": "Could not create the image. Try again in a moment."
-  },
-  "buyOverlay": {
-    "title": "First-round buy",
-    "weapon": "Weapon",
-    "shield": "Shield",
-    "lightShield": "Light shield",
-    "keepClassic": "Keep the Classic",
-    "ability": "Ability",
-    "notes": {
-      "astraStars": "Place your stars to suit the map — your call which ones.",
-      "chamberBullets": "No Ghost: spend the rest of the budget on Headhunter bullets."
-    }
   }
 }

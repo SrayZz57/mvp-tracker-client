@@ -21,14 +21,12 @@ import { E2EEProvider } from './renderer/E2EEContext.jsx';
 
 // Chargés à la demande selon `view` plutôt qu'au démarrage — ce fichier sert
 // de point d'entrée à TOUTES les fenêtres (principale, Aim Trainer plein
-// écran, overlay quotidien), donc un import statique ici embarquait
-// systématiquement le code (et les dépendances, dont three.js pour l'Aim
-// Trainer) des deux autres vues dans le bundle chargé par la fenêtre
-// principale, même quand l'utilisateur ne les ouvre jamais dans la session.
+// écran), donc un import statique ici embarquait systématiquement le code (et
+// les dépendances, dont three.js pour l'Aim Trainer) de l'autre vue dans le
+// bundle chargé par la fenêtre principale, même quand l'utilisateur ne l'ouvre
+// jamais dans la session.
 const App = lazy(() => import('./renderer/App.jsx'));
 const AimTrainerHub = lazy(() => import('./renderer/AimTrainerHub.jsx'));
-const MatchRanksOverlay = lazy(() => import('./renderer/MatchRanksOverlay.jsx'));
-const BuyOverlay = lazy(() => import('./renderer/BuyOverlay.jsx'));
 
 applyPerfLite();
 
@@ -90,20 +88,6 @@ function Root() {
     return (
       <Suspense fallback={null}>
         <AimTrainerHub config={gameConfig} />
-      </Suspense>
-    );
-  }
-  if (view === 'buy-overlay') {
-    return (
-      <Suspense fallback={null}>
-        <BuyOverlay />
-      </Suspense>
-    );
-  }
-  if (view === 'match-ranks-overlay') {
-    return (
-      <Suspense fallback={null}>
-        <MatchRanksOverlay />
       </Suspense>
     );
   }

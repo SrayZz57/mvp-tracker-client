@@ -7,7 +7,6 @@ import CollapsibleCard from './CollapsibleCard.jsx';
 import DeleteAccountModal from './DeleteAccountModal.jsx';
 import { useE2EE } from './E2EEContext.jsx';
 import { isPerfLiteEnabled, setPerfLite } from './perfMode.js';
-import OverlayHotkeyRow from './OverlayHotkeyRow.jsx';
 
 // Une ligne de réglage à bascule : étiquette + description à gauche (sur une
 // largeur raisonnable, pas étirées sur toute la carte), switch aligné à
@@ -52,8 +51,6 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
   const [tiltNotificationsEnabled, setTiltNotificationsEnabled] = useState(true);
   const [perfLiteEnabled, setPerfLiteEnabled] = useState(isPerfLiteEnabled);
   const [dailyOverlayEnabled, setDailyOverlayEnabled] = useState(true);
-  const [matchRanksEnabled, setMatchRanksEnabled] = useState(false);
-  const [buyOverlayEnabled, setBuyOverlayEnabled] = useState(false);
   // Resynchro du Riot ID lié — pour les joueurs qui ont changé de pseudo EN
   // JEU après avoir lié leur compte (le tracker reste bloqué sur l'ancien nom
   // tant qu'on ne le met pas à jour ici, voir onUpdateRiotId dans App.jsx).
@@ -69,8 +66,6 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
     window.electronAPI.getAutoLaunch().then(setAutoLaunchEnabled);
     window.electronAPI.getTiltNotificationsEnabled().then(setTiltNotificationsEnabled);
     window.electronAPI.getDailyOverlayEnabled().then(setDailyOverlayEnabled);
-    window.electronAPI.getMatchRanksOverlayEnabled().then(setMatchRanksEnabled);
-    window.electronAPI.getBuyOverlayEnabled().then(setBuyOverlayEnabled);
   }, []);
 
   const handleToggleAutoLaunch = () => {
@@ -105,18 +100,6 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
     const next = !dailyOverlayEnabled;
     setDailyOverlayEnabled(next);
     window.electronAPI.setDailyOverlayEnabled(next);
-  };
-
-  const handleToggleMatchRanks = () => {
-    const next = !matchRanksEnabled;
-    setMatchRanksEnabled(next);
-    window.electronAPI.setMatchRanksOverlayEnabled(next);
-  };
-
-  const handleToggleBuyOverlay = () => {
-    const next = !buyOverlayEnabled;
-    setBuyOverlayEnabled(next);
-    window.electronAPI.setBuyOverlayEnabled(next);
   };
 
   const handleForgotPassword = async () => {
@@ -272,28 +255,6 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
       </CollapsibleCard>
 
       <CollapsibleCard id="settings.overlay" title={t('account.settingsOverlayTitle')}>
-        <SettingsToggleRow
-          label={t('account.matchRanksLabel')}
-          hint={t('account.matchRanksHint')}
-          checked={matchRanksEnabled}
-          onChange={handleToggleMatchRanks}
-        />
-        <OverlayHotkeyRow
-          overlayId="ranks"
-          label={t('account.matchRanksHotkeyLabel')}
-          hint={t('account.matchRanksHotkeyHint')}
-        />
-        <SettingsToggleRow
-          label={t('account.buyOverlayLabel')}
-          hint={t('account.buyOverlayHint')}
-          checked={buyOverlayEnabled}
-          onChange={handleToggleBuyOverlay}
-        />
-        <OverlayHotkeyRow
-          overlayId="buy"
-          label={t('account.buyOverlayHotkeyLabel')}
-          hint={t('account.buyOverlayHotkeyHint')}
-        />
         <SettingsToggleRow
           label={t('account.dailyOverlayLabel')}
           hint={t('account.dailyOverlayHint')}

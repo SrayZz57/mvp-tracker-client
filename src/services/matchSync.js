@@ -18,7 +18,7 @@ const brotliCompress = promisify(zlib.brotliCompress);
 // SYNCHRO DES MATCHS VERS SUPABASE
 //
 // Pense pour un futur client mobile : celui-ci ne pourra ni faire tourner le
-// client Valorant (API locale inaccessible) ni embarquer une clé HenrikDev
+// client Valorant ni embarquer une clé HenrikDev
 // personnelle (risque d'extraction). Le desktop, qui a déjà tout ça, pousse
 // donc ce qu'il a récupéré vers un stockage central que le mobile n'aura
 // qu'à lire plus tard.

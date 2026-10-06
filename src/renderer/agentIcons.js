@@ -23,8 +23,8 @@ export function useAgentIcons() {
   return icons;
 }
 
-// Indexé par UUID et non par nom : l'API locale du client Valorant (sélection
-// d'agent) renvoie un `CharacterID` qui est l'uuid de l'agent, jamais son nom.
+// Indexé par UUID et non par nom : certaines sources ne donnent que l'uuid de
+// l'agent, jamais son nom.
 export function useAgentsById() {
   const [agents, setAgents] = useState(new Map());
 

@@ -5,10 +5,7 @@ const LATENCY_REGEX = /(?:temps|time)[=<](\d+)/i;
 
 // Détection de Valorant par NOM de process uniquement, avec `tasklist` :
 // l'équivalent exact de regarder dans le Gestionnaire des tâches. Aucun fichier
-// de Riot n'est lu (avant, le `lockfile` du Riot Client l'était — il contient
-// l'identifiant et le mot de passe de l'API locale, dont on ne se servait que
-// du numéro de process) et aucun accès n'est ouvert sur un process de Riot
-// (l'ancien `process.kill(pid, 0)` en demandait un sur le Riot Client).
+// de Riot n'est lu et aucun accès n'est ouvert sur un process de Riot.
 //
 // `tasklist` plutôt que PowerShell : un outil Windows natif dédié à lister les
 // process par nom, pas besoin de tout l'attirail PowerShell/Add-Type. `/FO CSV`
@@ -21,9 +18,8 @@ const LATENCY_REGEX = /(?:temps|time)[=<](\d+)/i;
 // process puis chercher dedans) : l'app ne demande à Windows que ces deux noms
 // précis et ne voit jamais le reste de ce qui tourne sur le PC.
 
-// Process du Riot Client (le lanceur), présent dès l'écran d'accueil de Riot :
-// c'est lui dont le PID figurait dans l'ancien lockfile. Ne veut PAS dire qu'on
-// est en partie — voir VALORANT_GAME_PROCESS.
+// Process du Riot Client (le lanceur), présent dès l'écran d'accueil de Riot.
+// Ne veut PAS dire qu'on est en partie — voir VALORANT_GAME_PROCESS.
 const RIOT_CLIENT_PROCESS = 'RiotClientServices.exe';
 
 // Process du JEU lui-même (pas le Riot Client, ni son launcher) — confirmé

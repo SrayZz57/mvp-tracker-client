@@ -1675,6 +1675,10 @@ function App() {
                 {t('nav.riotIdOutdatedLink')}
               </button>
             </p>
+          ) : /internal error/i.test(data.error) ? (
+            // « Internal Error » est le message d'un 500 de HenrikDev lui-même (constaté sur
+            // sa recherche de compte pour tous les comptes) : ni le pseudo ni la clé ne sont en cause.
+            <p className="error-banner">{t('nav.henrikServerError')}</p>
           ) : (
             <p className="warning">{t('nav.error', { message: data.error })}</p>
           ))}

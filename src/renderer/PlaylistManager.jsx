@@ -83,7 +83,7 @@ function PlaylistManager({ onClose, onLaunch }) {
 
   // Résout chaque identifiant en config complète au moment du lancement —
   // ignore silencieusement un preset entre-temps supprimé plutôt que de
-  // planter, comme le reste de l'app avec l'API locale/HenrikDev.
+  // planter, comme le reste de l'app avec HenrikDev.
   const launchPlaylist = (playlist) => {
     const resolved = playlist.presetIds.map((id) => presetById.get(id)).filter(Boolean);
     if (resolved.length === 0) return;

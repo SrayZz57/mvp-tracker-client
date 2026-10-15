@@ -5,6 +5,18 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.13.3',
+    date: '2026-10-16',
+    items: {
+      fr: [
+        'Réglages > Chercher une mise à jour : quand une nouvelle version existe, elle se télécharge maintenant directement et le bouton vert « Redémarrer » apparaît en haut, au lieu de t’envoyer sur la page GitHub.',
+      ],
+      en: [
+        'Settings > Check for updates: when a new version exists, it now downloads right away and the green “Restart” button appears at the top, instead of sending you to the GitHub page.',
+      ],
+    },
+  },
+  {
     version: '1.13.2',
     date: '2026-10-16',
     items: {

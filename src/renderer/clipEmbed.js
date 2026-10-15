@@ -31,20 +31,37 @@ const MEDAL_PATH_PATTERN = /medal\.tv\/[a-z0-9_/-]*clips?\/[\w-]+(?:\/[\w-]+)?/i
 // `\/e\/` exclu du groupe capturé : un lien déjà en format embed ne doit pas
 // se retrouver avec `/e/` doublé une fois reconstruit.
 const STREAMABLE_ID_PATTERN = /streamable\.com\/(?:e\/)?([a-zA-Z0-9]{3,})/i;
+//   - TikTok     : https://www.tiktok.com/embed/v2/{id} — page prévue pour
+//     l'intégration (aucun x-frame-options, vérifié aux en-têtes HTTP ET dans un
+//     vrai Electron en file://), alors que la page normale d'une vidéo, elle,
+//     envoie `x-frame-options: SAMEORIGIN`. Il faut l'identifiant NUMÉRIQUE :
+//     un lien court (vm.tiktok.com/XXXX, tiktok.com/t/XXXX) est résolu à la
+//     publication (voir services/tiktok.js) ; non résolu, il s'ouvre dans le
+//     navigateur. TikTok affiche son propre bandeau de cookies à la première
+//     lecture (en Europe) : c'est le sien, on ne peut ni ne doit le contourner.
+const TIKTOK_ID_PATTERN = /tiktok\.com\/(?:@[\w.-]+\/video\/|embed\/v2\/|embed\/|v\/)(\d{10,25})/i;
+const TIKTOK_SHORT_PATTERN = /(?:\/\/(?:vm|vt)\.tiktok\.com\/[\w-]+|tiktok\.com\/t\/[\w-]+)/i;
 
 export const CLIP_PLATFORMS = {
   youtube: { labelKey: 'clips.platform.youtube' },
+  tiktok: { labelKey: 'clips.platform.tiktok' },
   medal: { labelKey: 'clips.platform.medal' },
   streamable: { labelKey: 'clips.platform.streamable' },
 };
 
-/** Plateforme détectée à partir d'un lien collé, ou `null` si aucune des 3 supportées. */
+/** Plateforme détectée à partir d'un lien collé, ou `null` si aucune des 4 supportées. */
 export function detectClipPlatform(url) {
   if (!url) return null;
   if (YOUTUBE_ID_PATTERN.test(url)) return 'youtube';
+  if (TIKTOK_ID_PATTERN.test(url) || TIKTOK_SHORT_PATTERN.test(url)) return 'tiktok';
   if (MEDAL_PATH_PATTERN.test(url)) return 'medal';
   if (STREAMABLE_ID_PATTERN.test(url)) return 'streamable';
   return null;
+}
+
+/** Vrai pour un lien TikTok court (sans identifiant) : à résoudre avant de pouvoir l'intégrer. */
+export function isTikTokShortLink(url) {
+  return Boolean(url) && !TIKTOK_ID_PATTERN.test(url) && TIKTOK_SHORT_PATTERN.test(url);
 }
 
 /**
@@ -58,6 +75,9 @@ export function clipEmbedUrl(url) {
 
   const youtube = url.match(YOUTUBE_ID_PATTERN);
   if (youtube) return `https://www.youtube-nocookie.com/embed/${youtube[1]}`;
+
+  const tiktok = url.match(TIKTOK_ID_PATTERN);
+  if (tiktok) return `https://www.tiktok.com/embed/v2/${tiktok[1]}`;
 
   const streamable = url.match(STREAMABLE_ID_PATTERN);
   if (streamable) return `https://streamable.com/e/${streamable[1]}?autoplay=0&muted=1`;

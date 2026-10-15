@@ -19,6 +19,7 @@ Application Windows de suivi de stats Valorant (Electron + React) et son applica
 
 - `src/main.js` : process principal, IPC, deep links `mvptracker://`, overlay, cache des matchs (`services/matchesReader.js` + worker, base SQLite `matches.db` dans `%APPDATA%\MVP Tracker`).
 - `src/preload.js` : pont IPC exposé en `window.electronAPI`.
+- **Boîte à outils en jeu** (`GameToolkit.jsx`, `createToolkitWindow` dans `main.js`) : fenêtre ouverte par `Alt+O` (réglage opt-in, désactivé par défaut) avec choix d'agent par map/rôle (`mapAgentTiers.js`) et recherche de lineups COURTES (YouTube Shorts, 40 s max) via l'Edge Function `lineup-search` (`lineupSearch.js`) — pas la bibliothèque `agent_techs`, réservée à l'onglet Lineups. Elle ne lit RIEN du jeu : pas de lockfile, pas d'API locale, pas de fichier Riot — ne pas y ajouter de lecture de l'état de la partie. Visible seulement si Valorant est en plein écran fenêtré.
 - `src/renderer/` : React. `App.jsx` (barre du haut, navigation), `tabs/`, un composant ou une page par fichier.
 - `src/services/` : `matchNormalizer.js` convertit les matchs HenrikDev v4 vers le format interne (proche de la v3), lecture du cache.
 - `src/index.css` : une seule feuille de style (~12 000 lignes). Ajouter les règles près de la section concernée.
@@ -38,6 +39,7 @@ Application Windows de suivi de stats Valorant (Electron + React) et son applica
 
 - La règle globale `button:hover:not(:disabled):not(.weekly-notch)…` a une spécificité plus haute que `.ma-classe:hover`. Un bouton qui a son propre style de survol doit être ajouté à la liste des `:not()` (voir `.account-auth-google-button`, `.danger-zone-button`).
 - La barre du haut est réduite par `zoom` selon la résolution (Windows à 125 % / 150 %). Voir la fin de `index.css`.
+- La CSP de `main.js` ne s'applique qu'aux pages de l'app (`file://`). Imposée aussi aux lecteurs intégrés (YouTube, TikTok), son `script-src 'self'` les laissait noirs en build packagé, sans jamais le montrer en `npm start` (pas de CSP en dev). Tester les iframes dans un vrai Electron en `file://`, pas seulement en dev.
 
 ## Statistiques et modes de jeu
 
@@ -57,4 +59,5 @@ Application Windows de suivi de stats Valorant (Electron + React) et son applica
 - **Nom d'une fonction** : le nom tapé à la création n'est pas forcément son identifiant. Vérifier l'URL dans l'onglet Overview. La fonction d'e-mail de bienvenue s'appelle `swift-api`.
 - **Trigger sur `auth.users`** : impossible depuis l'interface graphique, uniquement en SQL. `on_auth_user_created` appelle `supabase_functions.http_request` vers `.../functions/v1/swift-api` avec l'en-tête `x-webhook-secret`. Diagnostic : `select * from net._http_response order by created desc limit 5;`.
 - **Suppression de compte** : Edge Function `delete-account` (`auth.admin.deleteUser`, clé `service_role`). La cascade nettoie les tables liées. `account_deletion_feedback` n'a volontairement aucune clé étrangère, pour survivre à la suppression.
+- **Recherche de lineups** (`lineup-search`, voir `supabase/functions/lineup-search/` et `sql/lineup_search_cache.sql`) : la clé de l'API YouTube Data v3 est le secret `YOUTUBE_API_KEY` de la fonction, jamais dans l'app. Une recherche coûte 100 unités sur 10 000 par jour pour TOUS les joueurs : les résultats sont mis en cache 7 jours dans `lineup_search_cache` et un budget de 90 recherches/jour est compté sous la clé `__usage:AAAA-MM-JJ`. « Verify JWT » activé. Pas de recherche TikTok : aucune API officielle n'existe pour les applications.
 - **E-mails** : Resend, expéditeur `noreply@mvptracker.fr`. Secrets attendus : `RESEND_API_KEY`, `WEBHOOK_SECRET`. La fonction `contact-notify` (formulaire de contact du site, déclenchée par un webhook sur `contact_messages`) utilise les mêmes secrets.

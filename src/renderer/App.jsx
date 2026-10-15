@@ -90,6 +90,7 @@ import ChangelogModal from './ChangelogModal.jsx';
 import AnnouncementsModal from './AnnouncementsModal.jsx';
 import { LATEST_CHANGELOG_VERSION } from './changelog.js';
 import LoadingState from './LoadingState.jsx';
+import DailyOverlaySettings from './DailyOverlaySettings.jsx';
 import { supabase } from './supabaseClient.js';
 import { useOnlinePresence } from './presence.js';
 import { useRankTiers, usePlayerCardArt } from './rankData.js';
@@ -790,13 +791,24 @@ function App() {
   // finir de se peindre (sinon les mesures de position des sections seraient
   // prises avant que leur layout final ne soit stable).
   const [showOnboarding, setShowOnboarding] = useState(false);
-  // Ordre au premier passage : CGU, puis ce tour — jamais deux fenêtres en même temps.
+  // Ordre au premier passage : CGU, puis la fenêtre de l'overlay de session (modes
+  // à exclure), puis ce tour — jamais deux fenêtres en même temps. Sans ça, dès
+  // l'acceptation des CGU le tour et la fenêtre d'overlay s'ouvraient ensemble et
+  // se chevauchaient. `overlaySettingsSeen` passe à vrai quand cette fenêtre a déjà
+  // été vue (ou vient d'être fermée) ; si le stockage est illisible on ne bloque pas le tour.
+  const [overlaySettingsSeen, setOverlaySettingsSeen] = useState(() => {
+    try {
+      return !!localStorage.getItem('mvptracker-daily-overlay-settings-shown');
+    } catch {
+      return true;
+    }
+  });
   useEffect(() => {
-    if (!enteredApp || !termsAccepted) return undefined;
+    if (!enteredApp || !termsAccepted || !overlaySettingsSeen) return undefined;
     if (localStorage.getItem('mvptracker-onboarding-done')) return undefined;
     const id = setTimeout(() => setShowOnboarding(true), 300);
     return () => clearTimeout(id);
-  }, [enteredApp, termsAccepted]);
+  }, [enteredApp, termsAccepted, overlaySettingsSeen]);
 
   const [onboardingDone, setOnboardingDone] = useState(() => {
     try {
@@ -810,6 +822,27 @@ function App() {
     localStorage.setItem('mvptracker-onboarding-done', '1');
     setOnboardingDone(true);
     setShowOnboarding(false);
+  };
+
+  // Même principe que l'onboarding ci-dessus, pour présenter l'overlay de
+  // session une seule fois — modale DANS l'app (pas une fenêtre séparée,
+  // demandé explicitement) plutôt qu'un flag stocké côté main.js.
+  const [showDailyOverlaySettings, setShowDailyOverlaySettings] = useState(false);
+  useEffect(() => {
+    if (!enteredApp || !termsAccepted) return undefined;
+    if (localStorage.getItem('mvptracker-daily-overlay-settings-shown')) return undefined;
+    const id = setTimeout(() => setShowDailyOverlaySettings(true), 300);
+    return () => clearTimeout(id);
+  }, [enteredApp, termsAccepted]);
+
+  const closeDailyOverlaySettings = () => {
+    try {
+      localStorage.setItem('mvptracker-daily-overlay-settings-shown', '1');
+    } catch {
+      // stockage indisponible : la fenêtre reviendra au prochain lancement
+    }
+    setOverlaySettingsSeen(true);
+    setShowDailyOverlaySettings(false);
   };
 
   useEffect(() => {
@@ -1108,8 +1141,10 @@ function App() {
   const shareIntroReady =
     enteredApp &&
     termsAccepted &&
+    overlaySettingsSeen &&
     onboardingDone &&
     !showOnboarding &&
+    !showDailyOverlaySettings &&
     !!profile &&
     !!mySettings?.name &&
     !!myRank &&
@@ -1424,6 +1459,7 @@ function App() {
             onUpdateRiotId={updateRiotId}
             onSignOut={() => supabase.auth.signOut().then(lockMessagingKey)}
             onReplayOnboarding={() => setShowOnboarding(true)}
+            onOpenDailyOverlaySettings={() => setShowDailyOverlaySettings(true)}
           />
         );
       default:
@@ -1713,6 +1749,9 @@ function App() {
           rank={myRank}
           onClose={() => setShowShareIntro(false)}
         />
+      )}
+      {showDailyOverlaySettings && (
+        <DailyOverlaySettings matches={myMatches} onClose={closeDailyOverlaySettings} />
       )}
     </div>
   );

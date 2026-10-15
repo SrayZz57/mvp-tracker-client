@@ -5,6 +5,30 @@
 // À compléter à chaque release, dans le même esprit que l'annonce Discord.
 export const CHANGELOG = [
   {
+    version: '1.13.2',
+    date: '2026-10-16',
+    items: {
+      fr: [
+        'Boîte à outils en jeu : un raccourci (Alt+O, à activer dans Réglages) ouvre par-dessus le jeu une fenêtre pour préparer ta partie. Elle ne lit rien du jeu, tu choisis tout toi-même, et Valorant doit être en plein écran fenêtré.',
+        'Agent par map : choisis la map et vois les agents les plus efficaces d’après leurs taux de victoire en compétitif, ceux à éviter, ce que jouent les équipes pro et une compo conseillée. Des onglets filtrent par rôle.',
+        'Lineups : choisis ton agent et la boîte à outils trouve des lineups courtes (moins de 40 secondes) sur YouTube Shorts. Tu les filtres par map, côté et site, et tu les regardes sans quitter la fenêtre.',
+        'Double check après match : nouveau design, avec la bannière de la partie (map, agent, résultat), des réponses en couleur et un résultat qui compare ton ressenti à la réalité.',
+        'Onglet Lineups : les liens TikTok sont maintenant pris en charge, et le lecteur YouTube s’affiche aussi dans l’application installée (il restait noir).',
+        'Quand HenrikDev est en panne, l’application réutilise ton dernier compte connu au lieu d’afficher « Internal Error », avec un message clair.',
+        'La cloche des notifications se met à jour à chaque ouverture.',
+      ],
+      en: [
+        'In-game toolbox: a shortcut (Alt+O, to enable in Settings) opens a window over the game to prepare your match. It reads nothing from the game, you pick everything yourself, and Valorant must run in windowed fullscreen.',
+        'Agent by map: pick the map and see the most effective agents based on competitive win rates, the ones to avoid, what the pro teams play and a suggested comp. Tabs filter by role.',
+        'Lineups: pick your agent and the toolbox finds short lineups (under 40 seconds) on YouTube Shorts. Filter them by map, side and site, and watch them without leaving the window.',
+        'Post-match double check: new design, with the match banner (map, agent, result), colour-coded answers and a result that compares your feeling with reality.',
+        'Lineups tab: TikTok links are now supported, and the YouTube player also shows in the installed app (it stayed black).',
+        'When HenrikDev is down, the app reuses your last known account instead of showing “Internal Error”, with a clear message.',
+        'The notification bell refreshes every time you open it.',
+      ],
+    },
+  },
+  {
     version: '1.13.1',
     date: '2026-10-05',
     items: {

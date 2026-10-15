@@ -27,6 +27,8 @@ import { E2EEProvider } from './renderer/E2EEContext.jsx';
 // jamais dans la session.
 const App = lazy(() => import('./renderer/App.jsx'));
 const AimTrainerHub = lazy(() => import('./renderer/AimTrainerHub.jsx'));
+const DailyOverlay = lazy(() => import('./renderer/DailyOverlay.jsx'));
+const GameToolkit = lazy(() => import('./renderer/GameToolkit.jsx'));
 
 applyPerfLite();
 
@@ -88,6 +90,21 @@ function Root() {
     return (
       <Suspense fallback={null}>
         <AimTrainerHub config={gameConfig} />
+      </Suspense>
+    );
+  }
+  // Boîte à outils en jeu : fenêtre légère ouverte par raccourci (main.js).
+  if (view === 'daily-overlay') {
+    return (
+      <Suspense fallback={null}>
+        <DailyOverlay />
+      </Suspense>
+    );
+  }
+  if (view === 'toolkit') {
+    return (
+      <Suspense fallback={null}>
+        <GameToolkit />
       </Suspense>
     );
   }

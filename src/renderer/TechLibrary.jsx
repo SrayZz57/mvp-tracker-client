@@ -6,7 +6,7 @@ import { supabase } from './supabaseClient.js';
 import { usePlayerCardArt } from './rankData.js';
 import { useAgentIcons } from './agentIcons.js';
 import { useMapMinimaps } from './mapImages.js';
-import { detectClipPlatform, CLIP_PLATFORMS } from './clipEmbed.js';
+import { detectClipPlatform, isTikTokShortLink, CLIP_PLATFORMS } from './clipEmbed.js';
 import { VideoThumbnail, VideoPlayer } from './VideoPlayer.jsx';
 import CollapsibleCard from './CollapsibleCard.jsx';
 
@@ -175,8 +175,21 @@ function TechLibrary({ myId, isAdmin }) {
     // publication, plutôt qu'à chaque affichage du fil pour chaque visiteur
     // (même mécanique que le module Clips).
     let thumbnailUrl = null;
-    if (detectedPlatform !== 'youtube' && window.electronAPI?.resolveClipMetadata) {
-      const metadata = await window.electronAPI.resolveClipMetadata(formVideoUrl.trim());
+    let videoUrl = formVideoUrl.trim();
+    if (detectedPlatform === 'tiktok') {
+      // TikTok n'a pas de miniature stockable (l'URL signée expire en ~48 h) :
+      // on résout seulement l'adresse complète, car un lien court (vm.tiktok.com/...)
+      // ne contient pas l'identifiant nécessaire au lecteur (voir services/tiktok.js).
+      const metadata = await window.electronAPI?.resolveClipMetadata?.(videoUrl);
+      if (metadata?.canonicalUrl) {
+        videoUrl = metadata.canonicalUrl;
+      } else if (isTikTokShortLink(videoUrl)) {
+        setPublishing(false);
+        setPublishError(t('lineups.tiktokUnresolved'));
+        return;
+      }
+    } else if (detectedPlatform !== 'youtube' && window.electronAPI?.resolveClipMetadata) {
+      const metadata = await window.electronAPI.resolveClipMetadata(videoUrl);
       thumbnailUrl = metadata?.thumbnail ?? null;
     }
 
@@ -184,7 +197,7 @@ function TechLibrary({ myId, isAdmin }) {
       agent: formAgent,
       map: formMap || null,
       title: formTitle.trim(),
-      video_url: formVideoUrl.trim(),
+      video_url: videoUrl,
       thumbnail_url: thumbnailUrl,
       tags,
       created_by: myId,

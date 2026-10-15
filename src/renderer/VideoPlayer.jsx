@@ -98,7 +98,8 @@ export function VideoPlayer({ url, platform, title, t }) {
 
   if (embedUrl) {
     return (
-      <div className="clip-video-frame clip-video-frame-large">
+      // TikTok est une vidéo verticale avec sa propre interface : cadre portrait.
+      <div className={`clip-video-frame clip-video-frame-large${platform === 'tiktok' ? ' clip-video-frame-tiktok' : ''}`}>
         <iframe
           src={embedUrl}
           title={title}

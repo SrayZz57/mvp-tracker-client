@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell, Menu, Notification, session, safeStorage, screen, autoUpdater, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Menu, Notification, session, safeStorage, screen, autoUpdater, Tray, globalShortcut } from 'electron';
+import { DEFAULT_OVERLAY_HOTKEY, isValidAccelerator } from './renderer/overlayHotkey.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -44,6 +45,7 @@ import {
 } from './services/db.js';
 import { isValorantRunning, pingOnce, isValorantGameRunning } from './services/network.js';
 import { syncMatches } from './services/matchSync.js';
+import { isTikTokUrl, resolveTikTokMetadata } from './services/tiktok.js';
 import { getCachedMatchesAsync } from './services/matchesReader.js';
 import { updateElectronApp } from 'update-electron-app';
 import { captureEvent, captureException, shutdown as shutdownTelemetry } from './services/telemetry.js';
@@ -699,6 +701,9 @@ ipcMain.handle('shell:open-external', (_event, url) => shell.openExternal(url));
 // et lent.
 ipcMain.handle('clips:resolve-clip-metadata', async (_event, clipUrl) => {
   const empty = { video: null, thumbnail: null };
+  // TikTok : pas de balises og:video exploitables, mais un oEmbed officiel (voir
+  // services/tiktok.js) qui donne l'adresse complète d'un lien court.
+  if (isTikTokUrl(clipUrl)) return resolveTikTokMetadata(clipUrl);
   try {
     // `fetch` n'a aucun délai par défaut côté Node — sans ça, une plateforme
     // qui traîne ou ne répond jamais laisserait l'appelant coincé en
@@ -831,6 +836,97 @@ ipcMain.handle('aim-trainer:open-tab', (event, tab) => {
   mainWindow.webContents.send('app:open-tab', tab);
 });
 
+
+// --- Boîte à outils en jeu : fenêtre de référence ouverte par un raccourci ------
+// Choix d'agent par map/rôle et lineups, sans quitter le jeu. Elle ne lit RIEN
+// du jeu (pas de fichier Riot, pas d'API locale, pas de mémoire) : c'est une
+// simple fenêtre de l'app, au premier plan, avec du contenu que l'app possède
+// déjà. Désactivée par défaut : l'utilisateur l'active dans les Réglages. Le
+// jeu doit être en plein écran fenêtré — une fenêtre ne s'affiche pas par-dessus
+// un vrai plein écran exclusif.
+const TOOLKIT_HOTKEY = 'Alt+O';
+let toolkitWindow = null;
+
+function createToolkitWindow() {
+  // Ouverte sur l'écran où se trouve la souris (celui du jeu, en général).
+  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const width = 680;
+  const height = Math.min(820, display.workArea.height - 80);
+
+  const win = new BrowserWindow({
+    width,
+    height,
+    x: Math.round(display.workArea.x + (display.workArea.width - width) / 2),
+    y: Math.round(display.workArea.y + (display.workArea.height - height) / 2),
+    frame: false,
+    show: false,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    backgroundColor: '#0a0c11',
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+  });
+  // Niveau « screen-saver » : au-dessus d'un jeu en plein écran fenêtré.
+  win.setAlwaysOnTop(true, 'screen-saver');
+
+  const query = 'view=toolkit';
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    win.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
+  } else {
+    win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), { search: query });
+  }
+
+  // Échap ferme la fenêtre sans toucher au jeu ; tout le reste passe tel quel.
+  win.webContents.on('before-input-event', (_event, input) => {
+    if (input.type === 'keyDown' && input.key === 'Escape') win.hide();
+  });
+  win.once('ready-to-show', () => win.show());
+  win.on('closed', () => {
+    toolkitWindow = null;
+  });
+  return win;
+}
+
+function toggleToolkit() {
+  if (toolkitWindow && !toolkitWindow.isDestroyed()) {
+    if (toolkitWindow.isVisible()) {
+      toolkitWindow.hide();
+    } else {
+      toolkitWindow.show();
+      toolkitWindow.focus();
+    }
+    return;
+  }
+  toolkitWindow = createToolkitWindow();
+}
+
+// Enregistre ou retire le raccourci selon le réglage. Retourne false si
+// Windows refuse (raccourci déjà pris par une autre application).
+function syncToolkitShortcut() {
+  globalShortcut.unregister(TOOLKIT_HOTKEY);
+  const enabled = store.get('gameToolkitEnabled') ?? false;
+  if (!enabled) {
+    if (toolkitWindow && !toolkitWindow.isDestroyed()) toolkitWindow.destroy();
+    return true;
+  }
+  const ok = globalShortcut.register(TOOLKIT_HOTKEY, toggleToolkit);
+  if (!ok) console.warn(`[toolkit] raccourci ${TOOLKIT_HOTKEY} indisponible (déjà utilisé ailleurs)`);
+  return ok;
+}
+
+ipcMain.handle('toolkit:get-enabled', () => ({ enabled: store.get('gameToolkitEnabled') ?? false, hotkey: TOOLKIT_HOTKEY }));
+
+ipcMain.handle('toolkit:set-enabled', (_event, enabled) => {
+  store.set('gameToolkitEnabled', Boolean(enabled));
+  const registered = syncToolkitShortcut();
+  return { enabled: Boolean(enabled), registered, hotkey: TOOLKIT_HOTKEY };
+});
+
+ipcMain.handle('toolkit:close', () => {
+  if (toolkitWindow && !toolkitWindow.isDestroyed()) toolkitWindow.hide();
+});
 
 ipcMain.handle('settings:get', () => store.get('valorantSettings') || null);
 
@@ -1455,11 +1551,204 @@ setInterval(() => {
   if (dailyOverlayLastRunning) checkTiltAndNotify();
 }, 120000);
 
-// --- Stats de la session du jour (envoyées à l'app mobile) ------------------
-// Il n'y a aucune fenêtre : le calcul des stats du jour alimente uniquement le
-// téléphone (table live_session, voir App.jsx), derrière le réglage
-// dailyOverlayEnabled (nom historique). Alimenté uniquement par HenrikDev.
+// --- Overlay de session quotidienne (victoires/défaites, HS%, K/D) --------
+// Alimenté uniquement par HenrikDev (jamais l'API locale du client, retirée
+// en 1.10.6) — aucune capture d'écran ni OCR nécessaire ici (contrairement à
+// l'ancien overlay d'achat auto, mis de côté et retiré du code pour être
+// repris plus tard proprement). Fenêtre transparente, sans bordure,
+// click-through par défaut, ne fonctionne qu'en Sans bordure/Fenêtré.
+let dailyOverlayWindow = null;
+let dailyOverlayTopmostInterval = null;
 const dailyOverlayState = { dayKey: null };
+
+// Taille de base (100%) — voir dailyOverlayDimensions(), réglable depuis Mon
+// compte (dailyOverlaySize, store, en %).
+const DAILY_OVERLAY_BASE_WIDTH = 380;
+const DAILY_OVERLAY_BASE_HEIGHT = 110;
+
+function dailyOverlayDimensions() {
+  const percent = store.get('dailyOverlaySize') ?? 100;
+  return {
+    width: Math.round((DAILY_OVERLAY_BASE_WIDTH * percent) / 100),
+    height: Math.round((DAILY_OVERLAY_BASE_HEIGHT * percent) / 100),
+  };
+}
+
+function dailyOverlayDefaultPosition(width, height) {
+  // En haut à droite par défaut : loin du centre de l'écran où se concentre
+  // l'action, et de la minimap (généralement en bas) et de la boutique
+  // (haut-gauche). Écrasé par une position sauvegardée si l'utilisateur a
+  // déjà déplacé la fenêtre (voir dailyOverlayPosition, store).
+  const display = screen.getPrimaryDisplay().workArea;
+  return { x: display.x + display.width - width - 16, y: display.y + 16 };
+}
+
+// Mode "déplacement" : la fenêtre devient temporairement interactive et
+// glissable (voir setDailyOverlayDragMode) pour permettre à l'utilisateur de
+// la repositionner depuis Mon compte — jamais pendant une vraie partie (voir
+// le garde-fou dans la boucle de détection plus bas). `focusable: false` par
+// défaut est le vrai correctif du souci de blocage caméra remonté par des
+// utilisateurs : une fenêtre non-focusable, même toujours au premier plan,
+// ne peut jamais voler le focus clavier/souris au jeu — seule
+// setIgnoreMouseEvents ne suffisait apparemment pas.
+let dailyOverlayDragMode = false;
+
+function createDailyOverlay() {
+  const { width, height } = dailyOverlayDimensions();
+
+  dailyOverlayWindow = new BrowserWindow({
+    width,
+    height,
+    show: false,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    focusable: dailyOverlayDragMode,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  // 'screen-saver' : seul niveau confirmé s'afficher réellement par-dessus
+  // Valorant en test (l'ancien overlay d'achat, avant qu'on passe à
+  // 'floating' pour la perf — jamais revérifié visuellement après ce
+  // changement). Priorité à la visibilité d'abord, on reviendra sur un
+  // niveau plus léger une fois confirmé que ça s'affiche.
+  dailyOverlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  if (dailyOverlayDragMode) {
+    dailyOverlayWindow.setIgnoreMouseEvents(false);
+  } else {
+    dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  }
+
+  const saved = store.get('dailyOverlayPosition');
+  const pos = saved ?? dailyOverlayDefaultPosition(width, height);
+  dailyOverlayWindow.setPosition(pos.x, pos.y);
+
+  // Ne persiste la position que pendant un déplacement volontaire — un
+  // setPosition() programmatique (ci-dessus, ou un futur redimensionnement)
+  // ne doit jamais être interprété comme "l'utilisateur a bougé la fenêtre".
+  dailyOverlayWindow.on('moved', () => {
+    if (!dailyOverlayDragMode || !dailyOverlayWindow) return;
+    const [x, y] = dailyOverlayWindow.getPosition();
+    store.set('dailyOverlayPosition', { x, y });
+  });
+
+  const query = 'view=daily-overlay';
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    dailyOverlayWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?${query}`);
+  } else {
+    dailyOverlayWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), {
+      search: query,
+    });
+  }
+
+  dailyOverlayWindow.webContents.on('console-message', (_e, _level, message) => {
+    console.log('[daily-overlay]', message);
+  });
+  dailyOverlayWindow.webContents.on('did-fail-load', (_e, code, description) => {
+    console.error(`[daily-overlay] échec de chargement de la page (${code} ${description})`);
+  });
+  dailyOverlayWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[daily-overlay] process de rendu arrêté :', details.reason);
+  });
+
+  dailyOverlayWindow.showInactive();
+  if (dailyOverlayUserHidden) dailyOverlayWindow.hide();
+  if (!dailyOverlayTopmostInterval) {
+    dailyOverlayTopmostInterval = setInterval(() => {
+      try {
+        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed() && !dailyOverlayUserHidden) {
+          dailyOverlayWindow.moveTop();
+        }
+      } catch {
+        clearInterval(dailyOverlayTopmostInterval);
+        dailyOverlayTopmostInterval = null;
+      }
+    }, 3000);
+  }
+}
+
+function closeDailyOverlay() {
+  clearInterval(dailyOverlayTopmostInterval);
+  dailyOverlayTopmostInterval = null;
+  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+    try {
+      dailyOverlayWindow.close();
+    } catch {
+      // déjà détruite entre le check et l'appel — rien à faire de plus.
+    }
+  }
+  dailyOverlayWindow = null;
+}
+
+// Aperçu figé envoyé quand on active le mode déplacement hors partie (aucune
+// vraie stat disponible à ce moment-là) — juste de quoi voir la fenêtre pour
+// la faire glisser, jamais persisté nulle part.
+const DAILY_OVERLAY_PREVIEW_STATS = { dayKey: 'preview', matchesPlayed: 1, wins: 3, losses: 1, kd: 1.24, hsPercent: 53 };
+
+// Dernières vraies stats calculées — la fenêtre overlay les redemande elle-même
+// une fois montée (voir daily-overlay:get-stats). Envoyer uniquement au
+// 'did-finish-load' ne suffit plus : DailyOverlay est chargé en React.lazy
+// (renderer.jsx), son composant et son écouteur IPC n'existent donc qu'APRÈS
+// ce signal — le message partait dans le vide et l'overlay restait invisible
+// (impossible à déplacer hors partie, et absent en jeu jusqu'au refresh suivant).
+let dailyOverlayLatestStats = null;
+
+ipcMain.handle('daily-overlay:get-stats', () =>
+  dailyOverlayLatestStats ?? (dailyOverlayDragMode ? DAILY_OVERLAY_PREVIEW_STATS : null),
+);
+
+// Active/désactive le mode déplacement — voir le commentaire sur
+// dailyOverlayDragMode plus haut. Toujours forcé à `false` dès qu'une vraie
+// partie démarre (voir la boucle de détection plus bas) : ne doit jamais
+// rester interactif pendant que l'utilisateur joue.
+function setDailyOverlayDragMode(enabled) {
+  dailyOverlayDragMode = enabled;
+  console.log(`[daily-overlay] mode déplacement ${enabled ? 'activé' : 'désactivé'} (jeu détecté : ${dailyOverlayLastRunning})`);
+
+  if (enabled) {
+    const needsPreview = !dailyOverlayWindow || dailyOverlayWindow.isDestroyed();
+    if (needsPreview) createDailyOverlay();
+    dailyOverlayWindow.setFocusable(true);
+    dailyOverlayWindow.setIgnoreMouseEvents(false);
+    dailyOverlayWindow.webContents.send('daily-overlay:drag-mode', true);
+    if (needsPreview) {
+      dailyOverlayWindow.webContents.once('did-finish-load', () => {
+        if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+          dailyOverlayWindow.webContents.send('daily-overlay:stats', DAILY_OVERLAY_PREVIEW_STATS);
+        }
+      });
+    }
+    return;
+  }
+
+  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+    dailyOverlayWindow.setFocusable(false);
+    dailyOverlayWindow.setIgnoreMouseEvents(true, { forward: true });
+    dailyOverlayWindow.webContents.send('daily-overlay:drag-mode', false);
+    // Hors partie, pas de raison de laisser tourner une fenêtre juste
+    // affichée pour le repositionnement.
+    if (!dailyOverlayLastRunning) closeDailyOverlay();
+  }
+}
+
+ipcMain.handle('daily-overlay:get-drag-mode', () => dailyOverlayDragMode);
+ipcMain.handle('daily-overlay:set-drag-mode', (_event, enabled) => setDailyOverlayDragMode(enabled));
+
+ipcMain.handle('daily-overlay:get-size', () => store.get('dailyOverlaySize') ?? 100);
+ipcMain.handle('daily-overlay:set-size', (_event, percent) => {
+  store.set('dailyOverlaySize', percent);
+  if (dailyOverlayWindow && !dailyOverlayWindow.isDestroyed()) {
+    const { width, height } = dailyOverlayDimensions();
+    dailyOverlayWindow.setSize(width, height);
+    dailyOverlayWindow.webContents.send('daily-overlay:size', percent);
+  }
+});
 
 ipcMain.handle('tilt-notifications:get-enabled', () => store.get('tiltNotificationsEnabled') ?? true);
 ipcMain.handle('tilt-notifications:set-enabled', (_event, enabled) => store.set('tiltNotificationsEnabled', enabled));
@@ -1468,16 +1757,18 @@ ipcMain.handle('daily-overlay:get-enabled', () => store.get('dailyOverlayEnabled
 
 ipcMain.handle('daily-overlay:set-enabled', (_event, enabled) => {
   store.set('dailyOverlayEnabled', enabled);
-  // Réactivé pendant que le jeu tourne : le calcul ne repartirait sinon qu'au
-  // prochain lancement du jeu (transition fermé→lancé).
-  if (enabled && dailyOverlayLastRunning) refreshDailyOverlay();
+  if (!enabled) closeDailyOverlay();
+  // Réactivé pendant que le jeu tourne : la fenêtre n'est sinon créée qu'au
+  // prochain lancement du jeu (transition fermé→lancé), donc rien n'apparaissait
+  // tant qu'on n'ouvrait pas le mode déplacement (qui, lui, crée la fenêtre).
+  else if (dailyOverlayLastRunning) refreshDailyOverlay();
 });
 
 // Modes à exclure du score du jour, en plus des modes sans vraie
 // victoire/défaite déjà exclus automatiquement (voir dailyStats.js/
-// computeDailyStats). La modale qui permettait de le régler a été supprimée
-// avec l'overlay de session : le dernier choix enregistré reste appliqué aux
-// stats envoyées au téléphone, ces deux handlers restent pour le lire/l'écrire.
+// computeDailyStats). Réglable via une modale DANS l'app principale (voir
+// DailyOverlaySettings.jsx, App.jsx) — pas de fenêtre séparée côté main.js,
+// juste ces deux handlers pour lire/écrire le choix dans electron-store.
 ipcMain.handle('daily-overlay:get-excluded-modes', () => store.get('dailyOverlayExcludedModes') ?? []);
 
 ipcMain.handle('daily-overlay:set-excluded-modes', (_event, modeIds) => {
@@ -1502,6 +1793,7 @@ async function pushDailyOverlayStats(puuid, settings) {
     const stats = computeDailyStats(allMatches, settings.name, settings.tag, dailyOverlayState.dayKey, excludedModes);
     const t2 = Date.now();
     console.log('[daily-overlay] stats calculées', stats);
+    dailyOverlayLatestStats = stats;
     // Le process principal n'a pas la session Supabase (elle vit dans le
     // renderer) : on lui passe les stats pour qu'il les publie vers le téléphone.
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1509,6 +1801,23 @@ async function pushDailyOverlayStats(puuid, settings) {
     }
     console.log(`[daily-overlay] timing: getCachedMatches=${t1 - t0}ms compute=${t2 - t1}ms TOTAL=${t2 - t0}ms`);
 
+    if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) {
+      console.log('[daily-overlay] création de la fenêtre');
+      createDailyOverlay();
+      // loadURL/loadFile est asynchrone : envoyer tout de suite risquait de
+      // perdre le message si la page (et son écouteur IPC) n'avait pas fini
+      // de charger — le tout premier envoi partait dans le vide (constaté
+      // en test le 2026-09-16 : "stats envoyées" loggé AVANT même la
+      // connexion vite de la fenêtre). On attend que la page soit prête.
+      dailyOverlayWindow.webContents.once('did-finish-load', () => {
+        if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) return;
+        dailyOverlayWindow.webContents.send('daily-overlay:stats', stats);
+        console.log('[daily-overlay] stats envoyées à la fenêtre (après chargement)');
+      });
+    } else {
+      dailyOverlayWindow.webContents.send('daily-overlay:stats', stats);
+      console.log('[daily-overlay] stats envoyées à la fenêtre');
+    }
   } catch (err) {
     console.error('[daily-overlay] échec de mise à jour des stats', err);
   }
@@ -1557,6 +1866,60 @@ async function refreshDailyOverlay() {
 // d'avoir lancé une partie.
 let dailyOverlayLastRunning = false;
 
+// Masquage volontaire par raccourci clavier (voir toggleDailyOverlayVisibility) : la
+// fenêtre reste en mémoire et continue de recevoir les stats, elle est juste cachée.
+// Remis à zéro à la fermeture du jeu, pour retrouver l'overlay à la partie suivante.
+let dailyOverlayUserHidden = false;
+let registeredOverlayHotkey = null;
+
+function toggleDailyOverlayVisibility() {
+  dailyOverlayUserHidden = !dailyOverlayUserHidden;
+  if (!dailyOverlayWindow || dailyOverlayWindow.isDestroyed()) return;
+  if (dailyOverlayUserHidden) {
+    dailyOverlayWindow.hide();
+  } else {
+    dailyOverlayWindow.showInactive();
+    dailyOverlayWindow.moveTop();
+  }
+}
+
+// undefined en base = jamais réglé (raccourci par défaut) ; '' = désactivé par le joueur.
+function currentOverlayHotkey() {
+  const saved = store.get('dailyOverlayHotkey');
+  return saved === undefined ? DEFAULT_OVERLAY_HOTKEY : saved;
+}
+
+function registerOverlayHotkey(accelerator) {
+  if (registeredOverlayHotkey) {
+    globalShortcut.unregister(registeredOverlayHotkey);
+    registeredOverlayHotkey = null;
+  }
+  if (!accelerator) return { ok: true };
+  try {
+    // register() renvoie false quand une autre application a déjà pris ce raccourci.
+    if (!globalShortcut.register(accelerator, toggleDailyOverlayVisibility)) return { ok: false, error: 'in_use' };
+  } catch {
+    return { ok: false, error: 'invalid' };
+  }
+  registeredOverlayHotkey = accelerator;
+  return { ok: true };
+}
+
+ipcMain.handle('daily-overlay:get-hotkey', () => ({ accelerator: currentOverlayHotkey(), defaultAccelerator: DEFAULT_OVERLAY_HOTKEY }));
+
+ipcMain.handle('daily-overlay:set-hotkey', (_event, accelerator) => {
+  if (accelerator !== '' && !isValidAccelerator(accelerator)) return { ok: false, error: 'invalid' };
+  const previous = registeredOverlayHotkey;
+  const result = registerOverlayHotkey(accelerator);
+  if (!result.ok) {
+    // On garde l'ancien raccourci plutôt que de se retrouver sans aucun.
+    registerOverlayHotkey(previous);
+    return result;
+  }
+  store.set('dailyOverlayHotkey', accelerator);
+  return { ok: true, accelerator };
+});
+
 function scheduleDailyOverlayRefresh() {
   console.log('[daily-overlay] Valorant détecté, lancement du suivi');
   refreshDailyOverlay();
@@ -1565,10 +1928,25 @@ function scheduleDailyOverlayRefresh() {
 setInterval(async () => {
   const running = await isValorantGameRunning();
 
+  // Garde-fou : jamais interactif/déplaçable une fois en partie, même si le
+  // mode déplacement avait été laissé actif par erreur (fenêtre fermée sans
+  // repasser par le toggle, par exemple). Uniquement sur la transition
+  // fermé→lancé (pas à chaque tick tant que `running` reste vrai) : sinon un
+  // glissement volontaire en cours pendant que le jeu est déjà ouvert se
+  // faisait couper dès que ce setInterval retombait sur `running`, ramenant
+  // l'overlay à sa dernière position persistée si le clic n'était pas
+  // relâché à temps.
+  if (running && !dailyOverlayLastRunning && dailyOverlayDragMode) {
+    console.log('[daily-overlay] partie détectée, verrouillage forcé du mode déplacement');
+    setDailyOverlayDragMode(false);
+  }
+
   if (running && !dailyOverlayLastRunning) {
     scheduleDailyOverlayRefresh();
   } else if (!running && dailyOverlayLastRunning) {
     console.log('[daily-overlay] Valorant fermé, arrêt du suivi');
+    closeDailyOverlay();
+    dailyOverlayUserHidden = false;
     // Le tilt repart de zéro à chaque fermeture du jeu : sans ça, l'alerte déjà
     // envoyée (notified) bloquait toute nouvelle alerte à la session suivante, et
     // le dernier match mémorisé faisait traiter le premier match de la nouvelle
@@ -1784,11 +2162,21 @@ app.whenReady().then(() => {
       // refusent l'intégration en iframe hors leur propre site
       // (x-frame-options: SAMEORIGIN, vérifié) — ouvert dans le navigateur
       // système/lu via <video> à la place, jamais en iframe.
-      "frame-src 'self' https://www.youtube-nocookie.com https://streamable.com",
+      "frame-src 'self' https://www.youtube-nocookie.com https://streamable.com https://www.tiktok.com",
       "object-src 'none'",
       "base-uri 'self'",
     ].join('; ');
+    // Cette CSP protège les pages DE L'APP (chargées en file://) : elle ne doit
+    // PAS être imposée aux documents des lecteurs intégrés (YouTube, TikTok...).
+    // Avant, elle l'était à toutes les réponses : « script-src 'self' » bloquait
+    // alors les scripts de ces lecteurs et l'iframe restait noire en build
+    // packagé (jamais vu en `npm start`, où cette CSP n'existe pas). Vérifié
+    // dans un vrai Electron en file:// : YouTube noir avant, lecture après.
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      if (!details.url.startsWith('file://')) {
+        callback({ responseHeaders: details.responseHeaders });
+        return;
+      }
       callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [csp] } });
     });
   }
@@ -1826,6 +2214,8 @@ app.whenReady().then(() => {
 
   createWindow();
   createTray();
+  syncToolkitShortcut();
+  registerOverlayHotkey(currentOverlayHotkey());
 
   // Sert de base au calcul PostHog des utilisateurs actifs (DAU/WAU/MAU) —
   // distinctId pas encore connu ici (compte pas forcément lié à ce stade),
@@ -1867,6 +2257,7 @@ app.on('window-all-closed', () => {
 // events d'une session (ex. le crash qui vient de la faire quitter) peuvent
 // se perdre s'ils n'ont pas encore été envoyés.
 app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
   shutdownTelemetry();
 });
 

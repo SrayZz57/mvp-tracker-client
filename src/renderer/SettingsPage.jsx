@@ -403,15 +403,6 @@ function SettingsPage({ mySettings, email, apiKey, onUpdateApiKey, onUpdateRiotI
                   })
                 : t('account.updateHint')}
             </p>
-            {updateCheck.result?.status === 'available' && (
-              <button
-                type="button"
-                className="account-forgot-password"
-                onClick={() => window.electronAPI.openExternal('https://github.com/SrayZz57/mvp-tracker-client/releases/latest')}
-              >
-                {t('account.updateDownload')}
-              </button>
-            )}
           </div>
           <button type="button" className="refresh" onClick={handleCheckForUpdate} disabled={updateCheck.loading}>
             {updateCheck.loading ? t('account.updateChecking') : t('account.updateCheck')}

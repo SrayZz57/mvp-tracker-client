@@ -3037,10 +3037,9 @@
     "updateHint": "Vérifie si une nouvelle version de MVP Tracker est disponible.",
     "updateCheck": "Chercher une mise à jour",
     "updateChecking": "Recherche…",
-    "updateDownload": "Télécharger la version",
     "updateStatus": {
       "upToDate": "Tu as la dernière version ({{current}}).",
-      "available": "La version {{version}} est disponible (tu as la {{current}}). Elle se télécharge en arrière-plan : le bouton « Redémarrer » apparaîtra en haut dès qu'elle est prête. Si rien ne se passe au bout de quelques minutes, télécharge-la directement.",
+      "available": "La version {{version}} est disponible (tu as la {{current}}). Elle se télécharge en arrière-plan : le bouton « Redémarrer » apparaîtra en haut dès qu'elle est prête.",
       "ready": "La version {{version}} est prête : clique sur « Redémarrer » en haut pour l'installer.",
       "dev": "Indisponible en mode développement : les mises à jour ne concernent que l'application installée.",
       "error": "Impossible de vérifier pour l'instant. Vérifie ta connexion et réessaie."

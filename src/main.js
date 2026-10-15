@@ -391,18 +391,28 @@ ipcMain.handle('app-update:check', async () => {
   if (pendingUpdate) return { status: 'ready', current, version: pendingUpdate.releaseName };
 
   let latest = null;
+  let latestTag = null;
   try {
     const response = await fetch('https://api.github.com/repos/SrayZz57/mvp-tracker-client/releases/latest', {
       headers: { 'User-Agent': 'MVP-Tracker' },
     });
-    if (response.ok) latest = (await response.json()).tag_name?.replace(/^v/, '') ?? null;
+    if (response.ok) {
+      latestTag = (await response.json()).tag_name ?? null;
+      latest = latestTag?.replace(/^v/, '') ?? null;
+    }
   } catch {
     // réseau coupé : traité comme une erreur plus bas
   }
 
-  // Lance aussi la vérification native : si le service de mise à jour voit déjà la
-  // version, elle se télécharge et le bouton "Redémarrer" apparaît (voir plus haut).
+  // Lance aussi la vérification native : la version se télécharge et le bouton vert
+  // "Redémarrer" apparaît (voir plus haut). Quand GitHub annonce une version que le
+  // service de mise à jour ne voit pas encore (son cache), on pointe Squirrel
+  // directement sur les fichiers de cette release (RELEASES + .nupkg) pour forcer
+  // le téléchargement, au lieu d'envoyer le joueur sur la page GitHub.
   try {
+    if (latest && latestTag && isNewerVersion(latest, current)) {
+      autoUpdater.setFeedURL({ url: `https://github.com/SrayZz57/mvp-tracker-client/releases/download/${latestTag}` });
+    }
     autoUpdater.checkForUpdates();
   } catch {
     // pas de flux de mise à jour configuré (installation atypique)

@@ -5,7 +5,7 @@ import { skinLockInfo } from './battlePass/ownership.js';
 import Icon from './Icon.jsx';
 import { WEAPON_MODELS } from './aimTrainerModes.js';
 import WeaponStage from './WeaponStage.jsx';
-import { SKIN_RARITY } from './skinRarity.js';
+import { SKIN_RARITY, hasIntro } from './skinRarity.js';
 
 
 // Vestiaire des skins : l'arme en 3D en direct (mêmes modèles et effets qu'en
@@ -65,7 +65,7 @@ function SkinViewer({ config, set, previews, onClose, isLocked = () => false }) 
           >
             <Icon icon={Crosshair} size={16} /> {t('aimTrainer.skinViewerFire')}
           </button>
-          {rarity === 'transcendent' && (
+          {hasIntro(rarity) && (
             <button type="button" className="skin-viewer-icon-btn" onClick={replayIntro} title={t('aimTrainer.skinViewerIntro')}>
               <Icon icon={Sparkles} size={16} />
             </button>

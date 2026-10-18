@@ -3,8 +3,13 @@
 // utilisable aussi bien côté menu que dans les tests.
 //
 // Ordre croissant : base < common < rare < epic < legendary < mythic < ultimate
-// < transcendent.
-export const RARITY_ORDER = ['base', 'common', 'rare', 'epic', 'legendary', 'mythic', 'ultimate', 'transcendent'];
+// < transcendent < unique.
+export const RARITY_ORDER = ['base', 'common', 'rare', 'epic', 'legendary', 'mythic', 'ultimate', 'transcendent', 'unique'];
+
+// Paliers dont les skins ont une animation d'apparition (rejouée à la sélection
+// dans le Vestiaire, le Battle Pass et la boutique).
+const INTRO_RARITIES = new Set(['transcendent', 'unique']);
+export const hasIntro = (rarity) => INTRO_RARITIES.has(rarity);
 
 export const SKIN_RARITY = {
   standard: 'base',
@@ -85,4 +90,7 @@ export const SKIN_RARITY = {
   marble: 'transcendent',
   weaver: 'transcendent',
   corsair: 'transcendent',
+  // Palier Unique : au-dessus de tout, un seul skin, la signature de l'app.
+  // Jamais vendu ni gagné au pass : offert à tous (voir shop/catalog.js).
+  mvptracker: 'unique',
 };

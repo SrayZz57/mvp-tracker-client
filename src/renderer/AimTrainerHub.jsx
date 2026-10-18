@@ -85,6 +85,7 @@ import weaponVandalHivePreview from '../assets/weapon-vandal-hive-preview.png';
 import weaponVandalVoxelPreview from '../assets/weapon-vandal-voxel-preview.png';
 import weaponVandalMaelstromPreview from '../assets/weapon-vandal-maelstrom-preview.png';
 import weaponVandalSumiPreview from '../assets/weapon-vandal-sumi-preview.png';
+import weaponVandalMvptrackerPreview from '../assets/weapon-vandal-mvptracker-preview.png';
 import weaponGlockArcadePreview from '../assets/weapon-glock-arcade-preview.png';
 import weaponGlockHanabiPreview from '../assets/weapon-glock-hanabi-preview.png';
 import weaponGlockMiragePreview from '../assets/weapon-glock-mirage-preview.png';
@@ -138,7 +139,7 @@ const WEAPON_PREVIEWS = {
 };
 
 const SKIN_PREVIEWS = {
-  vandal: { standard: weaponVandalPreview, dune: weaponVandalDunePreview, cobalt: weaponVandalCobaltPreview, tidal: weaponVandalTidalPreview, redline: weaponVandalRedlinePreview, magma: weaponVandalMagmaPreview, circuit: weaponVandalCircuitPreview, celeste: weaponVandalCelestePreview, jade: weaponVandalJadePreview, clockwork: weaponVandalClockworkPreview, aurora: weaponVandalAuroraPreview, sakura: weaponVandalSakuraPreview, radiation: weaponVandalRadiationPreview, pharaoh: weaponVandalPharaohPreview, hologram: weaponVandalHologramPreview, titan: weaponVandalTitanPreview, arcane: weaponVandalArcanePreview, mercury: weaponVandalMercuryPreview, sylvan: weaponVandalSylvanPreview, spectre: weaponVandalSpectrePreview, lithosphere: weaponVandalLithospherePreview, symbiote: weaponVandalSymbiotePreview, heliopause: weaponVandalHeliopausePreview, reliquary: weaponVandalReliquaryPreview, nullbyte: weaponVandalNullbytePreview, patchbay: weaponVandalPatchbayPreview, downforce: weaponVandalDownforcePreview, singularity: weaponVandalSingularityPreview, origami: weaponVandalOrigamiPreview, hive: weaponVandalHivePreview, voxel: weaponVandalVoxelPreview, maelstrom: weaponVandalMaelstromPreview, sumi: weaponVandalSumiPreview },
+  vandal: { standard: weaponVandalPreview, dune: weaponVandalDunePreview, cobalt: weaponVandalCobaltPreview, tidal: weaponVandalTidalPreview, redline: weaponVandalRedlinePreview, magma: weaponVandalMagmaPreview, circuit: weaponVandalCircuitPreview, celeste: weaponVandalCelestePreview, jade: weaponVandalJadePreview, clockwork: weaponVandalClockworkPreview, aurora: weaponVandalAuroraPreview, sakura: weaponVandalSakuraPreview, radiation: weaponVandalRadiationPreview, pharaoh: weaponVandalPharaohPreview, hologram: weaponVandalHologramPreview, titan: weaponVandalTitanPreview, arcane: weaponVandalArcanePreview, mercury: weaponVandalMercuryPreview, sylvan: weaponVandalSylvanPreview, spectre: weaponVandalSpectrePreview, lithosphere: weaponVandalLithospherePreview, symbiote: weaponVandalSymbiotePreview, heliopause: weaponVandalHeliopausePreview, reliquary: weaponVandalReliquaryPreview, nullbyte: weaponVandalNullbytePreview, patchbay: weaponVandalPatchbayPreview, downforce: weaponVandalDownforcePreview, singularity: weaponVandalSingularityPreview, origami: weaponVandalOrigamiPreview, hive: weaponVandalHivePreview, voxel: weaponVandalVoxelPreview, maelstrom: weaponVandalMaelstromPreview, sumi: weaponVandalSumiPreview, mvptracker: weaponVandalMvptrackerPreview },
   glock: {
     standard: weaponGlockPreview,
     olive: weaponGlockOlivePreview,

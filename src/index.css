@@ -15736,6 +15736,79 @@ button.sidebar-section-label {
   }
 }
 
+/* Palier « Unique » : au-dessus de Transcendant, réservé au skin signature de
+   l'app. Badge laqué noir cerclé de cramoisi, traversé d'un reflet rouge et
+   blanc ; carte au liseré qui court comme la « courbe MVP » du skin et au reflet
+   de vitrine qui la balaie. Sélecteurs à trois classes : `.skin-viewer-list
+   .skin-card` (deux classes) l'emporterait sinon sur le liseré et le fond. */
+.skin-rarity-unique,
+.skin-card-unique {
+  --rarity: #ff2b4e;
+}
+
+.skin-rarity-unique {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255, 43, 78, 0.95);
+  background:
+    linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.95) 47%, rgba(255, 210, 218, 0.7) 51%, transparent 58%) no-repeat,
+    linear-gradient(90deg, #2a0710, #b5102b 28%, #ff2b4e 50%, #b5102b 72%, #2a0710);
+  background-size: 250% 100%, 100% 100%;
+  box-shadow: inset 0 0 0 1px rgba(255, 200, 210, 0.85), inset 0 -5px 8px rgba(40, 0, 8, 0.45);
+  animation: skinUniqueSheen 2.8s ease-in-out infinite;
+}
+
+.skin-viewer-list .skin-card.skin-card-unique {
+  background: linear-gradient(165deg, rgba(255, 43, 78, 0.18), rgba(255, 43, 78, 0) 55%), linear-gradient(180deg, #160a0d, var(--surface-alt));
+}
+
+.skin-viewer-list .skin-card.skin-card-unique.active {
+  background: linear-gradient(160deg, rgba(255, 43, 78, 0.34), rgba(255, 43, 78, 0.06) 70%), linear-gradient(180deg, #1c0a0f, var(--surface-alt));
+}
+
+.skin-viewer-list .skin-card.skin-card-unique::before {
+  background: linear-gradient(180deg, #ffffff, #ff2b4e 30%, #5a0614 55%, #ff2b4e 80%, #ffffff);
+  background-size: 100% 300%;
+  animation: skinUltimateShiftV 1.6s linear infinite;
+}
+
+.skin-viewer-list .skin-card.skin-card-unique::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.14) 48%, rgba(255, 43, 78, 0.16) 52%, transparent 60%) no-repeat;
+  background-size: 300% 100%;
+  animation: skinUniqueSheen 4.2s ease-in-out infinite;
+}
+
+.skin-viewer-list .skin-card.skin-card-unique .skin-card-rarity {
+  color: transparent;
+  background: linear-gradient(90deg, #ffffff, #ff2b4e, #ffffff);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: skinUltimateShift 2.4s linear infinite;
+}
+
+@keyframes skinUniqueSheen {
+  0% {
+    background-position: 160% 0, 0 0;
+  }
+  60%,
+  100% {
+    background-position: -60% 0, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skin-rarity-unique,
+  .skin-viewer-list .skin-card.skin-card-unique::before,
+  .skin-viewer-list .skin-card.skin-card-unique::after,
+  .skin-viewer-list .skin-card.skin-card-unique .skin-card-rarity {
+    animation: none;
+  }
+}
+
 /* Battle Pass : panneau plus large que les autres écrans du hub, et pastille
    « récompenses à réclamer » sur l'entrée de menu. */
 .aim-hub-nav-item-badge {

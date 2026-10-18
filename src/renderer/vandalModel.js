@@ -26,6 +26,7 @@ import { VANDAL_DOSSIER_SKINS } from './vandalSkinsDossier.js';
 import { VANDAL_MACHINE_SKINS } from './vandalSkinsMachines.js';
 import { VANDAL_SINGULARITY_SKIN } from './vandalSkinSingularity.js';
 import { VANDAL_TRANSCENDENT_SKINS } from './vandalSkinsTranscendent.js';
+import { VANDAL_MVP_TRACKER_SKIN } from './vandalSkinMvpTracker.js';
 import { vandalHands } from './viewmodelHands.js';
 
 // Fusil d'assaut inspiré de la Vandal, modélisé entièrement en code (aucun
@@ -518,6 +519,7 @@ export const VANDAL_SKINS = {
   ...VANDAL_MACHINE_SKINS,
   ...VANDAL_SINGULARITY_SKIN,
   ...VANDAL_TRANSCENDENT_SKINS,
+  ...VANDAL_MVP_TRACKER_SKIN,
 };
 
 // --- Viewmodel ----------------------------------------------------------------

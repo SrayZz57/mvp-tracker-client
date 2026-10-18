@@ -870,6 +870,7 @@
 .lb-tile-locker[data-rarity='mythic'] { --r: #ff4655; }
 .lb-tile-locker[data-rarity='ultimate'] { --r: #ff6ad5; }
 .lb-tile-locker[data-rarity='transcendent'] { --r: #ffd27a; }
+.lb-tile-locker[data-rarity='unique'] { --r: #ff2b4e; }
 
 .lb-tile-weapon {
   position: absolute;
@@ -1177,6 +1178,7 @@
 .lb-bp-next[data-rarity='mythic'] { --r: #ff4655; }
 .lb-bp-next[data-rarity='ultimate'] { --r: #ff6ad5; }
 .lb-bp-next[data-rarity='transcendent'] { --r: #ffd27a; }
+.lb-bp-next[data-rarity='unique'] { --r: #ff2b4e; }
 
 .lb-bp-thumb {
   width: 92px;

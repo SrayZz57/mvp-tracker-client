@@ -5,7 +5,7 @@ import { createVandalViewmodel } from './vandalModel.js';
 import { createGlockViewmodel } from './glockModel.js';
 import { createSniperViewmodel } from './sniperModel.js';
 import { playWeaponShot, playWeaponIntro } from './weaponSounds.js';
-import { SKIN_RARITY } from './skinRarity.js';
+import { SKIN_RARITY, hasIntro } from './skinRarity.js';
 
 const FACTORIES = { vandal: createVandalViewmodel, glock: createGlockViewmodel, sniper: createSniperViewmodel };
 
@@ -181,7 +181,7 @@ const WeaponStage = forwardRef(function WeaponStage({ weapon, skin, hands = null
     stage.pivot = pivot;
     stage.weapon = created;
     // Lancée après le cadrage : pendant l'apparition les pièces sont dispersées.
-    if (SKIN_RARITY[skin] === 'transcendent') playIntro(stage);
+    if (hasIntro(SKIN_RARITY[skin])) playIntro(stage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weapon, skin, hands]);
 

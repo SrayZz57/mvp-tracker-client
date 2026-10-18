@@ -778,6 +778,7 @@
     "skinVoxel": "Voxel",
     "skinMaelstrom": "Maelström",
     "skinSumi": "Sumi",
+    "skinMvpTracker": "MVP Tracker",
     "skinArcade": "Arcade",
     "skinHanabi": "Hanabi",
     "skinMirage": "Mirage",
@@ -830,6 +831,7 @@
     "rarity": {
       "ultimate": "Ultime",
       "transcendent": "Transcendant",
+      "unique": "Unique",
       "base": "Base",
       "common": "Commun",
       "rare": "Rare",
@@ -851,6 +853,7 @@
       "hive": "Une ruche vivante : alvéoles de cire, miel qui luit et coule, rayons en relief et un essaim d’abeilles qui tourne autour de l’arme et s’affole au tir. La cire la bâtit alvéole par alvéole.",
       "voxel": "L’arme d’un jeu rétro : pixel art qui clignote, cœur et éclair en cubes, HUD de vies et munitions, explosions de cubes et « +100 ». Elle tombe du ciel en rebondissant, puis « READY! ».",
       "maelstrom": "De l’eau tenue en forme : carpes koï qui nagent dedans, bulles, caustiques, surface qui ondule, tourbillon autour du canon. Elle monte d’un tourbillon.",
+      "mvptracker": "La signature de l’app. Céramique blanche, laque noire, aluminium rouge brossé ; emblème MVP Tracker en lévitation dans la crosse, écran de stats en direct qui compte chaque tir, courbe de performance lumineuse jusqu’à une bouche en pointe de flèche. Elle s’assemble pièce par pièce dans son plan holographique.",
       "sumi": "Peinture à l’encre : lavis de montagnes, soleil rouge, rubans d’encre qui ondulent, pinceau de calligraphie à la bouche, ensō au tir. Un pinceau géant la peint.",
       "arcade": "Une borne d’arcade de poche : un vrai mini-jeu tourne sur les écrans, ampoules qui défilent, joystick, fente à jetons. Un jeton tombe et l’écran s’allume comme un vieux téléviseur.",
       "hanabi": "Nuit d’été : laque peinte de feux d’artifice qui scintillent, cierges magiques, fusées tirées à chaque coup qui éclatent en gerbe, lanterne rouge. Elle naît d’un feu d’artifice.",

@@ -7,6 +7,7 @@ import { PlayerCardFrame } from './playerCards.jsx';
 import { titleName } from './playerCosmetics.jsx';
 import { rewardName, rewardState } from './RewardList.jsx';
 import { rewardRarity } from './labels.js';
+import { hasIntro } from '../skinRarity.js';
 
 // Aperçu de la récompense sélectionnée : l'arme en 3D en direct (la même scène
 // que le Vestiaire, qu'on tourne à la souris et qu'on peut faire tirer), la
@@ -157,7 +158,7 @@ export default function RewardPreview({ reward, season, maxLevel, equipped, conf
             >
               <Icon icon={Crosshair} size={16} /> {t('aimTrainer.skinViewerFire')}
             </button>
-            {rarity === 'transcendent' && (
+            {hasIntro(rarity) && (
               <button type="button" className="skin-viewer-icon-btn" onClick={() => stageRef.current?.replayIntro()} title={t('aimTrainer.skinViewerIntro')}>
                 <Icon icon={Sparkles} size={16} />
               </button>

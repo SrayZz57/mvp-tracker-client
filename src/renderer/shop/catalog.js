@@ -9,7 +9,8 @@ import { PRICES } from './economy.js';
 //
 // Contenu :
 //   - tous les skins d'armes que AUCUNE saison du pass ne donne, sauf ceux
-//     réservés à de futures saisons (RESERVED_SKIN_IDS) ;
+//     réservés à de futures saisons (RESERVED_SKIN_IDS) et ceux du palier
+//     Unique (skin signature de l'app, offert à tous : ni vendu, ni verrouillé) ;
 //   - des exclusivités (titres) qu'on ne trouve qu'ici.
 // Pas de gants ici (demande du user) : ils ne se gagnent que par le pass.
 // `chrome`/`tiger` (handSkins.js) restent en réserve pour une saison à venir.
@@ -24,7 +25,7 @@ const skins = Object.entries(WEAPON_MODELS).flatMap(([weapon, model]) =>
   Object.keys(model.skins ?? {})
     .filter((skin) => skin !== 'standard')
     .map((skin) => ({ id: `skin:${weapon}:${skin}`, type: 'weaponSkin', weapon, skin, rarity: SKIN_RARITY[skin] ?? 'epic' }))
-    .filter((item) => !PASS_IDS.has(item.id) && !RESERVED_SKIN_IDS.has(item.id))
+    .filter((item) => !PASS_IDS.has(item.id) && !RESERVED_SKIN_IDS.has(item.id) && item.rarity !== 'unique')
     .map((item) => ({ ...item, price: PRICES[item.rarity] ?? PRICES.epic })),
 );
 

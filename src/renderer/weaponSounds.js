@@ -10,6 +10,10 @@ const noiseBuffers = new WeakMap();
 const PENTATONIC = [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 587.33];
 const patchbayState = { step: 0, last: -1 };
 const apexState = { shots: 0, last: -1 };
+// MVP Tracker : la note du carillon monte d'un degré de la gamme majeure à chaque
+// balle d'une rafale (une stat qui progresse), comme le compteur de l'arme.
+const MAJOR_STEPS = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
+const mvpState = { streak: 0, last: -1 };
 
 // Un seul tampon de bruit blanc par contexte audio, réutilisé à chaque tir.
 function noiseBuffer(ctx) {
@@ -513,6 +517,23 @@ const SHOTS = {
     noiseLayer(ctx, out, at + 0.02, { freq: 2200, sweepTo: 900, q: 1, peak: 0.14, decay: 0.2 });
     for (let i = 0; i < 4; i += 1) toneLayer(ctx, out, at + 0.08 + Math.random() * 0.2, { from: 500 + Math.random() * 400, to: 1300, peak: 0.035, decay: 0.04 });
   },
+  // MVP Tracker : claquement net et dense, coup de poing grave, petit « tic »
+  // numérique et carillon à deux notes (quinte) qui monte avec la rafale.
+  'vandal:mvptracker': (ctx, at) => {
+    const out = master(ctx, 1);
+    const pitch = 0.96 + Math.random() * 0.08;
+    noiseLayer(ctx, out, at, { freq: 2400 * pitch, q: 0.9, peak: 0.42, decay: 0.055 });
+    noiseLayer(ctx, out, at, { type: 'lowpass', freq: 680, q: 0.6, peak: 0.5, decay: 0.12 });
+    toneLayer(ctx, out, at, { from: 104 * pitch, to: 36, peak: 0.52, decay: 0.11 });
+    toneLayer(ctx, out, at + 0.004, { type: 'square', from: 3200, to: 2900, peak: 0.025, decay: 0.012 });
+    if (at - mvpState.last > 0.45) mvpState.streak = 0;
+    mvpState.last = at;
+    const note = 1046.5 * 2 ** (MAJOR_STEPS[Math.min(mvpState.streak, MAJOR_STEPS.length - 1)] / 12);
+    mvpState.streak += 1;
+    toneLayer(ctx, out, at + 0.012, { from: note, to: note, peak: 0.045, attack: 0.003, decay: 0.16 });
+    toneLayer(ctx, out, at + 0.04, { type: 'triangle', from: note * 1.5, to: note * 1.5, peak: 0.03, attack: 0.003, decay: 0.2 });
+    noiseLayer(ctx, out, at + 0.02, { type: 'lowpass', freq: 1300, sweepTo: 300, peak: 0.07, attack: 0.01, decay: 0.25 });
+  },
   // Sumi : coup de pinceau sec (souffle filtré) et frappe de taiko grave.
   'vandal:sumi': (ctx, at) => {
     const out = master(ctx, 1);
@@ -629,6 +650,27 @@ const INTROS = {
     noiseLayer(ctx, out, at, { type: 'lowpass', freq: 300, sweepTo: 1600, q: 1, peak: 0.2, attack: 0.8, decay: 0.5 });
     for (let i = 0; i < 10; i += 1) toneLayer(ctx, out, at + 0.2 + Math.random() * 1.2, { from: 400 + Math.random() * 500, to: 1200, peak: 0.03, decay: 0.05 });
     noiseLayer(ctx, out, at + 1.45, { freq: 1500, q: 1, peak: 0.15, decay: 0.2 });
+  },
+  // MVP Tracker (2,1 s, calé sur l'animation) : mise sous tension, quatre
+  // verrous de la croix, flèche qui la traverse, balayage qui ronronne pendant
+  // que les pièces se verrouillent, puis accord d'allumage sur une frappe grave.
+  'vandal:mvptracker': (ctx, at) => {
+    const out = master(ctx, 0.9);
+    toneLayer(ctx, out, at, { from: 70, to: 230, peak: 0.12, attack: 0.3, decay: 0.12 });
+    noiseLayer(ctx, out, at, { type: 'highpass', freq: 1500, sweepTo: 6000, q: 0.8, peak: 0.05, attack: 0.25, decay: 0.08 });
+    [0.1, 0.14, 0.18, 0.22].forEach((d) => noiseLayer(ctx, out, at + d, { freq: 2600, q: 4, peak: 0.12, attack: 0.001, decay: 0.03 }));
+    noiseLayer(ctx, out, at + 0.24, { freq: 900, sweepTo: 5200, q: 1.2, peak: 0.12, attack: 0.03, decay: 0.08 });
+    toneLayer(ctx, out, at + 0.34, { from: 2637, to: 2637, peak: 0.04, attack: 0.002, decay: 0.35 });
+    toneLayer(ctx, out, at + 0.62, { type: 'sawtooth', from: 110, to: 220, peak: 0.025, attack: 0.15, decay: 0.75, filter: 900 });
+    for (let i = 0; i < 12; i += 1) {
+      const t = at + 0.66 + i * 0.075 + Math.random() * 0.02;
+      noiseLayer(ctx, out, t, { freq: 1800 + Math.random() * 1400, q: 5, peak: 0.07, attack: 0.001, decay: 0.022 });
+      toneLayer(ctx, out, t, { type: 'square', from: 1200, to: 1000, peak: 0.012, decay: 0.015 });
+    }
+    toneLayer(ctx, out, at + 1.5, { from: 300, to: 1800, peak: 0.04, attack: 0.18, decay: 0.05 });
+    [329.63, 415.3, 493.88, 659.25].forEach((f) => toneLayer(ctx, out, at + 1.72, { type: 'triangle', from: f, to: f, peak: 0.035, attack: 0.02, decay: 0.9 }));
+    toneLayer(ctx, out, at + 1.72, { from: 92, to: 30, peak: 0.55, decay: 0.45 });
+    noiseLayer(ctx, out, at + 1.72, { freq: 2200, q: 0.8, peak: 0.22, decay: 0.08 });
   },
   'vandal:sumi': (ctx, at) => {
     const out = master(ctx, 0.9);

@@ -843,6 +843,7 @@
     "skinVoxel": "Voxel",
     "skinMaelstrom": "Maelstrom",
     "skinSumi": "Sumi",
+    "skinMvpTracker": "MVP Tracker",
     "skinArcade": "Arcade",
     "skinHanabi": "Hanabi",
     "skinMirage": "Mirage",
@@ -895,6 +896,7 @@
     "rarity": {
       "ultimate": "Ultimate",
       "transcendent": "Transcendent",
+      "unique": "Unique",
       "base": "Base",
       "common": "Common",
       "rare": "Rare",
@@ -916,6 +918,7 @@
       "hive": "A living hive: wax cells, glowing dripping honey, raised combs and a swarm of bees circling the weapon, panicking on each shot. The wax builds it cell by cell.",
       "voxel": "A retro game weapon: blinking pixel art, a cube heart and bolt, a lives and ammo HUD, cube explosions and “+100”. It drops from the sky bouncing, then “READY!”.",
       "maelstrom": "Water held in shape: koi swimming inside, bubbles, caustics, a rippling surface, a whirlpool around the barrel. It rises from a vortex.",
+      "mvptracker": "The app’s signature. White ceramic, black lacquer, brushed red aluminium; a levitating MVP Tracker emblem in the stock, a live stats screen that counts every shot, a glowing performance curve up to an arrowhead muzzle. It assembles piece by piece inside its holographic blueprint.",
       "sumi": "Ink painting: mountain washes, a red sun, flowing ink ribbons, a calligraphy brush muzzle, an ensō on each shot. A giant brush paints it.",
       "arcade": "A pocket arcade cabinet: a real mini game runs on the screens, chasing bulbs, a joystick, a coin slot. A coin drops in and the screen powers on like an old TV.",
       "hanabi": "A summer night: lacquer painted with twinkling fireworks, sparklers, rockets fired with every shot that burst in the sky, a red lantern. It is born from a firework.",

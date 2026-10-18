@@ -45,6 +45,7 @@
 .bp-screen [data-rarity='mythic'] { --r: #ff4655; }
 .bp-screen [data-rarity='ultimate'] { --r: #ff6ad5; }
 .bp-screen [data-rarity='transcendent'] { --r: #ffd27a; }
+.bp-screen [data-rarity='unique'] { --r: #ff2b4e; }
 
 /* --- En-tête ------------------------------------------------------------ */
 

@@ -146,6 +146,8 @@ export const FLASH_PALETTES = {
   abyss: ['rgba(230,255,250,1)', 'rgba(90,255,220,0.95)', 'rgba(20,160,180,0.45)', 'rgba(0,60,90,0)'],
   jade: ['rgba(240,255,245,1)', 'rgba(120,255,190,0.95)', 'rgba(30,200,120,0.45)', 'rgba(0,110,60,0)'],
   frost: ['rgba(255,255,255,1)', 'rgba(200,240,255,0.95)', 'rgba(120,200,255,0.4)', 'rgba(60,140,255,0)'],
+  // Rouge de l'app (skin MVP Tracker) : cœur blanc, frange rose, bord cramoisi.
+  mvp: ['rgba(255,255,255,1)', 'rgba(255,176,188,0.95)', 'rgba(255,42,72,0.5)', 'rgba(150,0,30,0)'],
 };
 
 export function flashTexture(palette = 'powder', spikes = 7) {

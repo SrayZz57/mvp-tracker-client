@@ -728,6 +728,7 @@
 .ap-screen [data-rarity='mythic'] { --r: #ff4655; }
 .ap-screen [data-rarity='ultimate'] { --r: #ff6ad5; }
 .ap-screen [data-rarity='transcendent'] { --r: #ffd27a; }
+.ap-screen [data-rarity='unique'] { --r: #ff2b4e; }
 
 .lk-top {
   display: grid;

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { RESERVED_SKIN_IDS, SEASONS, listRewards } from '../battlePass/catalog.js';
 import { SHOP_BUNDLES, SHOP_ITEMS, SHOP_ITEM_BY_ID } from './catalog.js';
 import { dailyOffersFor, expandShopOffers } from './rotation.js';
+import { SKIN_RARITY } from '../skinRarity.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -36,6 +37,12 @@ test('4 offres du jour distinctes, et la rotation change d\'un jour à l\'autre'
     if (d > 0 && ids.join() !== dailyOffersFor(start + (d - 1) * DAY).map((o) => o.item.id).join()) changed += 1;
   }
   assert.ok(changed >= 25);
+});
+
+test('les skins Uniques ne sont jamais en vente (offerts à tous)', () => {
+  const uniques = Object.entries(SKIN_RARITY).filter(([, r]) => r === 'unique').map(([skin]) => skin);
+  assert.ok(uniques.length > 0);
+  SHOP_ITEMS.forEach((item) => assert.ok(!(item.type === 'weaponSkin' && uniques.includes(item.skin)), `${item.id} est en boutique`));
 });
 
 test('les skins réservés au pass (saisons à venir) ne sont jamais en vente', () => {

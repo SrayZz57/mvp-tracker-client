@@ -73,6 +73,7 @@ export const WEAPON_MODELS = {
       voxel: { labelKey: 'aimTrainer.skinVoxel' },
       maelstrom: { labelKey: 'aimTrainer.skinMaelstrom' },
       sumi: { labelKey: 'aimTrainer.skinSumi' },
+      mvptracker: { labelKey: 'aimTrainer.skinMvpTracker' },
     },
   },
   glock: {

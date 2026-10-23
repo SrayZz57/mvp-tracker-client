@@ -3,14 +3,15 @@
 // (supabase/functions/lineup-search/) : en cas de modification, régénérer plutôt que
 // d'éditer ici. Prérequis : secret YOUTUBE_API_KEY, table lineup_search_cache
 // (sql/lineup_search_cache.sql), « Verify JWT » activé.
-// F:/MVP Tracker/gamer-hub/supabase/functions/lineup-search/index.ts
+// supabase/functions/lineup-search/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// F:/MVP Tracker/gamer-hub/supabase/functions/lineup-search/search.ts
+// supabase/functions/lineup-search/search.ts
 var MAX_SECONDS = 40;
 var MIN_SECONDS = 4;
 var MAX_RESULTS = 12;
 var MAX_PER_CHANNEL = 3;
+var MIN_SIDE_MATCHES = 4;
 var NAME_PATTERN = /^[\p{L}\p{N} '/.\-]{2,30}$/u;
 function sanitizeInput(raw) {
   const body = raw ?? {};
@@ -21,7 +22,7 @@ function sanitizeInput(raw) {
   const site = body.site === "A" || body.site === "B" || body.site === "C" ? body.site : null;
   return { agent, map, side, site };
 }
-var cacheKey = (input) => ["v2", input.agent, input.map, input.side ?? "", input.site ?? ""].join("|").toLowerCase();
+var cacheKey = (input) => ["v4", input.agent, input.map, input.side ?? "", input.site ?? ""].join("|").toLowerCase();
 function buildQuery(input) {
   const parts = ["valorant", input.agent];
   if (input.map) parts.push(input.map);
@@ -43,10 +44,23 @@ function agentVariants(agent) {
   const compact = base.replace(/[^a-z0-9]/g, "");
   return [.../* @__PURE__ */ new Set([base, compact, base.replace(/[/\-.]/g, " ")])];
 }
+var escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+function agentRegex(agent) {
+  const alternatives = agentVariants(agent).map(escapeRegex).join("|");
+  return new RegExp(`(^|[^a-z0-9])(${alternatives})($|[^a-z0-9])`);
+}
 var ALL_MAPS = ["abyss", "ascent", "bind", "breeze", "corrode", "fracture", "haven", "icebox", "lotus", "pearl", "split", "summit", "sunset"];
 var mentionsMap = (text, map) => new RegExp(`\\b${map}\\b`).test(text);
+var ALL_AGENTS = ["astra", "breach", "brimstone", "chamber", "clove", "cypher", "deadlock", "fade", "gekko", "harbor", "iso", "jett", "kay/o", "killjoy", "miks", "neon", "omen", "phoenix", "raze", "reyna", "sage", "skye", "sova", "tejo", "veto", "viper", "vyse", "waylay", "yoru"];
+var SIDE_WORDS = {
+  attack: /\b(attack|attacks|attacker|attackers|attacking|attaque|atk|execute|executes|execution|post.?plants?|plants?)\b/,
+  defense: /\b(defense|defence|defend|defending|defender|defenders|defensive|retake|retakes|anchor|anchoring)\b/
+};
+var OPPOSITE = { attack: "defense", defense: "attack" };
 function toResults(items, input) {
-  const variants = agentVariants(input.agent);
+  const chosenAgent = agentRegex(input.agent);
+  const chosenCompact = fold(input.agent).replace(/[^a-z0-9]/g, "");
+  const otherAgents = ALL_AGENTS.filter((name) => name.replace(/[^a-z0-9]/g, "") !== chosenCompact).map((name) => agentRegex(name));
   const mapName = fold(input.map);
   const scored = [];
   for (const item of items ?? []) {
@@ -55,26 +69,39 @@ function toResults(items, input) {
     const seconds = parseIsoDuration(item.contentDetails?.duration ?? "");
     if (seconds < MIN_SECONDS || seconds > MAX_SECONDS) continue;
     const snippet = item.snippet ?? {};
+    const title = fold(snippet.title ?? "");
     const text = fold([snippet.title, snippet.description, ...snippet.tags ?? []].filter(Boolean).join(" "));
     if (!text.includes("valorant")) continue;
-    if (!variants.some((variant) => text.includes(variant))) continue;
+    const agentInTitle = chosenAgent.test(title);
+    const otherAgentInTitle = otherAgents.some((regex) => regex.test(title));
+    if (!agentInTitle || otherAgentInTitle) continue;
     const views = Number(item.statistics?.viewCount ?? 0);
     let score = Math.log10(views + 1);
     if (mapName) {
-      const title = fold(snippet.title ?? "");
       const chosenInTitle = mentionsMap(title, mapName);
       const otherInTitle = ALL_MAPS.some((other) => other !== mapName && mentionsMap(title, other));
       if (!chosenInTitle && (otherInTitle || !mentionsMap(text, mapName))) continue;
       score += chosenInTitle && !otherInTitle ? 10 : 5;
     }
+    let tier = 0;
+    if (input.side) {
+      const wanted = SIDE_WORDS[input.side];
+      const opposite = SIDE_WORDS[OPPOSITE[input.side]];
+      const wantedInTitle = wanted.test(title);
+      const oppositeInTitle = opposite.test(title);
+      const wantedInText = wanted.test(text);
+      if (oppositeInTitle && !wantedInTitle) continue;
+      if (wantedInTitle) score += 6;
+      else if (wantedInText && !oppositeInTitle) score += 3;
+      else tier = 1;
+    }
     if (input.site) {
       const s = input.site.toLowerCase();
       if (new RegExp(`\\b(site ${s}|${s} site|${s}-site)\\b`).test(text)) score += 1;
     }
-    if (input.side === "attack" && /\b(attack|attaque|atk|execute)\b/.test(text)) score += 1;
-    if (input.side === "defense" && /\b(defense|defence|retake|post.?plant)\b/.test(text)) score += 1;
     scored.push({
       score,
+      tier,
       result: {
         id,
         title: snippet.title ?? "",
@@ -86,10 +113,12 @@ function toResults(items, input) {
       }
     });
   }
-  scored.sort((a, b) => b.score - a.score);
+  const strict = scored.filter((entry) => entry.tier === 0);
+  const pool = !input.side || strict.length >= MIN_SIDE_MATCHES ? strict : scored;
+  pool.sort((a, b) => a.tier - b.tier || b.score - a.score);
   const perChannel = /* @__PURE__ */ new Map();
   const out = [];
-  for (const { result } of scored) {
+  for (const { result } of pool) {
     const count = perChannel.get(result.channel) ?? 0;
     if (count >= MAX_PER_CHANNEL) continue;
     perChannel.set(result.channel, count + 1);
@@ -111,7 +140,7 @@ var YOUTUBE_SEARCH_URL = (query, apiKey) => "https://www.googleapis.com/youtube/
 }).toString();
 var YOUTUBE_VIDEOS_URL = (ids, apiKey) => "https://www.googleapis.com/youtube/v3/videos?" + new URLSearchParams({ part: "snippet,contentDetails,statistics,status", id: ids.join(","), key: apiKey }).toString();
 
-// F:/MVP Tracker/gamer-hub/supabase/functions/lineup-search/index.ts
+// supabase/functions/lineup-search/index.ts
 var CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1e3;
 var DAILY_SEARCH_BUDGET = 90;
 var CORS_HEADERS = {

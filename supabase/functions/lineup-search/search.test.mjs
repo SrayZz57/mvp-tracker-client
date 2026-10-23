@@ -51,7 +51,7 @@ test('buildQuery et cacheKey', () => {
   assert.equal(buildQuery({ agent: 'Sova', map: 'Haven', side: 'attack', site: 'A' }), 'valorant Sova Haven lineup A site attack shorts');
   assert.equal(cacheKey({ agent: 'Fade', map: 'Haven', side: null, site: null }), cacheKey({ agent: 'FADE', map: 'haven', side: null, site: null }));
   assert.notEqual(cacheKey({ agent: 'Fade', map: 'Haven', side: 'attack', site: null }), cacheKey({ agent: 'Fade', map: 'Haven', side: 'defense', site: null }));
-  assert.ok(cacheKey(onHaven).startsWith('v2|'), 'clé versionnée : les résultats de l\'ancien filtre sont ignorés');
+  assert.ok(cacheKey(onHaven).startsWith('v4|'), 'clé versionnée : les résultats de l\'ancien filtre sont ignorés');
 });
 
 test('parseIsoDuration', () => {
@@ -105,6 +105,62 @@ test('toResults : KAY/O reconnu sous toutes ses écritures, accents et casse tol
   const kayo = ids([video('k1', { title: 'KAYO lineup Ascent Valorant' }), video('k2', { title: 'Kay/O lineup Ascent Valorant' }), video('k3', { title: 'kay o lineup Ascent Valorant' })], { agent: 'KAY/O', map: 'Ascent', side: null, site: null });
   assert.equal(kayo.length, 3);
   assert.deepEqual(ids([video('acc', { title: 'FADE – lineup HAVEN VALORANT éàç' })], onHaven), ['acc']);
+});
+
+test('toResults : le titre doit citer l\'agent demandé et AUCUN autre agent', () => {
+  const on = (videos) => ids(videos, onHaven);
+  // Titre sur un autre agent, le bon n'est qu'en description/tags : c'était le bug.
+  assert.deepEqual(on([video('autre', { title: 'Sova lineup Haven Valorant', description: 'Fade, Skye and more' })]), []);
+  assert.deepEqual(on([video('tags', { title: 'Sova lineup Haven Valorant', tags: ['fade'] })]), []);
+  // Aucun agent dans le titre : écartée, même si la description cite l'agent demandé.
+  assert.deepEqual(on([video('desc', { title: 'Insane lineup Haven Valorant', description: 'Fade haunt lineup' })]), []);
+  // Deux agents dans le titre : écartée (ce n'est pas une lineup de cet agent seul).
+  assert.deepEqual(on([video('deux', { title: 'Fade and Sova lineup Haven Valorant' }), video('vs', { title: 'Fade vs Sova Haven Valorant' })]), []);
+  // Titre sur l'agent seul : gardée, même si la description parle d'autres agents.
+  assert.deepEqual(on([video('seul', { title: 'Fade lineup Haven Valorant', description: 'works with Sova and Skye' })]), ['seul']);
+  // Mot entier : « sovation » n'est pas Sova.
+  assert.deepEqual(ids([video('mot', { title: 'Sovation lineup Haven Valorant' })], { ...onHaven, agent: 'Sova' }), []);
+  assert.deepEqual(ids([video('ok', { title: 'Sova\'s lineup Haven Valorant' })], { ...onHaven, agent: 'Sova' }), ['ok']);
+  // KAY/O : autre agent reconnu sous toutes ses écritures.
+  assert.deepEqual(on([video('k', { title: 'Fade KAYO lineup Haven Valorant' }), video('k2', { title: 'Fade Kay/O lineup Haven Valorant' })]), []);
+});
+test('toResults : le côté demandé est respecté', () => {
+  const atk = { ...onHaven, side: 'attack' };
+  const def = { ...onHaven, side: 'defense' };
+  const videos = [
+    video('atk1', { title: 'Fade Haven attack lineup Valorant', channel: 'c1' }),
+    video('atk2', { title: 'Fade Haven post-plant lineup Valorant', channel: 'c2' }),
+    video('def1', { title: 'Fade Haven defense lineup Valorant', channel: 'c3' }),
+    video('def2', { title: 'Fade Haven retake lineup Valorant', channel: 'c4' }),
+    video('def3', { title: 'Fade Haven defender anchor lineup Valorant', channel: 'c5' }),
+    video('neutre', { title: 'Fade Haven lineup Valorant', channel: 'c6' }),
+    video('descDef', { title: 'Fade Haven lineup Valorant', description: 'great for defense', channel: 'c7' }),
+  ];
+  // Jamais le côté opposé, post-plant = attaque, retake = défense.
+  const a = ids(videos, atk);
+  assert.ok(a.includes('atk1') && a.includes('atk2'));
+  assert.ok(!a.includes('def1') && !a.includes('def2') && !a.includes('def3'), JSON.stringify(a));
+  const d = ids(videos, def);
+  assert.ok(d.includes('def1') && d.includes('def2') && d.includes('def3'));
+  assert.ok(!d.includes('atk1') && !d.includes('atk2'), JSON.stringify(d));
+  // Les vidéos qui citent le bon côté passent avant celles qui n'en citent aucun.
+  assert.deepEqual(d.slice(0, 4).sort(), ['def1', 'def2', 'def3', 'descDef'].sort());
+});
+
+test('toResults : vidéos sans côté — seulement pour compléter quand le côté demandé en donne trop peu', () => {
+  const few = ids([video('a', { title: 'Fade Haven attack lineup Valorant' }), video('n1', { title: 'Fade Haven lineup Valorant' })], { ...onHaven, side: 'attack' });
+  assert.deepEqual(few, ['a', 'n1'], 'peu de résultats : le neutre complète, derrière');
+  const many = ids(
+    [
+      ...['a', 'b', 'c', 'd'].map((k) => video(`atk${k}`, { title: `Fade Haven attack lineup ${k} Valorant`, channel: `ch${k}` })),
+      video('neutre', { title: 'Fade Haven lineup Valorant', views: 9000000, channel: 'chn' }),
+    ],
+    { ...onHaven, side: 'attack' },
+  );
+  assert.ok(!many.includes('neutre'), 'assez de résultats : pas de vidéo sans côté');
+  assert.equal(many.length, 4);
+  // Sans côté demandé, rien ne change.
+  assert.deepEqual(ids([video('n', { title: 'Fade Haven lineup Valorant' })], onHaven), ['n']);
 });
 
 test('toResults : 3 vidéos par chaîne et 12 résultats au plus', () => {
